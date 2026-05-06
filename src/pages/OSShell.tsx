@@ -63,9 +63,9 @@ export default function OSShell() {
     ])
   }
 
-  const closeWin  = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
+  const closeWin = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
 
-  const focusWin  = (id: string) => {
+  const focusWin = (id: string) => {
     _topZ++
     setWins(prev => prev.map(w =>
       w.id === id ? { ...w, focused: true, z: _topZ } : { ...w, focused: false }
@@ -199,7 +199,8 @@ function OsWindow({ win, onClose, onFocus, onMove }:
   }
 
   return (
-    <div onMouseDown={onFocus}
+    <div
+      onMouseDown={onFocus}
       style={{ position:'absolute', left:win.x, top:win.y, width:win.w, height:win.h,
         zIndex:win.z, display:'flex', flexDirection:'column',
         background:C.surface, borderRadius:6,
@@ -208,7 +209,7 @@ function OsWindow({ win, onClose, onFocus, onMove }:
           ? `0 8px 40px #00000088, 0 0 0 1px ${C.accent}18`
           : '0 4px 20px #00000066' }}>
 
-      {/* Title bar */}
+      {/* Title bar — drag + focus */}
       <div onMouseDown={startDrag}
         style={{ height:32, display:'flex', alignItems:'center', padding:'0 12px', gap:8,
           borderBottom:`1px solid ${C.border}`, background:C.surf2,
@@ -228,10 +229,12 @@ function OsWindow({ win, onClose, onFocus, onMove }:
         </span>
       </div>
 
-      {/* Body */}
-      <div style={{ flex:1, overflow:'auto', display:'flex',
-        alignItems:'stretch', justifyContent:'stretch',
-        flexDirection:'column', minHeight:0 }}>
+      {/* Body — stopPropagation so clicks here never bubble to the outer onMouseDown */}
+      <div
+        onMouseDown={e => e.stopPropagation()}
+        style={{ flex:1, overflow:'auto', display:'flex',
+          alignItems:'stretch', justifyContent:'stretch',
+          flexDirection:'column', minHeight:0 }}>
         {renderBody()}
       </div>
     </div>
