@@ -238,7 +238,15 @@ export default function Terminal() {
                 ? { ...prev, exfilled: [...prev.exfilled, filename] }
                 : prev
               )
+
+              // Always write to local filesystem under ~/loot/
+              const fs = useFSStore.getState()
+              fs.mkdir(['home', 'citizen', 'loot'])
+              fs.writeFile(['home', 'citizen', 'loot', filename], file.content)
+              useCareerStore.getState().addXP('hacker', 5)
+
               push(mkLine('success', `[+] ${filename} received (${file.size})`))
+              push(mkLine('output',  `    saved → ~/loot/${filename}`))
 
               if (isTarget) {
                 const job = getJob(session.jobId!)
