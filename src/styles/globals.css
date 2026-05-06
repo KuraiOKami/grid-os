@@ -2,51 +2,312 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --grid-bg:        #0a0a0f;
+  --grid-surface:   #111118;
+  --grid-surface2:  #16161f;
+  --grid-border:    #2a2a3a;
+  --grid-text:      #c8c8d8;
+  --grid-muted:     #6b6b80;
+  --grid-faint:     #3a3a4a;
+  --grid-accent:    #00e5ff;
+  --grid-accent-dim:#0099aa;
+  --grid-danger:    #ff3b5c;
+  --grid-warn:      #ffaa00;
+  --grid-success:   #00cc88;
+  --grid-purple:    #9b5de5;
 }
 
 html, body, #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #0a0a0f;
-  color: #c8c8d8;
+  background: var(--grid-bg);
+  color: var(--grid-text);
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar styling — dark OS feel */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #111118; }
-::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
+.os-shell {
+  width: 100%;
+  height: 100%;
+  background: var(--grid-bg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
 
-/* Terminal cursor blink */
+.desktop {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.desktop-icons {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 64px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.desktop-icon-box {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: var(--grid-surface);
+  border: 1px solid var(--grid-border);
+  border-radius: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--grid-accent);
+  font-weight: bold;
+}
+
+.desktop-icon:hover .desktop-icon-box {
+  border-color: var(--grid-accent);
+  box-shadow: 0 0 12px rgba(0,229,255,0.2);
+}
+
+.desktop-icon-label {
+  font-size: 11px;
+  color: var(--grid-muted);
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+  line-height: 1.2;
+  transition: color 0.15s;
+}
+
+.desktop-icon:hover .desktop-icon-label {
+  color: var(--grid-text);
+}
+
+/* Taskbar */
+.taskbar {
+  height: 40px;
+  background: var(--grid-surface);
+  border-top: 1px solid var(--grid-border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.taskbar-logo {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: bold;
+  color: var(--grid-accent);
+  border: 1px solid rgba(0,229,255,0.3);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.taskbar-logo:hover { background: rgba(0,229,255,0.1); }
+
+.taskbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--grid-border);
+}
+
+.taskbar-windows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.taskbar-btn {
+  padding: 3px 12px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--grid-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.taskbar-btn:hover {
+  border-color: var(--grid-border);
+  color: var(--grid-text);
+}
+
+.taskbar-btn.focused {
+  background: rgba(0,229,255,0.15);
+  color: var(--grid-accent);
+  border-color: rgba(0,229,255,0.4);
+}
+
+.taskbar-tray {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--grid-muted);
+}
+
+.status-online { color: var(--grid-success); }
+
+/* Window */
+.os-window {
+  position: absolute;
+  background: var(--grid-surface);
+  border: 1px solid var(--grid-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  animation: bootIn 0.15s ease-out;
+}
+
+.os-window.focused {
+  border-color: rgba(0,229,255,0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,229,255,0.1);
+}
+
+.window-titlebar {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  border-bottom: 1px solid var(--grid-border);
+  background: var(--grid-surface2);
+  border-radius: 6px 6px 0 0;
+  flex-shrink: 0;
+  cursor: move;
+}
+
+.window-dots { display: flex; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; border: none; cursor: pointer; }
+.dot-close { background: rgba(255,59,92,0.7); }
+.dot-close:hover { background: var(--grid-danger); }
+.dot-min { background: rgba(255,170,0,0.4); }
+.dot-max { background: rgba(0,204,136,0.4); }
+
+.window-title {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--grid-muted);
+}
+
+.window-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* Placeholder app content */
+.app-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--grid-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.app-placeholder span:first-child {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+/* Boot screen */
+.boot-screen {
+  width: 100%;
+  height: 100%;
+  background: var(--grid-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boot-inner {
+  width: 100%;
+  max-width: 640px;
+  padding: 48px 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.boot-logo {
+  color: var(--grid-accent);
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  margin-bottom: 32px;
+}
+
+.boot-logo span { color: var(--grid-muted); }
+
+.boot-lines { display: flex; flex-direction: column; gap: 6px; }
+
+.boot-line { color: var(--grid-muted); }
+.boot-line.accent { color: var(--grid-accent); }
+
 .cursor::after {
   content: '_';
   animation: blink 1s step-end infinite;
+  color: var(--grid-accent);
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
-/* CRT scanline overlay (optional, apply to OS shell) */
+/* Scanline overlay */
 .scanlines::before {
   content: '';
   position: fixed;
   inset: 0;
   background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px
   );
   pointer-events: none;
   z-index: 9999;
 }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes bootIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--grid-surface); }
+::-webkit-scrollbar-thumb { background: var(--grid-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--grid-faint); }

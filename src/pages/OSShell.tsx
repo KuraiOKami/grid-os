@@ -3,10 +3,8 @@ import Desktop from '@/components/Desktop'
 
 export default function OSShell() {
   return (
-    <div className="w-full h-full bg-grid-bg flex flex-col scanlines animate-boot">
-      {/* Desktop area */}
+    <div className="os-shell scanlines">
       <Desktop />
-      {/* Taskbar always on bottom */}
       <Taskbar />
     </div>
   )

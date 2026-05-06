@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useOSStore } from '@/store/osStore'
 import type { WindowState } from '@/store/osStore'
 
@@ -7,44 +7,52 @@ interface Props {
 }
 
 export default function Window({ window: win }: Props) {
-  const { closeWindow, focusWindow } = useOSStore()
-  const ref = useRef<HTMLDivElement>(null)
+  const { closeWindow, focusWindow, updateWindowPos } = useOSStore()
+  const dragOffset = useRef<{ x: number; y: number } | null>(null)
+  const [pos, setPos] = useState({ x: win.x, y: win.y })
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    focusWindow(win.id)
+    dragOffset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y }
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragOffset.current) return
+      const nx = ev.clientX - dragOffset.current.x
+      const ny = Math.max(0, ev.clientY - dragOffset.current.y)
+      setPos({ x: nx, y: ny })
+      updateWindowPos(win.id, nx, ny)
+    }
+    const onUp = () => {
+      dragOffset.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   return (
     <div
-      ref={ref}
+      className={`os-window${win.focused ? ' focused' : ''}`}
+      style={{ left: pos.x, top: pos.y, width: win.width, height: win.height, zIndex: win.zIndex }}
       onMouseDown={() => focusWindow(win.id)}
-      className="absolute bg-grid-surface border border-grid-border rounded
-        shadow-lg flex flex-col animate-boot"
-      style={{
-        left: win.x,
-        top: win.y,
-        width: win.width,
-        height: win.height,
-        zIndex: win.zIndex,
-        borderColor: win.focused ? 'rgba(0,229,255,0.4)' : undefined,
-      }}
     >
-      {/* Title bar */}
-      <div className="h-8 flex items-center px-3 gap-2 border-b border-grid-border
-        bg-grid-surface2 rounded-t shrink-0">
-        <div className="flex gap-1.5">
-          <button
-            onClick={() => closeWindow(win.id)}
-            className="w-3 h-3 rounded-full bg-grid-danger/70
-              hover:bg-grid-danger transition-colors"
-          />
-          <div className="w-3 h-3 rounded-full bg-grid-warn/40" />
-          <div className="w-3 h-3 rounded-full bg-grid-success/40" />
+      <div className="window-titlebar" onMouseDown={onMouseDown}>
+        <div className="window-dots">
+          <button className="dot dot-close" onClick={() => closeWindow(win.id)} />
+          <div className="dot dot-min" />
+          <div className="dot dot-max" />
         </div>
-        <span className="text-xs font-mono text-grid-muted flex-1 text-center">
-          {win.title}
-        </span>
+        <span className="window-title">{win.title}</span>
       </div>
-
-      {/* Window content */}
-      <div className="flex-1 overflow-auto">
-        {win.content}
+      <div className="window-body">
+        {win.content ?? (
+          <div className="app-placeholder">
+            <span>{win.icon}</span>
+            <span>{win.title}</span>
+            <span style={{ color: 'var(--grid-faint)', fontSize: '10px' }}>// coming soon</span>
+          </div>
+        )}
       </div>
     </div>
   )
