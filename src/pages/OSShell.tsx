@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import GridBrowser from '@/apps/GridBrowser'
 import JobBoard    from '@/apps/JobBoard'
+import RepHUD      from '@/components/RepHUD'
 
 // ── types ────────────────────────────────────────────────────────────────────
 interface Win {
@@ -101,7 +102,7 @@ export default function OSShell() {
       </div>
 
       {/* ── Taskbar ── */}
-      <div style={{ height:40, background:C.surface, borderTop:`1px solid ${C.border}`,
+      <div style={{ height:44, background:C.surface, borderTop:`1px solid ${C.border}`,
         display:'flex', alignItems:'center', padding:'0 12px', gap:8, flexShrink:0 }}>
 
         <button style={{ padding:'3px 14px', fontSize:11, fontWeight:'bold',
@@ -112,6 +113,7 @@ export default function OSShell() {
 
         <div style={{ width:1, height:20, background:C.border }} />
 
+        {/* Open windows */}
         <div style={{ flex:1, display:'flex', gap:4 }}>
           {wins.map(w => (
             <button key={w.id} onClick={() => focusWin(w.id)}
@@ -125,6 +127,12 @@ export default function OSShell() {
           ))}
         </div>
 
+        {/* Rep HUD */}
+        <RepHUD />
+
+        <div style={{ width:1, height:20, background:C.border }} />
+
+        {/* Status + clock */}
         <div style={{ display:'flex', gap:14, fontSize:11, color:C.muted }}>
           <span style={{ color:C.success }}>● ONLINE</span>
           <span>{time}</span>
@@ -229,7 +237,7 @@ function OsWindow({ win, onClose, onFocus, onMove }:
         </span>
       </div>
 
-      {/* Body — stopPropagation so clicks here never bubble to the outer onMouseDown */}
+      {/* Body — stopPropagation so clicks never bubble to the outer onMouseDown */}
       <div
         onMouseDown={e => e.stopPropagation()}
         style={{ flex:1, overflow:'auto', display:'flex',
