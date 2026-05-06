@@ -12,6 +12,10 @@ export interface WindowState {
   height: number
   zIndex: number
   focused: boolean
+  minimized: boolean
+  maximized: boolean
+  // stored so we can restore after un-maximize
+  restoreRect: { x: number; y: number; width: number; height: number }
 }
 
 interface OSStore {
@@ -21,6 +25,10 @@ interface OSStore {
   closeWindow: (id: string) => void
   focusWindow: (id: string) => void
   updateWindowPos: (id: string, x: number, y: number) => void
+  updateWindowSize: (id: string, width: number, height: number) => void
+  minimizeWindow: (id: string) => void
+  restoreWindow: (id: string) => void
+  toggleMaximize: (id: string) => void
 }
 
 const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number; height: number }> = {
@@ -40,17 +48,18 @@ export const useOSStore = create<OSStore>((set, get) => ({
     const id = `${appId}-${Date.now()}`
     const cfg = APP_DEFAULTS[appId] ?? { title: appId, icon: '?', width: 600, height: 400 }
     const offset = windows.length * 24
+    const rect = { x: 120 + offset, y: 60 + offset, width: cfg.width, height: cfg.height }
     const win: WindowState = {
       id,
       title: cfg.title,
       icon: cfg.icon,
       content: null,
-      x: 120 + offset,
-      y: 60 + offset,
-      width: cfg.width,
-      height: cfg.height,
+      ...rect,
       zIndex: newZ,
       focused: true,
+      minimized: false,
+      maximized: false,
+      restoreRect: rect,
     }
     set({
       topZ: newZ,
@@ -66,13 +75,72 @@ export const useOSStore = create<OSStore>((set, get) => ({
     set(state => ({
       topZ: newZ,
       windows: state.windows.map(w =>
-        w.id === id ? { ...w, focused: true, zIndex: newZ } : { ...w, focused: false }
+        w.id === id
+          ? { ...w, focused: true, zIndex: newZ }
+          : { ...w, focused: false }
       ),
     }))
   },
 
   updateWindowPos: (id, x, y) =>
     set(state => ({
-      windows: state.windows.map(w => w.id === id ? { ...w, x, y } : w),
+      windows: state.windows.map(w =>
+        w.id === id ? { ...w, x, y, restoreRect: { ...w.restoreRect, x, y } } : w
+      ),
+    })),
+
+  updateWindowSize: (id, width, height) =>
+    set(state => ({
+      windows: state.windows.map(w =>
+        w.id === id ? { ...w, width, height, restoreRect: { ...w.restoreRect, width, height } } : w
+      ),
+    })),
+
+  minimizeWindow: (id) =>
+    set(state => ({
+      windows: state.windows.map(w =>
+        w.id === id ? { ...w, minimized: true, focused: false } : w
+      ),
+    })),
+
+  restoreWindow: (id) => {
+    const newZ = get().topZ + 1
+    set(state => ({
+      topZ: newZ,
+      windows: state.windows.map(w =>
+        w.id === id
+          ? { ...w, minimized: false, focused: true, zIndex: newZ }
+          : { ...w, focused: false }
+      ),
+    }))
+  },
+
+  toggleMaximize: (id) =>
+    set(state => ({
+      windows: state.windows.map(w => {
+        if (w.id !== id) return w
+        if (w.maximized) {
+          // restore
+          return {
+            ...w,
+            maximized: false,
+            x: w.restoreRect.x,
+            y: w.restoreRect.y,
+            width: w.restoreRect.width,
+            height: w.restoreRect.height,
+          }
+        } else {
+          // save current rect then maximize
+          return {
+            ...w,
+            maximized: true,
+            restoreRect: { x: w.x, y: w.y, width: w.width, height: w.height },
+            x: 0,
+            y: 0,
+            width: window.innerWidth,
+            height: window.innerHeight - 36, // minus taskbar
+          }
+        }
+      }),
     })),
 }))

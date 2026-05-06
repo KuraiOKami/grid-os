@@ -1,8 +1,9 @@
+// Taskbar.tsx — shows open windows; click minimizes focused / restores minimized
 import { useState, useEffect } from 'react'
 import { useOSStore } from '@/store/osStore'
 
 export default function Taskbar() {
-  const { windows, focusWindow } = useOSStore()
+  const { windows, focusWindow, minimizeWindow, restoreWindow } = useOSStore()
   const [time, setTime] = useState('')
 
   useEffect(() => {
@@ -13,6 +14,18 @@ export default function Taskbar() {
     return () => clearInterval(id)
   }, [])
 
+  function handleTaskbarClick(id: string) {
+    const win = windows.find(w => w.id === id)
+    if (!win) return
+    if (win.minimized) {
+      restoreWindow(id)         // un-minimize + focus
+    } else if (win.focused) {
+      minimizeWindow(id)        // click focused window = minimize
+    } else {
+      focusWindow(id)           // click unfocused window = focus
+    }
+  }
+
   return (
     <div className="taskbar">
       <button className="taskbar-logo">GRID</button>
@@ -21,10 +34,17 @@ export default function Taskbar() {
         {windows.map(win => (
           <button
             key={win.id}
-            className={`taskbar-btn${win.focused ? ' focused' : ''}`}
-            onClick={() => focusWindow(win.id)}
+            className={[
+              'taskbar-btn',
+              win.focused && !win.minimized ? 'focused' : '',
+              win.minimized ? 'minimized' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={() => handleTaskbarClick(win.id)}
+            title={win.title}
           >
-            {win.title}
+            <span className="taskbar-btn-icon">{win.icon}</span>
+            <span className="taskbar-btn-label">{win.title}</span>
+            {win.minimized && <span className="taskbar-minimized-dot" />}
           </button>
         ))}
       </div>
