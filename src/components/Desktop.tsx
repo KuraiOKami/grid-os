@@ -1,33 +1,29 @@
+import { useEffect, useRef } from 'react'
 import { useOSStore } from '@/store/osStore'
-import Window from '@/components/Window'
-import DesktopIcon from '@/components/DesktopIcon'
-
-const APPS = [
-  { id: 'browser',  label: 'Browser',     icon: 'WWW' },
-  { id: 'terminal', label: 'Terminal',     icon: '>_'  },
-  { id: 'files',    label: 'Files',        icon: '/fs' },
-  { id: 'jobs',     label: 'Job Board',    icon: '\u25a0\u25a0' },
-]
+import Window from './Window'
+import DesktopIcon from './DesktopIcon'
 
 export default function Desktop() {
-  const { windows, openApp } = useOSStore()
+  const windows     = useOSStore(s => s.windows)
+  const openApp     = useOSStore(s => s.openApp)
+  const setDesktopRef = useOSStore(s => s.setDesktopRef)
+
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setDesktopRef(ref.current)
+    return () => setDesktopRef(null)
+  }, [])
 
   return (
-    <div className="desktop">
+    <div className="desktop" ref={ref}>
       <div className="desktop-icons">
-        {APPS.map(app => (
-          <DesktopIcon
-            key={app.id}
-            label={app.label}
-            icon={app.icon}
-            onClick={() => openApp(app.id)}
-          />
-        ))}
+        <DesktopIcon icon="WWW" label="Browser"     onOpen={() => openApp('browser')} />
+        <DesktopIcon icon=">_"  label="Terminal"    onOpen={() => openApp('terminal')} />
+        <DesktopIcon icon="/fs" label="File System" onOpen={() => openApp('files')} />
+        <DesktopIcon icon="▪▪"  label="Job Board"   onOpen={() => openApp('jobs')} />
       </div>
-
-      {windows.map(win => (
-        <Window key={win.id} window={win} />
-      ))}
+      {windows.map(w => <Window key={w.id} window={w} />)}
     </div>
   )
 }

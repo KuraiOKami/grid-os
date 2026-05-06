@@ -14,13 +14,14 @@ export interface WindowState {
   focused: boolean
   minimized: boolean
   maximized: boolean
-  // stored so we can restore after un-maximize
   restoreRect: { x: number; y: number; width: number; height: number }
 }
 
 interface OSStore {
   windows: WindowState[]
   topZ: number
+  desktopRef: HTMLElement | null
+  setDesktopRef: (el: HTMLElement | null) => void
   openApp: (appId: string) => void
   closeWindow: (id: string) => void
   focusWindow: (id: string) => void
@@ -41,6 +42,9 @@ const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number;
 export const useOSStore = create<OSStore>((set, get) => ({
   windows: [],
   topZ: 10,
+  desktopRef: null,
+
+  setDesktopRef: (el) => set({ desktopRef: el }),
 
   openApp: (appId) => {
     const { topZ, windows } = get()
@@ -82,17 +86,22 @@ export const useOSStore = create<OSStore>((set, get) => ({
     }))
   },
 
+  // Only update restoreRect when NOT maximized, so maximize/restore stays intact
   updateWindowPos: (id, x, y) =>
     set(state => ({
       windows: state.windows.map(w =>
-        w.id === id ? { ...w, x, y, restoreRect: { ...w.restoreRect, x, y } } : w
+        w.id === id
+          ? { ...w, x, y, ...(!w.maximized ? { restoreRect: { ...w.restoreRect, x, y } } : {}) }
+          : w
       ),
     })),
 
   updateWindowSize: (id, width, height) =>
     set(state => ({
       windows: state.windows.map(w =>
-        w.id === id ? { ...w, width, height, restoreRect: { ...w.restoreRect, width, height } } : w
+        w.id === id
+          ? { ...w, width, height, ...(!w.maximized ? { restoreRect: { ...w.restoreRect, width, height } } : {}) }
+          : w
       ),
     })),
 
@@ -115,12 +124,14 @@ export const useOSStore = create<OSStore>((set, get) => ({
     }))
   },
 
-  toggleMaximize: (id) =>
+  toggleMaximize: (id) => {
+    const { desktopRef } = get()
+    const dw = desktopRef ? desktopRef.clientWidth  : window.innerWidth
+    const dh = desktopRef ? desktopRef.clientHeight : window.innerHeight - 40
     set(state => ({
       windows: state.windows.map(w => {
         if (w.id !== id) return w
         if (w.maximized) {
-          // restore
           return {
             ...w,
             maximized: false,
@@ -130,17 +141,17 @@ export const useOSStore = create<OSStore>((set, get) => ({
             height: w.restoreRect.height,
           }
         } else {
-          // save current rect then maximize
           return {
             ...w,
             maximized: true,
             restoreRect: { x: w.x, y: w.y, width: w.width, height: w.height },
             x: 0,
             y: 0,
-            width: window.innerWidth,
-            height: window.innerHeight - 36, // minus taskbar
+            width: dw,
+            height: dh,
           }
         }
       }),
-    })),
+    }))
+  },
 }))
