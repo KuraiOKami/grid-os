@@ -91,6 +91,7 @@ export const LOCATIONS: Location[] = [
         name:        'GRIDMART_GUEST',
         tier:        0,
         secured:     false,
+        hackNodeId:  'gridmart-guest',
         sniffTimeMs: 5_000,
         sniffLoot: {
           type:   'credits',
@@ -187,6 +188,7 @@ export const LOCATIONS: Location[] = [
         name:        'ghost_net_55',
         tier:        0,
         secured:     false,
+        hackNodeId:  'ghost-net-55',
         sniffTimeMs: 5_000,
         sniffLoot: {
           type:     'data',

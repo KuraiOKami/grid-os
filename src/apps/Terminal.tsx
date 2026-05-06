@@ -494,10 +494,12 @@ export default function Terminal() {
         const header  = 'NAME                       TYPE    TIER  STATUS'
         const divider = '─────────────────────────  ──────  ────  ──────────────────────────'
         const rows = hackable.map(sig => {
-          const tier   = sig.tier === 0 ? '[0]' : `[${sig.tier}]`
-          const status = sig.secured ? 'FIREWALLED' : 'OPEN / UNSECURED'
-          const note   = sig.hackNodeId ? `  → connect ${sig.hackNodeId}` : ''
-          return `${sig.name.padEnd(25)}  ${sig.type.toUpperCase().padEnd(6)}  ${tier.padEnd(4)}  ${status}${note}`
+          const tier   = `[${sig.tier}]`
+          let status: string
+          if (sig.secured)          status = 'FIREWALLED'
+          else if (sig.hackNodeId)  status = `OPEN  → connect ${sig.hackNodeId}`
+          else                      status = 'OPEN  (sniff via City Map)'
+          return `${sig.name.padEnd(25)}  ${sig.type.toUpperCase().padEnd(6)}  ${tier.padEnd(4)}  ${status}`
         })
 
         push(mkLine('output', [header, divider, ...rows].join('\n')))
@@ -505,6 +507,10 @@ export default function Terminal() {
         const open = hackable.filter(s => !s.secured && s.hackNodeId)
         open.forEach(s => {
           push(mkLine('info', `[!] ${s.name} is accessible — use 'connect ${s.hackNodeId}'`))
+        })
+        const sniffOnly = hackable.filter(s => !s.secured && !s.hackNodeId)
+        sniffOnly.forEach(s => {
+          push(mkLine('output', `    ${s.name} — open network, sniff via City Map`))
         })
         const locked = hackable.filter(s => s.secured)
         locked.forEach(s => {

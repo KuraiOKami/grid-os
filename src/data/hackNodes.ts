@@ -72,6 +72,104 @@ export const HACK_NODES: HackNode[] = [
     ],
   },
 
+  // ── The Pit — underground open WiFi ──────────────────────────────────────
+  {
+    id:     'ghost-net-55',
+    name:   'ghost_net_55',
+    tier:   0,
+    status: 'unsecured',
+    files: [
+      {
+        name:    'board.txt',
+        size:    '2.1K',
+        content: [
+          '# ghost_net_55 // open relay board',
+          '# no logs. no names. no traces.',
+          '',
+          '[ANON_A] drop 441 confirmed. box 7, cycle end.',
+          '[ANON_B] R-114 still clean?',
+          '[ANON_A] for now. move the other package before cycle 16.',
+          '[ANON_C] anyone have a spare mirror key? civic.archive mirrors going dark.',
+          '[ANON_B] check voidbay. someone listed one last cycle.',
+          '[ANON_D] PHX cell 3 went quiet. assume compromised. rotate contacts.',
+          '[ANON_A] ROOT BLOOM is closer than they\'re saying. watch the sector 7 nodes.',
+        ].join('\n'),
+      },
+      {
+        name:    'drop_441.enc',
+        size:    '0.8K',
+        content: [
+          '[ENCRYPTED DROP — PKG-441]',
+          'Decryption key required.',
+          'Contact: ANON_A via ghost_net relay.',
+          '',
+          'Metadata (unencrypted):',
+          '  type    : civic_record_fragment',
+          '  origin  : civic.archive/flowering',
+          '  expires : cycle_16',
+        ].join('\n'),
+      },
+      {
+        name:    'contracts.txt',
+        size:    '1.4K',
+        content: [
+          '# Pit board — open contracts',
+          '',
+          '[ ₳ 310 ] Data scrape — pull public node logs before next GridOS sweep.',
+          '          Contact ANON_B. No identity check.',
+          '',
+          '[ ₳ 500 ] Mirror audit — verify integrity on three civic mirrors.',
+          '          Time sensitive. Mirrors going dark.',
+          '',
+          '[ ₳ 750 ] Signal trace — locate source of ghost crawler pings in sector 4.',
+          '          Danger pay included. Do not ask what you\'re looking for.',
+        ].join('\n'),
+      },
+    ],
+  },
+
+  // ── Sector 7 Market — open guest WiFi ────────────────────────────────────
+  {
+    id:     'gridmart-guest',
+    name:   'GRIDMART_GUEST',
+    tier:   0,
+    status: 'unsecured',
+    files: [
+      {
+        name:    'session_log.txt',
+        size:    '3.2K',
+        content: [
+          '# GRIDMART_GUEST — captured session log',
+          '# cleartext HTTP traffic intercepted this cycle',
+          '',
+          'citizen_7741 :: purchase :: GridMart order #88123 :: ₳ 42',
+          'citizen_2290 :: search :: "cheap relay tokens sector 4"',
+          'citizen_5512 :: login :: session token exposed (unencrypted)',
+          'citizen_0381 :: message_draft :: "I know what they did to the archive —"',
+          '                [DRAFT SAVED — NOT SENT]',
+          'citizen_7741 :: purchase :: GridMart order #88124 :: ₳ 17',
+          '',
+          '# Note: session token for citizen_5512 may be reusable.',
+          '# This log is unencrypted because GRIDMART_GUEST has no TLS.',
+        ].join('\n'),
+      },
+      {
+        name:    'promo_tracking.bin',
+        size:    '1.8K',
+        content: [
+          '[BINARY — GridMart ad tracking payload]',
+          '',
+          'Device fingerprints: 441 unique devices this cycle.',
+          'Location pings: 441 → Sector 7 Market.',
+          'Behaviour clusters: shopping (62%), browsing (28%), idle (10%).',
+          '',
+          '# Sellable to: data brokers, Syndicate market division.',
+          '# Value estimate: ₳ 80–200 depending on buyer.',
+        ].join('\n'),
+      },
+    ],
+  },
+
   // ── Higher-tier nodes (locked until breach sequences are implemented) ─────
   {
     id:     'corp-443',
