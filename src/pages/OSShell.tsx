@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import GridBrowser from '@/apps/GridBrowser'
 import JobBoard    from '@/apps/JobBoard'
 import WatchApp   from '@/apps/WatchApp'
+import MailApp    from '@/apps/MailApp'
+import AppStore   from '@/apps/AppStore'
 import RepHUD     from '@/components/RepHUD'
+import { useMailStore } from '@/store/mailStore'
 
 // ── types ────────────────────────────────────────────────────────────────────
 interface Win {
@@ -33,11 +36,13 @@ const C = {
 }
 
 const APPS = [
-  { id: 'browser',  title: 'GridBrowser', icon: 'WWW', w: 820, h: 540 },
-  { id: 'terminal', title: 'Terminal',    icon: '>_ ', w: 620, h: 420 },
-  { id: 'files',    title: 'File System', icon: '/fs', w: 660, h: 460 },
-  { id: 'jobs',     title: 'Job Board',   icon: '[ ]', w: 700, h: 500 },
-  { id: 'watch',   title: 'Watch',       icon: '■■■', w: 780, h: 520 },
+  { id: 'browser',   title: 'GridBrowser', icon: 'WWW', w: 820, h: 540, accent: '#00e5ff' },
+  { id: 'mail',      title: 'Mail',        icon: '@',   w: 720, h: 500, accent: '#00e5ff' },
+  { id: 'jobs',      title: 'Job Board',   icon: '[ ]', w: 700, h: 500, accent: '#00cc88' },
+  { id: 'appstore',  title: 'App Store',   icon: '[+]', w: 760, h: 520, accent: '#d6a2ff' },
+  { id: 'watch',     title: 'Watch',       icon: '■■■', w: 780, h: 520, accent: '#ff3b5c' },
+  { id: 'terminal',  title: 'Terminal',    icon: '>_ ', w: 620, h: 420, accent: '#00e5ff' },
+  { id: 'files',     title: 'File System', icon: '/fs', w: 660, h: 460, accent: '#00e5ff' },
 ]
 
 let _topZ = 10
@@ -45,6 +50,7 @@ let _topZ = 10
 export default function OSShell() {
   const [wins, setWins] = useState<Win[]>([])
   const [time, setTime] = useState('')
+  const unreadCount = useMailStore(s => s.unreadCount)()
 
   useEffect(() => {
     const tick = () => setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
@@ -88,9 +94,14 @@ export default function OSShell() {
         <div style={{ position:'absolute', top:24, left:24,
           display:'flex', flexDirection:'column', gap:20 }}>
           {APPS.map(app => (
-            <DesktopIcon key={app.id} icon={app.icon} label={app.title}
-              accent={app.id === 'watch' ? C.danger : C.accent}
-              onClick={() => openApp(app.id)} />
+            <DesktopIcon
+              key={app.id}
+              icon={app.icon}
+              label={app.title}
+              accent={app.accent}
+              badge={app.id === 'mail' && unreadCount > 0 ? unreadCount : 0}
+              onClick={() => openApp(app.id)}
+            />
           ))}
         </div>
 
@@ -136,6 +147,9 @@ export default function OSShell() {
 
         <div style={{ display:'flex', gap:14, fontSize:11, color:C.muted }}>
           <span style={{ color:C.success }}>● ONLINE</span>
+          {unreadCount > 0 && (
+            <span style={{ color: C.warn }}>✉ {unreadCount}</span>
+          )}
           <span>{time}</span>
         </div>
       </div>
@@ -144,23 +158,35 @@ export default function OSShell() {
 }
 
 // ── Desktop Icon ─────────────────────────────────────────────────────────────
-function DesktopIcon({ icon, label, accent = '#00e5ff', onClick }:
-  { icon:string; label:string; accent?:string; onClick:()=>void }) {
+function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }:
+  { icon:string; label:string; accent?:string; badge?:number; onClick:()=>void }) {
   const [hov, setHov] = useState(false)
   return (
     <button onClick={onClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{ background:'none', border:'none', cursor:'pointer', display:'flex',
-        flexDirection:'column', alignItems:'center', gap:5, width:64, padding:0 }}>
+        flexDirection:'column', alignItems:'center', gap:5, width:64, padding:0,
+        position: 'relative' }}>
       <div style={{ width:52, height:52, display:'flex', alignItems:'center',
         justifyContent:'center', fontSize:13, fontWeight:'bold', letterSpacing:1,
         background:C.surface, borderRadius:6,
         color: hov ? accent : C.muted,
         border:`1px solid ${hov ? accent : C.border}`,
         boxShadow: hov ? `0 0 12px ${accent}33` : 'none',
-        transition:'all 0.15s', fontFamily:'inherit' }}>
+        transition:'all 0.15s', fontFamily:'inherit', position:'relative' }}>
         {icon}
+        {/* Unread badge */}
+        {badge > 0 && (
+          <div style={{ position:'absolute', top:-5, right:-5,
+            minWidth:16, height:16, borderRadius:'50%',
+            background: C.danger, color:'#fff',
+            fontSize:9, fontWeight:'bold',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            padding:'0 3px', lineHeight:1 }}>
+            {badge > 9 ? '9+' : badge}
+          </div>
+        )}
       </div>
       <span style={{ fontSize:10, color: hov ? C.text : C.muted,
         textAlign:'center', lineHeight:1.3, transition:'color 0.15s' }}>
@@ -198,6 +224,8 @@ function OsWindow({ win, onClose, onFocus, onMove }:
     if (win.title === 'GridBrowser') return <GridBrowser />
     if (win.title === 'Job Board')   return <JobBoard />
     if (win.title === 'Watch')       return <WatchApp />
+    if (win.title === 'Mail')        return <MailApp />
+    if (win.title === 'App Store')   return <AppStore />
     return (
       <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center',
         justifyContent:'center', flexDirection:'column', gap:8 }}>
@@ -209,9 +237,9 @@ function OsWindow({ win, onClose, onFocus, onMove }:
     )
   }
 
-  // Watch window gets a red border instead of cyan
   const focusedBorder = isWatch ? '#ff3b5c55' : '#00e5ff55'
   const focusedGlow   = isWatch ? '#ff3b5c18' : '#00e5ff18'
+  const titleColor    = isWatch ? '#ff3b5c88' : '#6b6b80'
 
   return (
     <div
@@ -239,12 +267,12 @@ function OsWindow({ win, onClose, onFocus, onMove }:
         </div>
 
         <span style={{ flex:1, textAlign:'center', fontSize:11,
-          color: isWatch ? '#ff3b5c88' : '#6b6b80', fontFamily:'inherit' }}>
+          color: titleColor, fontFamily:'inherit' }}>
           {win.title}
         </span>
       </div>
 
-      {/* Body — stopPropagation so clicks never bubble to the outer onMouseDown */}
+      {/* Body */}
       <div
         onMouseDown={e => e.stopPropagation()}
         style={{ flex:1, overflow:'auto', display:'flex',
