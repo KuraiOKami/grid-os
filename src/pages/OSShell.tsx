@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import GridBrowser from '@/apps/GridBrowser'
+import JobBoard    from '@/apps/JobBoard'
 
 // ── types ────────────────────────────────────────────────────────────────────
 interface Win {
@@ -32,7 +34,7 @@ const APPS = [
   { id: 'browser',  title: 'GridBrowser', icon: 'WWW', w: 820, h: 540 },
   { id: 'terminal', title: 'Terminal',    icon: '>_ ', w: 620, h: 420 },
   { id: 'files',    title: 'File System', icon: '/fs', w: 660, h: 460 },
-  { id: 'jobs',     title: 'Job Board',   icon: '[ ]', w: 700, h: 480 },
+  { id: 'jobs',     title: 'Job Board',   icon: '[ ]', w: 700, h: 500 },
 ]
 
 let _topZ = 10
@@ -61,9 +63,9 @@ export default function OSShell() {
     ])
   }
 
-  const closeWin = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
+  const closeWin  = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
 
-  const focusWin = (id: string) => {
+  const focusWin  = (id: string) => {
     _topZ++
     setWins(prev => prev.map(w =>
       w.id === id ? { ...w, focused: true, z: _topZ } : { ...w, focused: false }
@@ -81,8 +83,8 @@ export default function OSShell() {
       <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
 
         {/* Desktop icons */}
-        <div style={{ position:'absolute', top:24, left:24, display:'flex',
-          flexDirection:'column', gap:20 }}>
+        <div style={{ position:'absolute', top:24, left:24,
+          display:'flex', flexDirection:'column', gap:20 }}>
           {APPS.map(app => (
             <DesktopIcon key={app.id} icon={app.icon} label={app.title}
               onClick={() => openApp(app.id)} />
@@ -114,7 +116,8 @@ export default function OSShell() {
           {wins.map(w => (
             <button key={w.id} onClick={() => focusWin(w.id)}
               style={{ padding:'3px 12px', fontSize:11, borderRadius:4, cursor:'pointer',
-                fontFamily:'inherit', border:`1px solid ${w.focused ? C.accent+'66' : 'transparent'}`,
+                fontFamily:'inherit',
+                border:`1px solid ${w.focused ? C.accent+'66' : 'transparent'}`,
                 background: w.focused ? C.accent+'22' : 'none',
                 color: w.focused ? C.accent : C.muted }}>
               {w.title}
@@ -132,15 +135,19 @@ export default function OSShell() {
 }
 
 // ── Desktop Icon ─────────────────────────────────────────────────────────────
-function DesktopIcon({ icon, label, onClick }: { icon:string; label:string; onClick:()=>void }) {
+function DesktopIcon({ icon, label, onClick }:
+  { icon:string; label:string; onClick:()=>void }) {
   const [hov, setHov] = useState(false)
   return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+    <button onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       style={{ background:'none', border:'none', cursor:'pointer', display:'flex',
         flexDirection:'column', alignItems:'center', gap:5, width:64, padding:0 }}>
       <div style={{ width:52, height:52, display:'flex', alignItems:'center',
         justifyContent:'center', fontSize:13, fontWeight:'bold', letterSpacing:1,
-        background:C.surface, borderRadius:6, color: hov ? C.accent : C.muted,
+        background:C.surface, borderRadius:6,
+        color: hov ? C.accent : C.muted,
         border:`1px solid ${hov ? C.accent : C.border}`,
         boxShadow: hov ? `0 0 12px ${C.accent}33` : 'none',
         transition:'all 0.15s', fontFamily:'inherit' }}>
@@ -177,6 +184,20 @@ function OsWindow({ win, onClose, onFocus, onMove }:
     window.addEventListener('mouseup', up)
   }
 
+  function renderBody() {
+    if (win.title === 'GridBrowser') return <GridBrowser />
+    if (win.title === 'Job Board')   return <JobBoard />
+    return (
+      <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center',
+        justifyContent:'center', flexDirection:'column', gap:8 }}>
+        <span style={{ fontSize:26, color:C.accent, fontFamily:'inherit',
+          fontWeight:'bold' }}>{win.icon}</span>
+        <span style={{ fontSize:12, color:C.muted }}>{win.title}</span>
+        <span style={{ fontSize:10, color:C.faint }}>// coming soon</span>
+      </div>
+    )
+  }
+
   return (
     <div onMouseDown={onFocus}
       style={{ position:'absolute', left:win.x, top:win.y, width:win.w, height:win.h,
@@ -194,9 +215,9 @@ function OsWindow({ win, onClose, onFocus, onMove }:
           borderRadius:'6px 6px 0 0', flexShrink:0, cursor:'move', userSelect:'none' }}>
 
         <div style={{ display:'flex', gap:6 }}>
-          <button onClick={(e) => { e.stopPropagation(); onClose() }}
-            style={{ width:12, height:12, borderRadius:'50%', border:'none', cursor:'pointer',
-              background:`${C.danger}bb` }} />
+          <button onClick={e => { e.stopPropagation(); onClose() }}
+            style={{ width:12, height:12, borderRadius:'50%', border:'none',
+              cursor:'pointer', background:`${C.danger}bb` }} />
           <div style={{ width:12, height:12, borderRadius:'50%', background:`${C.warn}44` }} />
           <div style={{ width:12, height:12, borderRadius:'50%', background:`${C.success}44` }} />
         </div>
@@ -208,12 +229,10 @@ function OsWindow({ win, onClose, onFocus, onMove }:
       </div>
 
       {/* Body */}
-      <div style={{ flex:1, overflow:'auto', display:'flex', alignItems:'center',
-        justifyContent:'center', flexDirection:'column', gap:8 }}>
-        <span style={{ fontSize:26, color:C.accent, fontFamily:'inherit',
-          fontWeight:'bold' }}>{win.icon}</span>
-        <span style={{ fontSize:12, color:C.muted }}>{win.title}</span>
-        <span style={{ fontSize:10, color:C.faint }}>// coming soon</span>
+      <div style={{ flex:1, overflow:'auto', display:'flex',
+        alignItems:'stretch', justifyContent:'stretch',
+        flexDirection:'column', minHeight:0 }}>
+        {renderBody()}
       </div>
     </div>
   )
