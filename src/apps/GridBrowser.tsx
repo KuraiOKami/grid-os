@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { addJob } from '@/store/jobStore'
 import { useRepStore } from '@/store/reputationStore'
 
-// ── types ────────────────────────────────────────────────────────────────────
+// ── types ────────────────────────────────────────────────────────────────
 type LinkItem = { label: string; url: string }
 type JobOffer = { title: string; corp: string; pay: string }
 
@@ -25,7 +25,7 @@ type PageData = {
   repEffect?: { compliance?: number; shadow?: number } // visiting costs / earns rep
 }
 
-// ── page registry ─────────────────────────────────────────────────────────────
+// ── page registry ───────────────────────────────────────────────────────────────
 const PAGES: Record<string, PageData> = {
 
   // ─ GridOS Corporate ────────────────────────────────────────────────────────
@@ -99,7 +99,6 @@ const PAGES: Record<string, PageData> = {
     repEffect: { compliance: +1 },
   },
 
-  // Compliance-gated: GridOS internal portal. Requires compliance >= 65.
   'gridos.corp/internal': {
     site: 'GridOS Corporate — INTERNAL',
     title: 'Internal Systems Portal',
@@ -139,7 +138,7 @@ const PAGES: Record<string, PageData> = {
     repEffect: { compliance: +3, shadow: -2 },
   },
 
-  // ─ Pulse News ─────────────────────────────────────────────────────────────
+  // ─ Pulse News ─────────────────────────────────────────────────────────────────
   'pulse.news': {
     site: 'Pulse News',
     title: 'Pulse // Daily Feed',
@@ -206,7 +205,7 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +1, compliance: -1 },
   },
 
-  // ─ YellowThread ────────────────────────────────────────────────────────────
+  // ─ YellowThread ────────────────────────────────────────────────────────────────
   'yellowthread.forum': {
     site: 'YellowThread Forum',
     title: 'YellowThread // Public Index',
@@ -277,7 +276,7 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +1, compliance: -1 },
   },
 
-  // ─ Ghostlily Blog ─────────────────────────────────────────────────────────
+  // ─ Ghostlily Blog ────────────────────────────────────────────────────────────────
   'ghostlily.blog': {
     site: 'ghostlily.blog',
     title: 'ghostlily // notes from the soft edge',
@@ -331,7 +330,7 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +1, compliance: -1 },
   },
 
-  // ─ Civic Archive ───────────────────────────────────────────────────────────
+  // ─ Civic Archive ──────────────────────────────────────────────────────────────────
   'civic.archive/flowering': {
     site: 'Civic Archive Mirror',
     title: 'Municipal Archive // Flowering District',
@@ -351,7 +350,6 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +1, compliance: -1 },
   },
 
-  // Shadow-gated: requires shadow >= 55 to read the ROOT BLOOM timeline.
   'civic.archive/rootbloom-timeline': {
     site: 'Civic Archive Mirror',
     title: 'ROOT BLOOM // Incident Timeline',
@@ -373,7 +371,6 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +2, compliance: -2 },
   },
 
-  // Unlock-gated: only reachable after burying lena.arc's Watch case file.
   'civic.archive/protected': {
     site: 'Civic Archive Mirror',
     title: 'Protected Records // lena.arc collection',
@@ -395,8 +392,7 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +3, compliance: -3 },
   },
 
-  // ─ VoidBay ───────────────────────────────────────────────────────────────────
-  // Shadow-gated: basic VoidBay listing page
+  // ─ VoidBay ───────────────────────────────────────────────────────────────────────
   'voidbay.net': {
     site: 'VoidBay',
     title: 'VoidBay // Grey Market Exchange',
@@ -456,8 +452,7 @@ const PAGES: Record<string, PageData> = {
     repEffect: { shadow: +2, compliance: -3 },
   },
 
-  // ─ null.54 ───────────────────────────────────────────────────────────────────
-  // Only reachable after escalating null.54 in the Watch app (Watch sets the unlock).
+  // ─ null.54 ───────────────────────────────────────────────────────────────────────
   'void.null/54': {
     site: 'void.null',
     title: '// we saw you',
@@ -479,7 +474,7 @@ const PAGES: Record<string, PageData> = {
   },
 }
 
-// ── theme map ───────────────────────────────────────────────────────────────────
+// ── theme map ──────────────────────────────────────────────────────────────────────
 const THEME_STYLES = {
   corp:   { header: '#00e5ff', badgeBg: 'rgba(0,229,255,0.12)',   badgeBorder: 'rgba(0,229,255,0.35)' },
   news:   { header: '#ffd166', badgeBg: 'rgba(255,209,102,0.12)', badgeBorder: 'rgba(255,209,102,0.35)' },
@@ -491,7 +486,7 @@ const THEME_STYLES = {
 
 const DEFAULT_URL = 'gridos.corp'
 
-// ── component ───────────────────────────────────────────────────────────────────
+// ── component ─────────────────────────────────────────────────────────────────────────
 export default function GridBrowser() {
   const [currentUrl, setCurrentUrl] = useState(DEFAULT_URL)
   const [input,      setInput]      = useState(DEFAULT_URL)
@@ -506,7 +501,6 @@ export default function GridBrowser() {
 
   const page = PAGES[currentUrl] ?? null
 
-  // Check whether the current page's gate passes
   const gateBlocked = useMemo(() => {
     if (!page?.gate) return false
     const g = page.gate
@@ -521,7 +515,7 @@ export default function GridBrowser() {
     return THEME_STYLES[page.theme ?? 'corp']
   }, [page])
 
-  function showToast(msg: string, color = '#7bd389') {
+  function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(null), 3500)
   }
@@ -542,7 +536,6 @@ export default function GridBrowser() {
     const target = PAGES[normalized]
     if (!target) return
 
-    // Check gate before applying effects
     const g = target.gate
     const blocked =
       g && (
@@ -552,11 +545,8 @@ export default function GridBrowser() {
       )
 
     if (!blocked) {
-      // Apply rep effect on successful visit
       if (target.repEffect) applyEvent(target.repEffect)
-      // Apply unlock if this page grants one
       if (target.unlocks) unlock(target.unlocks)
-      // Add job
       if (target.job) {
         addJob({ ...target.job, source: normalized })
         showToast(`New job posted to Job Board: "${target.job.title}"`)
@@ -584,8 +574,8 @@ export default function GridBrowser() {
       {/* Chrome */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
         borderBottom: '1px solid #222634', background: '#0f1320', flexShrink: 0 }}>
-        <button onClick={goBack}               style={navBtn(histIndex > 0)}>←</button>
-        <button onClick={goForward}            style={navBtn(histIndex < history.length - 1)}>→</button>
+        <button onClick={goBack}                  style={navBtn(histIndex > 0)}>←</button>
+        <button onClick={goForward}               style={navBtn(histIndex < history.length - 1)}>→</button>
         <button onClick={() => goTo(DEFAULT_URL)} style={navBtn(true)}>⌂</button>
 
         <form onSubmit={e => { e.preventDefault(); goTo(input) }} style={{ flex: 1 }}>
@@ -618,14 +608,14 @@ export default function GridBrowser() {
           padding: '10px 18px', borderRadius: 8, fontSize: 12,
           fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap',
           boxShadow: '0 4px 20px #00000088', pointerEvents: 'none' }}>
-          ✦ {toast}
+          ❆ {toast}
         </div>
       )}
     </div>
   )
 }
 
-// ── PageView ───────────────────────────────────────────────────────────────────────
+// ── PageView ───────────────────────────────────────────────────────────────────────────
 function PageView({ page, theme, onNavigate }:
   { page: PageData; theme: typeof THEME_STYLES.corp; onNavigate: (url: string) => void }) {
   return (
@@ -662,7 +652,7 @@ function PageView({ page, theme, onNavigate }:
           border: `1px solid ${theme.header}44`, background: `${theme.header}0d` }}>
           <span style={{ fontSize: 11, color: theme.header,
             fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>
-            ✦ JOB AVAILABLE — {page.job.title} · {page.job.corp} · {page.job.pay}
+            ❆ JOB AVAILABLE — {page.job.title} · {page.job.corp} · {page.job.pay}
           </span>
         </div>
       )}
@@ -702,7 +692,7 @@ function PageView({ page, theme, onNavigate }:
   )
 }
 
-// ── GatedPage ────────────────────────────────────────────────────────────────────
+// ── GatedPage ──────────────────────────────────────────────────────────────────────────
 function GatedPage({ hint, gate, compliance, shadow, onHome }:{
   hint?: string; gate: AccessGate; compliance: number; shadow: number; onHome: () => void
 }) {
@@ -721,7 +711,6 @@ function GatedPage({ hint, gate, compliance, shadow, onHome }:{
         {hint ?? 'You do not have permission to view this page.'}
       </div>
 
-      {/* Progress hint for score-based gates */}
       {gate.type === 'compliance' && (
         <div style={{ marginBottom: 16, fontSize: 12, fontFamily: "'JetBrains Mono',monospace",
           color: '#6b6b80' }}>
@@ -742,7 +731,7 @@ function GatedPage({ hint, gate, compliance, shadow, onHome }:{
   )
 }
 
-// ── MissingPage ────────────────────────────────────────────────────────────────────
+// ── MissingPage ────────────────────────────────────────────────────────────────────────────
 function MissingPage({ currentUrl, onHome }: { currentUrl: string; onHome: () => void }) {
   return (
     <div style={{ minHeight: 260, display: 'flex', flexDirection: 'column',
@@ -758,7 +747,7 @@ function MissingPage({ currentUrl, onHome }: { currentUrl: string; onHome: () =>
   )
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────────
+// ── helpers ─────────────────────────────────────────────────────────────────────────────
 function navBtn(enabled: boolean): React.CSSProperties {
   return {
     width: 32, height: 32, borderRadius: 6,
@@ -779,7 +768,4 @@ function linkBtn(color: string): React.CSSProperties {
   }
 }
 
-// ── export unlock helper for WatchApp to call ───────────────────────────────────
-// Since unlocks live in GridBrowser's local state, WatchApp triggers them via
-// the shared unlockStore below so the two apps can communicate.
 export {}
