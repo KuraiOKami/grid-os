@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import GridBrowser from '@/apps/GridBrowser'
 import JobBoard    from '@/apps/JobBoard'
-import RepHUD      from '@/components/RepHUD'
+import WatchApp   from '@/apps/WatchApp'
+import RepHUD     from '@/components/RepHUD'
 
 // ── types ────────────────────────────────────────────────────────────────────
 interface Win {
@@ -36,11 +37,11 @@ const APPS = [
   { id: 'terminal', title: 'Terminal',    icon: '>_ ', w: 620, h: 420 },
   { id: 'files',    title: 'File System', icon: '/fs', w: 660, h: 460 },
   { id: 'jobs',     title: 'Job Board',   icon: '[ ]', w: 700, h: 500 },
+  { id: 'watch',   title: 'Watch',       icon: '■■■', w: 780, h: 520 },
 ]
 
 let _topZ = 10
 
-// ── main component ───────────────────────────────────────────────────────────
 export default function OSShell() {
   const [wins, setWins] = useState<Win[]>([])
   const [time, setTime] = useState('')
@@ -88,6 +89,7 @@ export default function OSShell() {
           display:'flex', flexDirection:'column', gap:20 }}>
           {APPS.map(app => (
             <DesktopIcon key={app.id} icon={app.icon} label={app.title}
+              accent={app.id === 'watch' ? C.danger : C.accent}
               onClick={() => openApp(app.id)} />
           ))}
         </div>
@@ -132,7 +134,6 @@ export default function OSShell() {
 
         <div style={{ width:1, height:20, background:C.border }} />
 
-        {/* Status + clock */}
         <div style={{ display:'flex', gap:14, fontSize:11, color:C.muted }}>
           <span style={{ color:C.success }}>● ONLINE</span>
           <span>{time}</span>
@@ -143,8 +144,8 @@ export default function OSShell() {
 }
 
 // ── Desktop Icon ─────────────────────────────────────────────────────────────
-function DesktopIcon({ icon, label, onClick }:
-  { icon:string; label:string; onClick:()=>void }) {
+function DesktopIcon({ icon, label, accent = '#00e5ff', onClick }:
+  { icon:string; label:string; accent?:string; onClick:()=>void }) {
   const [hov, setHov] = useState(false)
   return (
     <button onClick={onClick}
@@ -155,9 +156,9 @@ function DesktopIcon({ icon, label, onClick }:
       <div style={{ width:52, height:52, display:'flex', alignItems:'center',
         justifyContent:'center', fontSize:13, fontWeight:'bold', letterSpacing:1,
         background:C.surface, borderRadius:6,
-        color: hov ? C.accent : C.muted,
-        border:`1px solid ${hov ? C.accent : C.border}`,
-        boxShadow: hov ? `0 0 12px ${C.accent}33` : 'none',
+        color: hov ? accent : C.muted,
+        border:`1px solid ${hov ? accent : C.border}`,
+        boxShadow: hov ? `0 0 12px ${accent}33` : 'none',
         transition:'all 0.15s', fontFamily:'inherit' }}>
         {icon}
       </div>
@@ -174,6 +175,7 @@ function OsWindow({ win, onClose, onFocus, onMove }:
   { win:Win; onClose:()=>void; onFocus:()=>void; onMove:(x:number,y:number)=>void }) {
 
   const dragRef = useRef<{ ox:number; oy:number } | null>(null)
+  const isWatch = win.title === 'Watch'
 
   const startDrag = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -195,44 +197,49 @@ function OsWindow({ win, onClose, onFocus, onMove }:
   function renderBody() {
     if (win.title === 'GridBrowser') return <GridBrowser />
     if (win.title === 'Job Board')   return <JobBoard />
+    if (win.title === 'Watch')       return <WatchApp />
     return (
       <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center',
         justifyContent:'center', flexDirection:'column', gap:8 }}>
-        <span style={{ fontSize:26, color:C.accent, fontFamily:'inherit',
+        <span style={{ fontSize:26, color:'#00e5ff', fontFamily:'inherit',
           fontWeight:'bold' }}>{win.icon}</span>
-        <span style={{ fontSize:12, color:C.muted }}>{win.title}</span>
-        <span style={{ fontSize:10, color:C.faint }}>// coming soon</span>
+        <span style={{ fontSize:12, color:'#6b6b80' }}>{win.title}</span>
+        <span style={{ fontSize:10, color:'#3a3a4a' }}>// coming soon</span>
       </div>
     )
   }
+
+  // Watch window gets a red border instead of cyan
+  const focusedBorder = isWatch ? '#ff3b5c55' : '#00e5ff55'
+  const focusedGlow   = isWatch ? '#ff3b5c18' : '#00e5ff18'
 
   return (
     <div
       onMouseDown={onFocus}
       style={{ position:'absolute', left:win.x, top:win.y, width:win.w, height:win.h,
         zIndex:win.z, display:'flex', flexDirection:'column',
-        background:C.surface, borderRadius:6,
-        border:`1px solid ${win.focused ? C.accent+'55' : C.border}`,
+        background:'#111118', borderRadius:6,
+        border:`1px solid ${win.focused ? focusedBorder : '#2a2a3a'}`,
         boxShadow: win.focused
-          ? `0 8px 40px #00000088, 0 0 0 1px ${C.accent}18`
+          ? `0 8px 40px #00000088, 0 0 0 1px ${focusedGlow}`
           : '0 4px 20px #00000066' }}>
 
-      {/* Title bar — drag + focus */}
+      {/* Title bar */}
       <div onMouseDown={startDrag}
         style={{ height:32, display:'flex', alignItems:'center', padding:'0 12px', gap:8,
-          borderBottom:`1px solid ${C.border}`, background:C.surf2,
+          borderBottom:'1px solid #2a2a3a', background:'#16161f',
           borderRadius:'6px 6px 0 0', flexShrink:0, cursor:'move', userSelect:'none' }}>
 
         <div style={{ display:'flex', gap:6 }}>
           <button onClick={e => { e.stopPropagation(); onClose() }}
             style={{ width:12, height:12, borderRadius:'50%', border:'none',
-              cursor:'pointer', background:`${C.danger}bb` }} />
-          <div style={{ width:12, height:12, borderRadius:'50%', background:`${C.warn}44` }} />
-          <div style={{ width:12, height:12, borderRadius:'50%', background:`${C.success}44` }} />
+              cursor:'pointer', background:'#ff3b5cbb' }} />
+          <div style={{ width:12, height:12, borderRadius:'50%', background:'#ffaa0044' }} />
+          <div style={{ width:12, height:12, borderRadius:'50%', background:'#00cc8844' }} />
         </div>
 
         <span style={{ flex:1, textAlign:'center', fontSize:11,
-          color:C.muted, fontFamily:'inherit' }}>
+          color: isWatch ? '#ff3b5c88' : '#6b6b80', fontFamily:'inherit' }}>
           {win.title}
         </span>
       </div>
