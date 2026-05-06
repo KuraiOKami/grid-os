@@ -10,10 +10,10 @@ import MailApp    from '@/apps/MailApp'
 import AppStore   from '@/apps/AppStore'
 import RepHUD     from '@/components/RepHUD'
 import BootScreen from '@/components/BootScreen'
-import { useMailStore } from '@/store/mailStore'
+import StartMenu  from '@/components/StartMenu'
+import { useMailStore }   from '@/store/mailStore'
 import { useUnlockStore } from '@/store/unlockStore'
 
-// ── types ────────────────────────────────────────────────────────────────────
 interface Win {
   id:      string
   title:   string
@@ -26,7 +26,6 @@ interface Win {
   focused: boolean
 }
 
-// ── palette ───────────────────────────────────────────────────────────────────
 const C = {
   bg:      '#0a0a0f',
   surface: '#111118',
@@ -34,14 +33,12 @@ const C = {
   border:  '#2a2a3a',
   text:    '#c8c8d8',
   muted:   '#6b6b80',
-  faint:   '#3a3a4a',
   accent:  '#00e5ff',
   danger:  '#ff3b5c',
   warn:    '#ffaa00',
   success: '#00cc88',
 }
 
-// ── all possible apps (icon only shows if unlocked) ──────────────────────────
 const ALL_APPS = [
   { id: 'browser',  title: 'GridBrowser', icon: 'WWW', w: 820, h: 540, accent: '#00e5ff' },
   { id: 'mail',     title: 'Mail',        icon: '@',   w: 720, h: 500, accent: '#00e5ff' },
@@ -55,13 +52,13 @@ const ALL_APPS = [
 let _topZ = 10
 
 export default function OSShell() {
-  const [booted, setBooted] = useState(false)
-  const [wins,   setWins]   = useState<Win[]>([])
-  const [time,   setTime]   = useState('')
+  const [booted,    setBooted]    = useState(false)
+  const [wins,      setWins]      = useState<Win[]>([])
+  const [time,      setTime]      = useState('')
+  const [menuOpen,  setMenuOpen]  = useState(false)
 
   const unreadCount = useMailStore(s => s.unreadCount)()
   const installed   = useUnlockStore(s => s.installed)
-
   const visibleApps = ALL_APPS.filter(a => installed.includes(a.id))
 
   useEffect(() => {
@@ -102,6 +99,14 @@ export default function OSShell() {
     <>
       {!booted && <BootScreen onDone={() => setBooted(true)} />}
 
+      {/* Start menu portal — rendered above everything */}
+      {menuOpen && (
+        <StartMenu
+          onClose={() => setMenuOpen(false)}
+          onOpenApp={openApp}
+        />
+      )}
+
       <div style={{
         width: '100vw', height: '100vh', background: C.bg,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -111,7 +116,6 @@ export default function OSShell() {
         {/* ── Desktop ── */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
-          {/* Desktop icons */}
           <div style={{
             position: 'absolute', top: 24, left: 24,
             display: 'flex', flexDirection: 'column', gap: 20,
@@ -128,7 +132,6 @@ export default function OSShell() {
             ))}
           </div>
 
-          {/* Windows */}
           {wins.map(win => (
             <OsWindow
               key={win.id}
@@ -143,18 +146,28 @@ export default function OSShell() {
         {/* ── Taskbar ── */}
         <div style={{
           height: 44, background: C.surface, borderTop: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8, flexShrink: 0,
+          display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8,
+          flexShrink: 0, position: 'relative', zIndex: 100,
         }}>
-          <button style={{
-            padding: '3px 14px', fontSize: 11, fontWeight: 'bold',
-            color: C.accent, border: `1px solid ${C.accent}44`, borderRadius: 4,
-            background: 'none', cursor: 'pointer', fontFamily: 'inherit',
-          }}>
+          {/* GRID start button */}
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            style={{
+              padding: '3px 14px', fontSize: 11, fontWeight: 'bold',
+              color: menuOpen ? C.bg : C.accent,
+              border: `1px solid ${C.accent}`,
+              borderRadius: 4,
+              background: menuOpen ? C.accent : 'none',
+              cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'all 0.15s',
+            }}
+          >
             GRID
           </button>
 
           <div style={{ width: 1, height: 20, background: C.border }} />
 
+          {/* Open window buttons */}
           <div style={{ flex: 1, display: 'flex', gap: 4 }}>
             {wins.map(w => (
               <button key={w.id} onClick={() => focusWin(w.id)} style={{
@@ -273,16 +286,12 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: 8,
       }}>
-        <span style={{ fontSize: 22, color: '#00e5ff', fontFamily: 'inherit', fontWeight: 'bold' }}>
-          {win.icon}
-        </span>
+        <span style={{ fontSize: 22, color: '#00e5ff', fontWeight: 'bold' }}>{win.icon}</span>
         <span style={{ fontSize: 12, color: '#6b6b80' }}>{win.title}</span>
         <span style={{ fontSize: 10, color: '#3a3a4a' }}>// coming soon</span>
       </div>
     )
   }
-
-  const focusedBorder = isWatch ? '#ff3b5c55' : '#00e5ff55'
 
   return (
     <div
@@ -292,7 +301,7 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         width: win.w, height: win.h, zIndex: win.z,
         display: 'flex', flexDirection: 'column',
         background: '#111118', borderRadius: 6,
-        border: `1px solid ${win.focused ? focusedBorder : '#2a2a3a'}`,
+        border: `1px solid ${isWatch ? '#ff3b5c55' : '#00e5ff55'}`,
         boxShadow: win.focused ? '0 8px 40px #00000088' : '0 4px 20px #00000066',
       }}
     >
@@ -319,7 +328,6 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ffaa0044' }} />
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#00cc8844' }} />
         </div>
-
         <span style={{
           flex: 1, textAlign: 'center', fontSize: 11,
           color: isWatch ? '#ff3b5c88' : '#6b6b80',
@@ -334,7 +342,7 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         onMouseDown={e => e.stopPropagation()}
         style={{
           flex: 1, overflow: 'auto',
-          display: 'flex', alignItems: 'stretch', justifyContent: 'stretch',
+          display: 'flex', alignItems: 'stretch',
           flexDirection: 'column', minHeight: 0,
         }}
       >
