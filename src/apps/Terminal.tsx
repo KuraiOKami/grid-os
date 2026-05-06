@@ -13,6 +13,8 @@ import { useWalletStore } from '@/store/walletStore'
 import { useCareerStore } from '@/store/careerStore'
 import { HACK_NODES, HackFile } from '@/data/hackNodes'
 import { completeJob, acceptJob, getJob } from '@/store/jobStore'
+import { useMapStore } from '@/store/mapStore'
+import { getLocation } from '@/data/locations'
 
 const C = {
   bg:      '#0a0a0f',
@@ -90,8 +92,6 @@ const HELP_HACK = [
   '  disconnect        close connection and return to local shell',
   '  clear             clear terminal',
 ].join('\n')
-
-const TIER_STARS = ['☆☆☆☆☆', '★☆☆☆☆', '★★☆☆☆', '★★★☆☆', '★★★★☆', '★★★★★']
 
 const FAKE_PROCESSES = [
   { pid: 1,   name: 'init',          cpu: '0.0%',  mem: '0.1%'  },
@@ -473,22 +473,43 @@ export default function Terminal() {
       // ── Hacking ────────────────────────────────────────────────────────────
 
       case 'scan': {
-        const header  = 'ID            NAME                       TIER     STATUS'
-        const divider = '────────────  ─────────────────────────  ───────  ──────────────────────'
-        const rows = HACK_NODES.map(n => {
-          const tier   = n.tier === 0 ? 'NONE  ' : TIER_STARS[Math.min(n.tier, 5)].padEnd(6)
-          const status = n.status.toUpperCase().padEnd(10)
-          const note   = n.scanNote ? `  ← ${n.scanNote}` : ''
-          return `${n.id.padEnd(12)}  ${n.name.padEnd(25)}  ${tier}   ${status}${note}`
+        const locId   = useMapStore.getState().currentLocationId
+        const loc     = getLocation(locId)
+
+        push(mkLine('info', '[*] Scanning local network environment...'))
+        push(mkLine('info', `[*] Location: ${loc?.name ?? locId} (${loc?.district ?? ''})`))
+
+        if (!loc || loc.signals.length === 0) {
+          push(mkLine('output', '[*] No scannable networks detected at this location.'))
+          break
+        }
+
+        // Only show wifi and device signals — the hackable kinds
+        const hackable = loc.signals.filter(s => s.type === 'wifi' || s.type === 'device')
+        if (hackable.length === 0) {
+          push(mkLine('output', '[*] No hackable networks at this location. (Phones/BT visible in City Map)'))
+          break
+        }
+
+        const header  = 'NAME                       TYPE    TIER  STATUS'
+        const divider = '─────────────────────────  ──────  ────  ──────────────────────────'
+        const rows = hackable.map(sig => {
+          const tier   = sig.tier === 0 ? '[0]' : `[${sig.tier}]`
+          const status = sig.secured ? 'FIREWALLED' : 'OPEN / UNSECURED'
+          const note   = sig.hackNodeId ? `  → connect ${sig.hackNodeId}` : ''
+          return `${sig.name.padEnd(25)}  ${sig.type.toUpperCase().padEnd(6)}  ${tier.padEnd(4)}  ${status}${note}`
         })
 
-        push(mkLine('info',   '[*] Scanning local grid segment...'))
         push(mkLine('output', [header, divider, ...rows].join('\n')))
 
-        const unsecured = HACK_NODES.filter(n => n.tier === 0)
-        if (unsecured.length) {
-          push(mkLine('info', `[!] Unsecured node detected: ${unsecured[0].id} — use 'connect ${unsecured[0].id}'`))
-        }
+        const open = hackable.filter(s => !s.secured && s.hackNodeId)
+        open.forEach(s => {
+          push(mkLine('info', `[!] ${s.name} is accessible — use 'connect ${s.hackNodeId}'`))
+        })
+        const locked = hackable.filter(s => s.secured)
+        locked.forEach(s => {
+          push(mkLine('warn', `[!] ${s.name} — Tier ${s.tier} breach required`))
+        })
         break
       }
 
@@ -496,8 +517,19 @@ export default function Terminal() {
         const nodeId = args[0]
         if (!nodeId) { push(mkLine('error', 'usage: connect <node-id>')); break }
 
+        // Validate node exists in hack registry
         const node = HACK_NODES.find(n => n.id === nodeId)
-        if (!node) { push(mkLine('error', `connect: unknown node: ${nodeId}`)); break }
+        if (!node) { push(mkLine('error', `connect: unknown node identifier: ${nodeId}`)); break }
+
+        // Validate node is physically reachable from current location
+        const locId = useMapStore.getState().currentLocationId
+        const loc   = getLocation(locId)
+        const reachable = loc?.signals.some(s => s.hackNodeId === nodeId) ?? false
+        if (!reachable) {
+          push(mkLine('error',  `connect: ${node.name} is not reachable from ${loc?.name ?? locId}`))
+          push(mkLine('warn',   `[!] Travel to the node's physical location first. Check City Map.`))
+          break
+        }
 
         if (node.status === 'ghost') {
           push(mkLine('error', `connect: ${nodeId} — no route to host`))
@@ -506,12 +538,12 @@ export default function Terminal() {
         }
 
         if (node.tier > 0) {
-          push(mkLine('error',  `connect: ${node.name} — access requires Tier ${node.tier} breach sequence`))
-          push(mkLine('warn',   `[!] Pattern-match breach coming in a future update. Try node r114 to start.`))
+          push(mkLine('error', `connect: ${node.name} — Tier ${node.tier} breach sequence required`))
+          push(mkLine('warn',  '[!] Pattern-match breach system coming soon. Tier 0 nodes only for now.'))
           break
         }
 
-        // Tier 0 — unsecured
+        // Tier 0 — unsecured, connect directly
         push(
           mkLine('info',    `[*] Initiating connection to ${node.name}...`),
           mkLine('info',    '[*] Security check: NONE — node is unsecured.'),
