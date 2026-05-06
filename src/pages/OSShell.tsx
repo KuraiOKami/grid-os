@@ -1,4 +1,4 @@
-// ── OSShell.tsx ──────────────────────────────────────────────────────────────
+// ── OSShell.tsx ────────────────────────────────────────────────────────────
 // Main desktop shell. Reads unlockStore to determine which icons appear.
 
 import { useState, useEffect, useRef } from 'react'
@@ -8,6 +8,8 @@ import WatchApp   from '@/apps/WatchApp'
 import MailApp    from '@/apps/MailApp'
 import AppStore   from '@/apps/AppStore'
 import NodeApp    from '@/apps/NodeApp'
+import Terminal   from '@/apps/Terminal'
+import FileSystem from '@/apps/FileSystem'
 import RepHUD     from '@/components/RepHUD'
 import BootScreen from '@/components/BootScreen'
 import StartMenu  from '@/components/StartMenu'
@@ -46,8 +48,8 @@ const ALL_APPS = [
   { id: 'appstore', title: 'App Store',   icon: '[+]', w: 760, h: 520, accent: '#d6a2ff' },
   { id: 'watch',    title: 'Watch',       icon: '[W]', w: 780, h: 520, accent: '#ff3b5c' },
   { id: 'node',     title: 'NODE',        icon: '[~]', w: 780, h: 560, accent: '#00e5ff' },
-  { id: 'terminal', title: 'Terminal',    icon: '>_',  w: 620, h: 420, accent: '#00e5ff' },
-  { id: 'files',    title: 'File System', icon: '/fs', w: 660, h: 460, accent: '#00e5ff' },
+  { id: 'terminal', title: 'Terminal',    icon: '>_',  w: 680, h: 440, accent: '#00cc88' },
+  { id: 'files',    title: 'File System', icon: '/fs', w: 720, h: 500, accent: '#ffaa00' },
 ]
 
 let _topZ = 10
@@ -84,9 +86,9 @@ export default function OSShell() {
     ])
   }
 
-  const closeWin = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
+  const closeWin  = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
 
-  const focusWin = (id: string) => {
+  const focusWin  = (id: string) => {
     _topZ++
     setWins(prev => prev.map(w =>
       w.id === id ? { ...w, focused: true, z: _topZ } : { ...w, focused: false }
@@ -277,6 +279,8 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
     if (win.title === 'Mail')        return <MailApp />
     if (win.title === 'App Store')   return <AppStore />
     if (win.title === 'NODE')        return <NodeApp />
+    if (win.title === 'Terminal')    return <Terminal />
+    if (win.title === 'File System') return <FileSystem />
     return (
       <div style={{
         width: '100%', height: '100%',

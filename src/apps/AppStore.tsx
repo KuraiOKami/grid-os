@@ -1,4 +1,4 @@
-// ── AppStore.tsx ──────────────────────────────────────────────────────────────
+// ── AppStore.tsx ────────────────────────────────────────────────────────────
 // GridOS App Store. Apps are gated by tier, rep scores, and access codes.
 
 import { useState } from 'react'
@@ -37,19 +37,21 @@ interface AppEntry {
 
 const APPS: AppEntry[] = [
   // ─ CORPORATE ─
-  { id: 'gridos-suite', name: 'GridOS Suite',   publisher: 'GridOS Corp',        tier: 'CORPORATE',   desc: 'Official productivity tools — mail, calendar, ledger.',                                  price: 0 },
-  { id: 'node',         name: 'NODE',           publisher: 'NODE Network',        tier: 'CORPORATE',   desc: 'The Grid\'s social signal platform. Post, relay, follow. Watch what\'s trending on the Frequency board.', price: 0, unlockId: 'node' },
-  { id: 'pulse-reader', name: 'Pulse Reader',   publisher: 'Pulse News Network',  tier: 'CORPORATE',   desc: 'Live feed of the Pulse Network. Sanitised edition.',                                     price: 0 },
-  { id: 'gridmart',     name: 'GridMart',       publisher: 'GridOS Commerce',     tier: 'CORPORATE',   desc: 'Official marketplace. All transactions logged.',                                        price: 0 },
+  { id: 'gridos-suite', name: 'GridOS Suite',   publisher: 'GridOS Corp',         tier: 'CORPORATE',   desc: 'Official productivity tools — mail, calendar, ledger.',                                                                                         price: 0 },
+  { id: 'node',         name: 'NODE',           publisher: 'NODE Network',         tier: 'CORPORATE',   desc: 'The Grid\'s social signal platform. Post, relay, follow. Watch what\'s trending on the Frequency board.',                                       price: 0, unlockId: 'node' },
+  { id: 'terminal',     name: 'Terminal',       publisher: 'GridOS Corp',          tier: 'CORPORATE',   desc: 'GridShell (gsh) — command-line access to your local filesystem. ls, cd, cat, mkdir, rm, cp, mv, find, grep, exec and more.',                    price: 0, unlockId: 'terminal' },
+  { id: 'files',        name: 'File System',    publisher: 'GridOS Corp',          tier: 'CORPORATE',   desc: 'Graphical file manager. Browse, create, edit, and delete files in your local directory tree. Two-pane layout with inline editor.',                price: 0, unlockId: 'files' },
+  { id: 'pulse-reader', name: 'Pulse Reader',   publisher: 'Pulse News Network',   tier: 'CORPORATE',   desc: 'Live feed of the Pulse Network. Sanitised edition.',                                                                                          price: 0 },
+  { id: 'gridmart',     name: 'GridMart',       publisher: 'GridOS Commerce',      tier: 'CORPORATE',   desc: 'Official marketplace. All transactions logged.',                                                                                              price: 0 },
   // ─ FREELANCE ─
-  { id: 'courier-kit',  name: 'Courier Kit',    publisher: 'Anonymous',           tier: 'FREELANCE',   desc: 'Route management and package tracking for anonymous courier contracts. No logs.',          price: 300 },
-  { id: 'voidbay',      name: 'VoidBay',        publisher: 'VoidSyndicate',       tier: 'FREELANCE',   desc: 'Decentralised listing board for off-ledger goods and services.',                         price: 500 },
+  { id: 'courier-kit',  name: 'Courier Kit',    publisher: 'Anonymous',            tier: 'FREELANCE',   desc: 'Route management and package tracking for anonymous courier contracts. No logs.',                                                             price: 300 },
+  { id: 'voidbay',      name: 'VoidBay',        publisher: 'VoidSyndicate',        tier: 'FREELANCE',   desc: 'Decentralised listing board for off-ledger goods and services.',                                                                              price: 500 },
   // ─ RESTRICTED ─
-  { id: 'watch',        name: 'Watch',          publisher: 'GridOS Security',     tier: 'RESTRICTED',  desc: 'Compliance review and citizen surveillance system. Cleared analysts only.', price: 0, codeKey: 'WATCH-GRID-01', minCompliance: 0, unlockId: 'watch' },
-  { id: 'archivist',    name: 'Archivist',      publisher: 'Archivist Guild',     tier: 'RESTRICTED',  desc: 'Full access to the civic archive. Includes redacted document browser.',         price: 0, codeKey: 'ARC-GUILD-07', minCompliance: 20 },
+  { id: 'watch',        name: 'Watch',          publisher: 'GridOS Security',      tier: 'RESTRICTED',  desc: 'Compliance review and citizen surveillance system. Cleared analysts only.',                                price: 0, codeKey: 'WATCH-GRID-01', minCompliance: 0,  unlockId: 'watch' },
+  { id: 'archivist',    name: 'Archivist',      publisher: 'Archivist Guild',      tier: 'RESTRICTED',  desc: 'Full access to the civic archive. Includes redacted document browser.',                                    price: 0, codeKey: 'ARC-GUILD-07', minCompliance: 20 },
   // ─ UNDERGROUND ─
-  { id: 'shadownet',    name: 'ShadowNet',      publisher: 'Unknown',             tier: 'UNDERGROUND', desc: 'Encrypted peer-to-peer communications. No metadata. No trace.',                  price: 0, codeKey: 'SHD-??-??',   minShadow: 60 },
-  { id: 'rootterm',     name: 'ROOT Terminal',  publisher: 'ROOT BLOOM',          tier: 'UNDERGROUND', desc: 'Direct access to ROOT BLOOM coordination infrastructure.',                      price: 0, codeKey: 'ROOT-BLOOM-??', minShadow: 80 },
+  { id: 'shadownet',    name: 'ShadowNet',      publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Encrypted peer-to-peer communications. No metadata. No trace.',                                            price: 0, codeKey: 'SHD-??-??',    minShadow: 60 },
+  { id: 'rootterm',     name: 'ROOT Terminal',  publisher: 'ROOT BLOOM',           tier: 'UNDERGROUND', desc: 'Direct access to ROOT BLOOM coordination infrastructure.',                                                 price: 0, codeKey: 'ROOT-BLOOM-??', minShadow: 80 },
 ]
 
 const TIER_ORDER: Tier[] = ['CORPORATE', 'FREELANCE', 'RESTRICTED', 'UNDERGROUND']
@@ -93,9 +95,9 @@ export default function AppStore() {
     return codeInput.trim().toUpperCase() === app.codeKey.toUpperCase()
   }
   function canInstall(app: AppEntry) {
-    if (isInstalled)        return false
-    if (!meetsRep(app))     return false
-    if (app.price > 0)      return false
+    if (isInstalled)            return false
+    if (!meetsRep(app))         return false
+    if (app.price > 0)          return false
     if (app.codeKey && !codeValid(app)) return false
     return true
   }
