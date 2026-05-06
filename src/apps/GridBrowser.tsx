@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
+import { addJob } from '@/store/jobStore'
 
+// ── types ────────────────────────────────────────────────────────────────────
 type LinkItem = {
   label: string
   url: string
@@ -21,7 +23,7 @@ type PageData = {
   job?: JobOffer
 }
 
-// ── page registry ─────────────────────────────────────────────────────────────
+// ── page registry ────────────────────────────────────────────────────────────
 const PAGES: Record<string, PageData> = {
   'gridos.corp': {
     site: 'GridOS Corporate',
@@ -188,7 +190,7 @@ const PAGES: Record<string, PageData> = {
       'A deleted reply referenced: civic.archive/flowering',
     ],
     links: [
-      { label: 'Return to Forum',          url: 'yellowthread.forum' },
+      { label: 'Return to Forum',             url: 'yellowthread.forum' },
       { label: 'Try civic.archive/flowering', url: 'civic.archive/flowering' },
     ],
   },
@@ -289,7 +291,7 @@ const PAGES: Record<string, PageData> = {
   },
 }
 
-// ── theme map ─────────────────────────────────────────────────────────────────
+// ── theme map ────────────────────────────────────────────────────────────────
 const THEME_STYLES = {
   corp:   { header: '#00e5ff', badgeBg: 'rgba(0,229,255,0.12)',   badgeBorder: 'rgba(0,229,255,0.35)' },
   news:   { header: '#ffd166', badgeBg: 'rgba(255,209,102,0.12)', badgeBorder: 'rgba(255,209,102,0.35)' },
@@ -300,7 +302,7 @@ const THEME_STYLES = {
 
 const DEFAULT_URL = 'gridos.corp'
 
-// ── component ─────────────────────────────────────────────────────────────────
+// ── component ────────────────────────────────────────────────────────────────
 export default function GridBrowser() {
   const [currentUrl, setCurrentUrl] = useState(DEFAULT_URL)
   const [input, setInput]           = useState(DEFAULT_URL)
@@ -336,6 +338,7 @@ export default function GridBrowser() {
 
     const target = PAGES[normalized]
     if (target?.job) {
+      addJob({ ...target.job, source: normalized })
       showToast(`New job posted to Job Board: "${target.job.title}"`)
     }
   }
