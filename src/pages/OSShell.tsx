@@ -1,6 +1,5 @@
 // ── OSShell.tsx ──────────────────────────────────────────────────────────────
 // Main desktop shell. Reads unlockStore to determine which icons appear.
-// Watch icon only shows after the player installs it via the App Store.
 
 import { useState, useEffect, useRef } from 'react'
 import GridBrowser from '@/apps/GridBrowser'
@@ -8,6 +7,7 @@ import JobBoard    from '@/apps/JobBoard'
 import WatchApp   from '@/apps/WatchApp'
 import MailApp    from '@/apps/MailApp'
 import AppStore   from '@/apps/AppStore'
+import NodeApp    from '@/apps/NodeApp'
 import RepHUD     from '@/components/RepHUD'
 import BootScreen from '@/components/BootScreen'
 import StartMenu  from '@/components/StartMenu'
@@ -45,6 +45,7 @@ const ALL_APPS = [
   { id: 'jobs',     title: 'Job Board',   icon: '[ ]', w: 700, h: 500, accent: '#00cc88' },
   { id: 'appstore', title: 'App Store',   icon: '[+]', w: 760, h: 520, accent: '#d6a2ff' },
   { id: 'watch',    title: 'Watch',       icon: '[W]', w: 780, h: 520, accent: '#ff3b5c' },
+  { id: 'node',     title: 'NODE',        icon: '[~]', w: 780, h: 560, accent: '#00e5ff' },
   { id: 'terminal', title: 'Terminal',    icon: '>_',  w: 620, h: 420, accent: '#00e5ff' },
   { id: 'files',    title: 'File System', icon: '/fs', w: 660, h: 460, accent: '#00e5ff' },
 ]
@@ -52,10 +53,10 @@ const ALL_APPS = [
 let _topZ = 10
 
 export default function OSShell() {
-  const [booted,    setBooted]    = useState(false)
-  const [wins,      setWins]      = useState<Win[]>([])
-  const [time,      setTime]      = useState('')
-  const [menuOpen,  setMenuOpen]  = useState(false)
+  const [booted,   setBooted]   = useState(false)
+  const [wins,     setWins]     = useState<Win[]>([])
+  const [time,     setTime]     = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const unreadCount = useMailStore(s => s.unreadCount)()
   const installed   = useUnlockStore(s => s.installed)
@@ -99,7 +100,6 @@ export default function OSShell() {
     <>
       {!booted && <BootScreen onDone={() => setBooted(true)} />}
 
-      {/* Start menu portal — rendered above everything */}
       {menuOpen && (
         <StartMenu
           onClose={() => setMenuOpen(false)}
@@ -113,9 +113,8 @@ export default function OSShell() {
         fontFamily: "'JetBrains Mono', monospace",
         opacity: booted ? 1 : 0, transition: 'opacity 0.4s ease',
       }}>
-        {/* ── Desktop ── */}
+        {/* Desktop */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-
           <div style={{
             position: 'absolute', top: 24, left: 24,
             display: 'flex', flexDirection: 'column', gap: 20,
@@ -143,13 +142,12 @@ export default function OSShell() {
           ))}
         </div>
 
-        {/* ── Taskbar ── */}
+        {/* Taskbar */}
         <div style={{
           height: 44, background: C.surface, borderTop: `1px solid ${C.border}`,
           display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8,
           flexShrink: 0, position: 'relative', zIndex: 100,
         }}>
-          {/* GRID start button */}
           <button
             onClick={() => setMenuOpen(v => !v)}
             style={{
@@ -158,8 +156,7 @@ export default function OSShell() {
               border: `1px solid ${C.accent}`,
               borderRadius: 4,
               background: menuOpen ? C.accent : 'none',
-              cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'all 0.15s',
+              cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
             }}
           >
             GRID
@@ -167,7 +164,6 @@ export default function OSShell() {
 
           <div style={{ width: 1, height: 20, background: C.border }} />
 
-          {/* Open window buttons */}
           <div style={{ flex: 1, display: 'flex', gap: 4 }}>
             {wins.map(w => (
               <button key={w.id} onClick={() => focusWin(w.id)} style={{
@@ -197,7 +193,7 @@ export default function OSShell() {
   )
 }
 
-// ── Desktop Icon ──────────────────────────────────────────────────────────────
+// ── Desktop Icon
 function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
   icon: string; label: string; accent?: string; badge?: number; onClick: () => void
 }) {
@@ -247,7 +243,7 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
   )
 }
 
-// ── OS Window ─────────────────────────────────────────────────────────────────
+// ── OS Window
 function OsWindow({ win, onClose, onFocus, onMove }: {
   win: Win
   onClose: () => void
@@ -280,6 +276,7 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
     if (win.title === 'Watch')       return <WatchApp />
     if (win.title === 'Mail')        return <MailApp />
     if (win.title === 'App Store')   return <AppStore />
+    if (win.title === 'NODE')        return <NodeApp />
     return (
       <div style={{
         width: '100%', height: '100%',
@@ -305,7 +302,6 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         boxShadow: win.focused ? '0 8px 40px #00000088' : '0 4px 20px #00000066',
       }}
     >
-      {/* Title bar */}
       <div
         onMouseDown={startDrag}
         style={{
@@ -320,24 +316,19 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={e => { e.stopPropagation(); onClose() }}
-            style={{
-              width: 12, height: 12, borderRadius: '50%',
-              border: 'none', cursor: 'pointer', background: '#ff3b5cbb',
-            }}
+            style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#ff3b5cbb' }}
           />
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ffaa0044' }} />
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#00cc8844' }} />
         </div>
         <span style={{
           flex: 1, textAlign: 'center', fontSize: 11,
-          color: isWatch ? '#ff3b5c88' : '#6b6b80',
-          fontFamily: 'inherit',
+          color: isWatch ? '#ff3b5c88' : '#6b6b80', fontFamily: 'inherit',
         }}>
           {win.title}
         </span>
       </div>
 
-      {/* Body */}
       <div
         onMouseDown={e => e.stopPropagation()}
         style={{
