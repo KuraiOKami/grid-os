@@ -1,20 +1,16 @@
-// ── AppStore.tsx ────────────────────────────────────────────────────────────
-// The official GridOS app marketplace.
-// Corporate apps are always visible. Special/underground apps
-// require an unlock code delivered via email or job completion.
-//
-// Installing an app fires useUnlockStore.unlock(appKey)
-// which OSShell reads to add the icon to the desktop.
+// ── AppStore.tsx ──────────────────────────────────────────────────────────────
+// GridOS App Store. Apps are gated by tier, rep scores, and access codes.
+// Installing Watch sets a flag in unlockStore so OSShell can show the icon.
 
 import { useState } from 'react'
-import { useUnlockStore } from '@/store/unlockStore'
 import { useRepStore } from '@/store/reputationStore'
+import { useUnlockStore } from '@/store/unlockStore'
 
 const C = {
-  bg:      '#090b12',
-  surface: '#0d111a',
-  surf2:   '#111520',
-  border:  '#202636',
+  bg:      '#0a0a0f',
+  surface: '#111118',
+  surf2:   '#16161f',
+  border:  '#2a2a3a',
   text:    '#c8c8d8',
   muted:   '#6b6b80',
   faint:   '#3a3a4a',
@@ -25,252 +21,185 @@ const C = {
   violet:  '#d6a2ff',
 }
 
-type AppTier = 'corporate' | 'freelance' | 'restricted' | 'underground'
+type Tier = 'CORPORATE' | 'FREELANCE' | 'RESTRICTED' | 'UNDERGROUND'
 
-interface AppListing {
-  id: string
-  name: string
-  publisher: string
-  description: string
-  tier: AppTier
-  unlockKey: string       // key written to unlockStore on install
-  accessCode?: string     // if set, player must enter this code to install
-  requireCompliance?: number
-  requireShadow?: number
-  price: string           // display only for now
-  icon: string
+interface AppEntry {
+  id:          string
+  name:        string
+  publisher:   string
+  tier:        Tier
+  desc:        string
+  price:       number
+  codeKey?:    string   // required access code value (if any)
+  minCompliance?: number
+  minShadow?:  number
+  unlockId?:   string   // key written to unlockStore on install
 }
 
-const TIER_COLOR: Record<AppTier, string> = {
-  corporate:   C.accent,
-  freelance:   C.success,
-  restricted:  C.warn,
-  underground: C.violet,
-}
-
-const TIER_LABEL: Record<AppTier, string> = {
-  corporate:   'CORPORATE',
-  freelance:   'FREELANCE',
-  restricted:  'RESTRICTED',
-  underground: 'UNDERGROUND',
-}
-
-const APPS: AppListing[] = [
-  // ─ Corporate tier ────────────────────────────────────────────────────
-  {
-    id: 'gridos-suite',
-    name: 'GridOS Suite',
-    publisher: 'GridOS Corp',
-    description: 'Standard productivity tools. File manager, calendar, compliance tracker. Pre-installed on all registered nodes.',
-    tier: 'corporate',
-    unlockKey: 'app_gridos_suite',
-    price: 'Free — bundled',
-    icon: '[G]',
-  },
-  {
-    id: 'pulse-reader',
-    name: 'Pulse Reader',
-    publisher: 'Pulse News Network',
-    description: 'Certified news aggregator. GridOS-approved sources only. Deviation alerts enabled.',
-    tier: 'corporate',
-    unlockKey: 'app_pulse_reader',
-    price: 'Free',
-    icon: '[P]',
-  },
-  {
-    id: 'gridmart-client',
-    name: 'GridMart',
-    publisher: 'GridOS Commerce',
-    description: 'Official marketplace. Buy hardware, software licenses, and tools. Loyalty score affects pricing.',
-    tier: 'corporate',
-    unlockKey: 'app_gridmart',
-    price: 'Free',
-    icon: '[M]',
-  },
-  // ─ Freelance tier ────────────────────────────────────────────────────
-  {
-    id: 'courier-kit',
-    name: 'Courier Kit',
-    publisher: 'Anonymous',
-    description: 'Route management and package tracking for anonymous courier contracts. No logs. No receipts.',
-    tier: 'freelance',
-    unlockKey: 'app_courier_kit',
-    price: '₳ 300',
-    icon: '[C]',
-  },
-  {
-    id: 'voidbay-client',
-    name: 'VoidBay',
-    publisher: 'VoidSyndicate',
-    description: 'Grey market auction board. Buy and sell outside GridOS commerce rails. Prices fluctuate. Identity optional.',
-    tier: 'freelance',
-    unlockKey: 'app_voidbay',
-    price: '₳ 500',
-    icon: '[V]',
-  },
-  // ─ Restricted tier (need access code from email) ──────────────────
-  {
-    id: 'watch',
-    name: 'Watch',
-    publisher: 'GridOS Compliance Division',
-    description: 'Citizen review and compliance analysis tool. Authorised analysts only. Access code required.',
-    tier: 'restricted',
-    unlockKey: 'app_watch',
-    accessCode: 'WATCH-GRID-01',
-    requireCompliance: 40,
-    price: 'Contract-issued',
-    icon: '[■]',
-  },
-  {
-    id: 'node-scanner',
-    name: 'NodeScan',
-    publisher: 'GridOS Security',
-    description: 'Network topology scanner. Maps active nodes and flags suspicious traffic. Security clearance required.',
-    tier: 'restricted',
-    unlockKey: 'app_nodescan',
-    accessCode: 'SCAN-SEC-07',
-    requireCompliance: 60,
-    price: 'Contract-issued',
-    icon: '[~]',
-  },
-  // ─ Underground tier (shadow rep + code) ──────────────────────────
-  {
-    id: 'ghost-terminal',
-    name: 'Ghost Terminal',
-    publisher: '[REDACTED]',
-    description: 'Unlogged terminal session. Commands executed here leave no trace in GridOS activity records.',
-    tier: 'underground',
-    unlockKey: 'app_ghost_terminal',
-    accessCode: 'GHOST-NULL-00',
-    requireShadow: 60,
-    price: 'Unknown',
-    icon: '[x]',
-  },
-  {
-    id: 'archivist-viewer',
-    name: 'Archive Viewer',
-    publisher: 'Archivist Guild',
-    description: 'Decrypts and displays protected Civic Archive documents. For those with the right access and the right friends.',
-    tier: 'underground',
-    unlockKey: 'app_archive_viewer',
-    accessCode: 'ARC-BLOOM-33',
-    requireShadow: 40,
-    price: 'Earned',
-    icon: '[A]',
-  },
+const APPS: AppEntry[] = [
+  { id: 'gridos-suite', name: 'GridOS Suite',   publisher: 'GridOS Corp',        tier: 'CORPORATE',    desc: 'Official productivity tools — mail, calendar, ledger.',                         price: 0   },
+  { id: 'pulse-reader', name: 'Pulse Reader',   publisher: 'Pulse News Network', tier: 'CORPORATE',    desc: 'Live feed of the Pulse Network. Sanitised edition.',                           price: 0   },
+  { id: 'gridmart',     name: 'GridMart',       publisher: 'GridOS Commerce',    tier: 'CORPORATE',    desc: 'Official marketplace. All transactions logged.',                               price: 0   },
+  { id: 'courier-kit',  name: 'Courier Kit',    publisher: 'Anonymous',          tier: 'FREELANCE',    desc: 'Route management and package tracking for anonymous courier contracts. No logs. No receipts.', price: 300 },
+  { id: 'voidbay',      name: 'VoidBay',        publisher: 'VoidSyndicate',      tier: 'FREELANCE',    desc: 'Decentralised listing board for off-ledger goods and services.',                 price: 500 },
+  { id: 'watch',        name: 'Watch',          publisher: 'GridOS Security',    tier: 'RESTRICTED',   desc: 'Compliance review and citizen surveillance system. Cleared analysts only.', price: 0, codeKey: 'WATCH-GRID-01', minCompliance: 0, unlockId: 'watch' },
+  { id: 'archivist',    name: 'Archivist',      publisher: 'Archivist Guild',    tier: 'RESTRICTED',   desc: 'Full access to the civic archive. Includes redacted document browser.',         price: 0,   codeKey: 'ARC-GUILD-07', minCompliance: 20 },
+  { id: 'shadownet',    name: 'ShadowNet',      publisher: 'Unknown',            tier: 'UNDERGROUND',  desc: 'Encrypted peer-to-peer communications. No metadata. No trace.',                  price: 0,   codeKey: 'SHD-??-??',   minShadow: 60 },
+  { id: 'rootterm',     name: 'ROOT Terminal',  publisher: 'ROOT BLOOM',         tier: 'UNDERGROUND',  desc: 'Direct access to ROOT BLOOM coordination infrastructure.',                      price: 0,   codeKey: 'ROOT-BLOOM-??', minShadow: 80 },
 ]
 
+const TIER_ORDER: Tier[] = ['CORPORATE', 'FREELANCE', 'RESTRICTED', 'UNDERGROUND']
+
+const TIER_COLOR: Record<Tier, string> = {
+  CORPORATE:   C.accent,
+  FREELANCE:   C.success,
+  RESTRICTED:  C.warn,
+  UNDERGROUND: C.danger,
+}
+
+const TIER_DESC: Record<Tier, string> = {
+  CORPORATE:   'Official GridOS-approved applications',
+  FREELANCE:   'Third-party tools — unverified, functional',
+  RESTRICTED:  'Requires access code + rep clearance',
+  UNDERGROUND: 'Not officially distributed — enter at your own risk',
+}
+
 export default function AppStore() {
-  const unlock       = useUnlockStore(s => s.unlock)
-  const hasUnlock    = useUnlockStore(s => s.has)
-  const compliance   = useRepStore(s => s.compliance)
-  const shadow       = useRepStore(s => s.shadow)
+  const compliance  = useRepStore(s => s.compliance)
+  const shadow      = useRepStore(s => s.shadow)
+  const installed   = useUnlockStore(s => s.installed)
+  const install     = useUnlockStore(s => s.install)
 
-  const [selected, setSelected] = useState<AppListing | null>(null)
-  const [codeInput, setCodeInput] = useState('')
-  const [codeError, setCodeError] = useState('')
-  const [filter, setFilter]  = useState<AppTier | 'all'>('all')
+  const [activeFilter, setActiveFilter] = useState<'ALL' | Tier>('ALL')
+  const [selectedId,   setSelectedId]   = useState<string>(APPS[0].id)
+  const [codeInput,    setCodeInput]    = useState('')
+  const [codeError,    setCodeError]    = useState('')
+  const [justInstalled, setJustInstalled] = useState<string | null>(null)
 
-  const visible = APPS.filter(a => filter === 'all' || a.tier === filter)
+  const filters: ('ALL' | Tier)[] = ['ALL', ...TIER_ORDER]
 
-  function isInstalled(app: AppListing) {
-    return hasUnlock(app.unlockKey)
-  }
+  const visible = activeFilter === 'ALL'
+    ? APPS
+    : APPS.filter(a => a.tier === activeFilter)
 
-  function meetsRepReq(app: AppListing) {
-    if (app.requireCompliance && compliance < app.requireCompliance) return false
-    if (app.requireShadow     && shadow     < app.requireShadow)     return false
+  const selected = APPS.find(a => a.id === selectedId)!
+  const isInstalled = installed.includes(selected.id)
+
+  function meetsRep(app: AppEntry) {
+    if ((app.minCompliance ?? 0) > compliance) return false
+    if ((app.minShadow ?? 0) > shadow) return false
     return true
   }
 
-  function tryInstall(app: AppListing) {
-    if (!meetsRepReq(app)) {
-      setCodeError('Reputation requirement not met.')
+  function codeValid(app: AppEntry) {
+    if (!app.codeKey) return true
+    return codeInput.trim().toUpperCase() === app.codeKey.toUpperCase()
+  }
+
+  function canInstall(app: AppEntry) {
+    if (isInstalled) return false
+    if (!meetsRep(app)) return false
+    if (app.price > 0) return false   // payment not yet implemented
+    if (app.codeKey && !codeValid(app)) return false
+    return true
+  }
+
+  function handleInstall() {
+    if (!canInstall(selected)) {
+      if (selected.codeKey && !codeValid(selected)) {
+        setCodeError('Invalid access code.')
+      }
       return
     }
-    if (app.accessCode) {
-      if (codeInput.trim().toUpperCase() !== app.accessCode) {
-        setCodeError('Invalid access code.')
-        return
-      }
-    }
-    unlock(app.unlockKey)
+    install(selected.id)
+    if (selected.unlockId) install(selected.unlockId)
+    setJustInstalled(selected.id)
     setCodeError('')
-    setCodeInput('')
+    setTimeout(() => setJustInstalled(null), 2500)
+  }
+
+  function lockReason(app: AppEntry): string {
+    if (isInstalled) return ''
+    if (app.price > 0) return `Price  ₢ ${app.price}  (payment coming soon)`
+    const parts: string[] = []
+    if ((app.minCompliance ?? 0) > compliance)
+      parts.push(`GRID ≥ ${app.minCompliance} (yours: ${compliance})`)
+    if ((app.minShadow ?? 0) > shadow)
+      parts.push(`SHADOW ≥ ${app.minShadow} (yours: ${shadow})`)
+    if (app.codeKey)
+      parts.push(`Access code required`)
+    return parts.join('  ·  ')
   }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
-      background: C.bg, color: C.text, fontFamily: "'JetBrains Mono', monospace",
-      overflow: 'hidden', fontSize: 12 }}>
+      background: C.bg, color: C.text,
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
 
       {/* Header */}
-      <div style={{ padding: '12px 18px 10px', borderBottom: `1px solid ${C.border}`,
+      <div style={{ padding: '10px 16px 8px', borderBottom: `1px solid ${C.border}`,
         background: C.surf2, flexShrink: 0 }}>
-        <div style={{ fontSize: 14, color: C.accent, fontWeight: 'bold', marginBottom: 2 }}>
-          APP STORE
-        </div>
-        <div style={{ fontSize: 10, color: C.muted }}>
+        <div style={{ fontSize: 14, color: C.violet, fontWeight: 'bold' }}>APP STORE</div>
+        <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>
           GridOS official distribution — and beyond
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div style={{ display: 'flex', gap: 4, padding: '8px 14px',
-        borderBottom: `1px solid ${C.border}`, background: C.surface,
-        flexShrink: 0 }}>
-        {(['all', 'corporate', 'freelance', 'restricted', 'underground'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            style={{ padding: '3px 10px', fontSize: 10, borderRadius: 4,
-              border: `1px solid ${filter === f
-                ? (f === 'all' ? C.accent : TIER_COLOR[f as AppTier])
-                : C.border}`,
-              background: filter === f ? 'none' : 'none',
-              color: filter === f
-                ? (f === 'all' ? C.accent : TIER_COLOR[f as AppTier])
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`,
+        background: C.surface, flexShrink: 0 }}>
+        {filters.map(f => (
+          <button key={f}
+            onClick={() => setActiveFilter(f)}
+            style={{
+              padding: '7px 14px', fontSize: 10, border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', letterSpacing: '0.08em',
+              borderBottom: activeFilter === f
+                ? `2px solid ${f === 'ALL' ? C.violet : TIER_COLOR[f as Tier]}`
+                : '2px solid transparent',
+              background: activeFilter === f ? C.surf2 : 'none',
+              color: activeFilter === f
+                ? (f === 'ALL' ? C.violet : TIER_COLOR[f as Tier])
                 : C.muted,
-              cursor: 'pointer', fontFamily: 'inherit',
-              letterSpacing: '0.06em' }}>
-            {f.toUpperCase()}
+              transition: 'all 0.12s',
+            }}>
+            {f}
           </button>
         ))}
       </div>
 
-      {/* Split view */}
+      {/* Body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* App list */}
         <div style={{ width: 240, borderRight: `1px solid ${C.border}`,
           overflow: 'auto', flexShrink: 0 }}>
           {visible.map(app => {
-            const installed  = isInstalled(app)
-            const meetsRep   = meetsRepReq(app)
-            const tierColor  = TIER_COLOR[app.tier]
-            const isActive   = selected?.id === app.id
+            const tc = TIER_COLOR[app.tier]
+            const isActive = app.id === selectedId
+            const inst = installed.includes(app.id)
             return (
-              <button key={app.id} onClick={() => { setSelected(app); setCodeInput(''); setCodeError('') }}
-                style={{ width: '100%', textAlign: 'left',
+              <button key={app.id}
+                onClick={() => { setSelectedId(app.id); setCodeInput(''); setCodeError('') }}
+                style={{
+                  width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+                  padding: '10px 12px',
                   background: isActive ? C.surf2 : 'none',
-                  border: 'none', borderBottom: `1px solid ${C.border}`,
-                  borderLeft: `3px solid ${isActive ? tierColor : 'transparent'}`,
-                  padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit',
-                  opacity: (!meetsRep && !installed) ? 0.5 : 1,
-                  transition: 'background 0.12s' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'center', marginBottom: 3 }}>
-                  <span style={{ fontSize: 10, color: tierColor,
-                    letterSpacing: '0.06em' }}>
-                    {TIER_LABEL[app.tier]}
-                  </span>
-                  {installed && (
-                    <span style={{ fontSize: 9, color: C.success }}>✓ installed</span>
-                  )}
+                  borderBottom: `1px solid ${C.border}`,
+                  borderLeft: isActive ? `2px solid ${tc}` : '2px solid transparent',
+                  fontFamily: 'inherit', transition: 'background 0.12s',
+                }}>
+                <div style={{ fontSize: 9, color: tc, letterSpacing: '0.1em',
+                  marginBottom: 3 }}>{app.tier}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, color: tc, fontWeight: 'bold',
+                    fontFamily: 'inherit' }}>[{app.name[0]}]</span>
+                  <span style={{ fontSize: 11,
+                    color: isActive ? C.text : C.muted }}>{app.name}</span>
+                  {inst && <span style={{ fontSize: 9, color: C.success,
+                    marginLeft: 'auto' }}>✓</span>}
                 </div>
-                <div style={{ fontSize: 11, color: isActive ? C.text : C.muted,
-                  fontWeight: isActive ? 'bold' : 'normal' }}>
-                  {app.icon} {app.name}
-                </div>
-                <div style={{ fontSize: 9, color: C.faint, marginTop: 2 }}>
+                <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>
                   {app.publisher}
                 </div>
               </button>
@@ -279,144 +208,124 @@ export default function AppStore() {
         </div>
 
         {/* Detail pane */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
-          {selected ? (
-            <AppDetail
-              app={selected}
-              installed={isInstalled(selected)}
-              meetsRep={meetsRepReq(selected)}
-              compliance={compliance}
-              shadow={shadow}
-              codeInput={codeInput}
-              codeError={codeError}
-              onCodeChange={v => { setCodeInput(v); setCodeError('') }}
-              onInstall={() => tryInstall(selected)}
-            />
-          ) : (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', flexDirection: 'column', gap: 8,
-              color: C.faint }}>
-              <span style={{ fontSize: 22 }}>[+]</span>
-              <span style={{ fontSize: 11 }}>Select an app</span>
+        <div style={{ flex: 1, overflow: 'auto', padding: '18px 20px',
+          display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          <div style={{ fontSize: 9, color: TIER_COLOR[selected.tier],
+            letterSpacing: '0.12em' }}>{selected.tier}</div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 8,
+              border: `1px solid ${TIER_COLOR[selected.tier]}44`,
+              background: C.surf2,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16, color: TIER_COLOR[selected.tier], fontWeight: 'bold' }}>
+              [{selected.name[0]}]
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── App detail pane ───────────────────────────────────────────────────────────
-function AppDetail({
-  app, installed, meetsRep, compliance, shadow,
-  codeInput, codeError, onCodeChange, onInstall
-}: {
-  app: AppListing
-  installed: boolean
-  meetsRep: boolean
-  compliance: number
-  shadow: number
-  codeInput: string
-  codeError: string
-  onCodeChange: (v: string) => void
-  onInstall: () => void
-}) {
-  const tierColor = TIER_COLOR[app.tier]
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-      {/* App header */}
-      <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 14 }}>
-        <div style={{ fontSize: 10, color: tierColor, letterSpacing: '0.1em',
-          marginBottom: 6 }}>
-          {TIER_LABEL[app.tier]}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <span style={{ fontSize: 20, color: tierColor }}>{app.icon}</span>
-          <div>
-            <div style={{ fontSize: 14, color: C.text }}>{app.name}</div>
-            <div style={{ fontSize: 10, color: C.muted }}>{app.publisher}</div>
+            <div>
+              <div style={{ fontSize: 15, color: C.text, fontWeight: 'bold' }}>
+                {selected.name}
+              </div>
+              <div style={{ fontSize: 10, color: C.muted }}>{selected.publisher}</div>
+            </div>
           </div>
-        </div>
-        <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.7 }}>
-          {app.description}
-        </div>
-      </div>
 
-      {/* Requirements */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.1em' }}>REQUIREMENTS</div>
-        <ReqRow label="Price" value={app.price} met />
-        {app.requireCompliance && (
-          <ReqRow
-            label={`GRID ≥ ${app.requireCompliance}`}
-            value={`current: ${compliance}`}
-            met={compliance >= app.requireCompliance}
-          />
-        )}
-        {app.requireShadow && (
-          <ReqRow
-            label={`SHADOW ≥ ${app.requireShadow}`}
-            value={`current: ${shadow}`}
-            met={shadow >= app.requireShadow}
-          />
-        )}
-        {app.accessCode && (
-          <ReqRow label="Access code" value="required" met={false} />
-        )}
-      </div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
+            {selected.desc}
+          </div>
 
-      {/* Install section */}
-      {installed ? (
-        <div style={{ padding: '10px 14px', borderRadius: 6,
-          border: `1px solid ${C.success}44`, background: `${C.success}0f`,
-          fontSize: 11, color: C.success }}>
-          ✓ Installed
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {app.accessCode && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.08em' }}>
-                ACCESS CODE
+          <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.1em' }}>
+            {TIER_DESC[selected.tier]}
+          </div>
+
+          <div style={{ height: 1, background: C.border }} />
+
+          {/* Requirements */}
+          <div>
+            <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.12em',
+              marginBottom: 8 }}>REQUIREMENTS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Req label="Price" value={
+                selected.price > 0 ? `₢ ${selected.price}` : 'Free'
+              } ok={selected.price === 0} />
+              {(selected.minCompliance ?? 0) > 0 && (
+                <Req label="GRID rep" value={`≥ ${selected.minCompliance}`}
+                  ok={compliance >= (selected.minCompliance ?? 0)}
+                  current={compliance} />
+              )}
+              {(selected.minShadow ?? 0) > 0 && (
+                <Req label="SHADOW rep" value={`≥ ${selected.minShadow}`}
+                  ok={shadow >= (selected.minShadow ?? 0)}
+                  current={shadow} />
+              )}
+              {selected.codeKey && (
+                <Req label="Access code" value="required" ok={codeValid(selected)} />
+              )}
+            </div>
+          </div>
+
+          {/* Code input */}
+          {selected.codeKey && !isInstalled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.1em' }}>
+                ENTER ACCESS CODE
               </div>
               <input
                 value={codeInput}
-                onChange={e => onCodeChange(e.target.value)}
-                placeholder="Enter code..."
-                style={{ background: C.surface, border: `1px solid ${codeError ? C.danger : C.border}`,
-                  borderRadius: 4, padding: '6px 10px', color: C.text,
-                  fontFamily: 'inherit', fontSize: 11, outline: 'none' }}
+                onChange={e => { setCodeInput(e.target.value); setCodeError('') }}
+                placeholder="XXXX-XXXX-XX"
+                style={{
+                  background: C.surface, border: `1px solid ${codeError ? C.danger : C.border}`,
+                  borderRadius: 4, padding: '7px 10px', color: C.accent,
+                  fontSize: 12, fontFamily: 'inherit',
+                  outline: 'none', letterSpacing: '0.1em',
+                }}
               />
               {codeError && (
                 <div style={{ fontSize: 10, color: C.danger }}>{codeError}</div>
               )}
             </div>
           )}
-          <button onClick={onInstall}
-            disabled={!meetsRep}
-            style={{ padding: '9px 0', borderRadius: 6, fontSize: 12,
-              fontWeight: 'bold', fontFamily: 'inherit', letterSpacing: '0.08em',
-              border: `1px solid ${meetsRep ? tierColor + '88' : C.faint}`,
-              background: meetsRep ? `${tierColor}18` : 'none',
-              color: meetsRep ? tierColor : C.faint,
-              cursor: meetsRep ? 'pointer' : 'default',
-              transition: 'all 0.2s' }}>
-            {meetsRep ? 'INSTALL' : 'LOCKED'}
-          </button>
+
+          {/* Install / installed */}
+          {isInstalled ? (
+            <div style={{ padding: '10px 0', fontSize: 12, color: C.success,
+              letterSpacing: '0.08em' }}>✓ INSTALLED</div>
+          ) : justInstalled === selected.id ? (
+            <div style={{ padding: '10px 0', fontSize: 12, color: C.success,
+              letterSpacing: '0.08em', animation: 'none' }}>✓ INSTALLING...</div>
+          ) : (
+            <button
+              onClick={handleInstall}
+              disabled={!canInstall(selected)}
+              style={{
+                padding: '10px 0', borderRadius: 6, fontSize: 12,
+                fontWeight: 'bold', fontFamily: 'inherit',
+                letterSpacing: '0.08em', cursor: canInstall(selected) ? 'pointer' : 'default',
+                border: `1px solid ${canInstall(selected) ? C.success + '88' : C.faint}`,
+                background: canInstall(selected) ? `${C.success}22` : 'none',
+                color: canInstall(selected) ? C.success : C.faint,
+                transition: 'all 0.15s',
+              }}>
+              {canInstall(selected) ? 'INSTALL' : `LOCKED  —  ${lockReason(selected)}`}
+            </button>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
-function ReqRow({ label, value, met }: { label: string; value: string; met: boolean }) {
+function Req({ label, value, ok, current }:
+  { label: string; value: string; ok: boolean; current?: number }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between',
-      fontSize: 10, padding: '3px 0', borderBottom: `1px solid ${C.faint}22` }}>
-      <span style={{ color: met ? C.muted : C.danger }}>{label}</span>
-      <span style={{ color: met ? C.success : C.warn }}>{value}</span>
+      fontSize: 11, color: C.muted }}>
+      <span>{label}</span>
+      <span style={{ color: ok ? C.success : C.danger }}>
+        {ok ? '✓ ' : '✗ '}{value}
+        {current !== undefined && !ok && ` (you: ${current})`}
+      </span>
     </div>
   )
 }

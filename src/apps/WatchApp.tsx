@@ -1,9 +1,11 @@
 // ── WatchApp.tsx ────────────────────────────────────────────────────────────
 // Compliance surveillance app. Players review NPC citizen case files
 // and submit decisions that shift the dual reputation axes.
+// After the first submission, a reactive mail is sent via mailStore.
 
-import { useState } from 'react'
-import { useRepStore, REP_EVENTS } from '@/store/reputationStore'
+import { useState, useRef } from 'react'
+import { useRepStore } from '@/store/reputationStore'
+import { useMailStore } from '@/store/mailStore'
 
 // ── types ─────────────────────────────────────────────────────────────────
 type Decision = 'no_threat' | 'low_concern' | 'flag' | 'escalate' | 'bury'
@@ -21,11 +23,8 @@ interface CaseFile {
   history: string[]
   messages: Message[]
   jobHistory: string[]
-  // Which options are available (bury requires shadow >= 40)
   hasBury: boolean
-  // Flavour shown after submission
   outcome: Record<Decision, string>
-  // Rep changes per decision
   repChanges: Record<Decision, { compliance: number; shadow: number }>
 }
 
@@ -145,15 +144,15 @@ const CASES: CaseFile[] = [
       no_threat:   { compliance: -1,  shadow: +1  },
       low_concern: { compliance: +1,  shadow:  0  },
       flag:        { compliance: +2,  shadow: -1  },
-      escalate:    { compliance: -2,  shadow: -2  }, // counter-investigation hits you too
-      bury:        { compliance: -1,  shadow: +4  }, // he owes you big
+      escalate:    { compliance: -2,  shadow: -2  },
+      bury:        { compliance: -1,  shadow: +4  },
     },
     outcome: {
       no_threat:   'v.thresh keeps selling internal data. You keep your own record clean.',
       low_concern: 'A soft audit is opened. v.thresh slows down. Temporarily.',
       flag:        'v.thresh is suspended pending review. His files may mention yours.',
       escalate:    'v.thresh is taken in. The counter-investigation opens. It includes your logs.',
-      bury:        'File buried. v.thresh knows. He routes you a cut — \u20b3 800 deposited.',
+      bury:        'File buried. v.thresh knows. He routes you a cut — ₢ 800 deposited.',
     },
   },
   {
@@ -182,8 +181,8 @@ const CASES: CaseFile[] = [
       no_threat:   { compliance: -1,  shadow: +2  },
       low_concern: { compliance: +1,  shadow: -1  },
       flag:        { compliance: +3,  shadow: -3  },
-      escalate:    { compliance: +5,  shadow: -6  }, // archive goes down with her
-      bury:        { compliance: -3,  shadow: +4  }, // she becomes a contact
+      escalate:    { compliance: +5,  shadow: -6  },
+      bury:        { compliance: -3,  shadow: +4  },
     },
     outcome: {
       no_threat:   'lena.arc keeps building the record. Forty-two names become forty-three.',
@@ -211,11 +210,11 @@ const CASES: CaseFile[] = [
     ],
     hasBury: false,
     repChanges: {
-      no_threat:   { compliance:  0,  shadow:  0  }, // option disabled
-      low_concern: { compliance:  0,  shadow:  0  }, // option disabled
-      flag:        { compliance:  0,  shadow:  0  }, // option disabled
-      escalate:    { compliance:  0, shadow: -10  }, // they were watching you
-      bury:        { compliance:  0,  shadow:  0  }, // option disabled
+      no_threat:   { compliance:  0,  shadow:  0  },
+      low_concern: { compliance:  0,  shadow:  0  },
+      flag:        { compliance:  0,  shadow:  0  },
+      escalate:    { compliance:  0, shadow: -10  },
+      bury:        { compliance:  0,  shadow:  0  },
     },
     outcome: {
       no_threat:   '',
@@ -236,26 +235,75 @@ const DECISIONS: { key: Decision; label: string; color: string; desc: string }[]
   { key: 'bury',        label: 'Bury File',    color: '#d6a2ff', desc: 'Mark clean. No pay. They survive.' },
 ]
 
+// ── reactive mail templates ──────────────────────────────────────────────────
+type MailCategory = 'compliant' | 'defiant'
+
+const REACTIVE_MAIL: Record<MailCategory, { subject: string; body: string }> = {
+  compliant: {
+    subject: 'we saw what you did',
+    body: `You're going to want to be careful with that tool.
+
+GridOS doesn't give those out for free.
+
+Think about why they chose you.
+
+— [sender scrubbed]`,
+  },
+  defiant: {
+    subject: 'good call',
+    body: `You made the right choice.
+
+There are people who notice things like that.
+
+Don't open this thread again.
+
+— [sender scrubbed]`,
+  },
+}
+
 // ── WatchApp ───────────────────────────────────────────────────────────────────
 export default function WatchApp() {
   const [caseIndex, setCaseIndex]   = useState(0)
   const [selected,  setSelected]    = useState<Decision | null>(null)
   const [submitted, setSubmitted]   = useState<Record<string, Decision>>({})
   const [activeTab, setActiveTab]   = useState<'activity' | 'messages' | 'jobs'>('activity')
+  const firstSubmit = useRef(true)
 
-  const shadow    = useRepStore(s => s.shadow)
+  const shadow     = useRepStore(s => s.shadow)
   const applyEvent = useRepStore(s => s.applyEvent)
+  const sendMail   = useMailStore(s => s.send)
 
-  const current   = CASES[caseIndex]
-  const isDone    = !!submitted[current.id]
-  const isNull54  = current.handle === 'null.54'
-
-  const canBury   = current.hasBury && shadow >= 40
+  const current  = CASES[caseIndex]
+  const isDone   = !!submitted[current.id]
+  const isNull54 = current.handle === 'null.54'
+  const canBury  = current.hasBury && shadow >= 40
 
   function handleSubmit() {
     if (!selected || isDone) return
     applyEvent(current.repChanges[selected])
     setSubmitted(prev => ({ ...prev, [current.id]: selected }))
+
+    // ── Reactive mail on first-ever submission ──────────────────────────────
+    if (firstSubmit.current) {
+      firstSubmit.current = false
+      const isDefiant = selected === 'bury' || selected === 'no_threat'
+      const tpl = isDefiant
+        ? REACTIVE_MAIL.defiant
+        : REACTIVE_MAIL.compliant
+
+      // small delay so the outcome text renders first
+      setTimeout(() => {
+        sendMail({
+          tag:    'ANON',
+          from:   'anon@void.null',
+          subject: tpl.subject,
+          date:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          unread: true,
+          dot:    '#ffaa00',
+          body:   tpl.body,
+        })
+      }, 1200)
+    }
   }
 
   return (
@@ -267,9 +315,7 @@ export default function WatchApp() {
       <div style={{ padding: '12px 18px 10px', borderBottom: `1px solid ${C.border}`,
         background: C.surf2, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-          <span style={{ fontSize: 14, color: C.danger, fontWeight: 'bold' }}>
-            ■ WATCH
-          </span>
+          <span style={{ fontSize: 14, color: C.danger, fontWeight: 'bold' }}>■ WATCH</span>
           <span style={{ fontSize: 10, color: C.muted, letterSpacing: '0.1em' }}>
             COMPLIANCE REVIEW SYSTEM
           </span>
@@ -283,10 +329,11 @@ export default function WatchApp() {
       <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`,
         background: C.surface, flexShrink: 0, overflowX: 'auto' }}>
         {CASES.map((c, i) => {
-          const done = !!submitted[c.id]
+          const done   = !!submitted[c.id]
           const active = i === caseIndex
           return (
-            <button key={c.id} onClick={() => { setCaseIndex(i); setSelected(null); setActiveTab('activity') }}
+            <button key={c.id}
+              onClick={() => { setCaseIndex(i); setSelected(null); setActiveTab('activity') }}
               style={{ padding: '8px 14px', fontSize: 11, border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', whiteSpace: 'nowrap',
                 borderBottom: active ? `2px solid ${C.danger}` : '2px solid transparent',
@@ -314,9 +361,7 @@ export default function WatchApp() {
             <div style={{ fontSize: 11, color: C.text }}>
               Citizen: <span style={{ color: C.accent }}>{current.handle}</span>
             </div>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>
-              {current.period}
-            </div>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{current.period}</div>
           </div>
 
           {/* Data tabs */}
@@ -327,8 +372,7 @@ export default function WatchApp() {
                 style={{ flex: 1, padding: '7px 0', fontSize: 10, border: 'none',
                   cursor: 'pointer', fontFamily: 'inherit',
                   letterSpacing: '0.08em', textTransform: 'uppercase',
-                  borderBottom: activeTab === tab
-                    ? `2px solid ${C.accent}` : '2px solid transparent',
+                  borderBottom: activeTab === tab ? `2px solid ${C.accent}` : '2px solid transparent',
                   background: activeTab === tab ? C.surf2 : 'none',
                   color: activeTab === tab ? C.accent : C.muted }}>
                 {tab}
@@ -338,13 +382,12 @@ export default function WatchApp() {
 
           {/* Tab content */}
           <div style={{ flex: 1, overflow: 'auto', padding: 14 }}>
-
             {activeTab === 'activity' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <Label text="BROWSING HISTORY" />
                 {current.history.map((url, i) => (
-                  <div key={i} style={{ fontSize: 11, color:
-                    url.startsWith('[') ? C.faint : C.muted,
+                  <div key={i} style={{ fontSize: 11,
+                    color: url.startsWith('[') ? C.faint : C.muted,
                     fontStyle: url.startsWith('[') ? 'italic' : 'normal',
                     paddingLeft: 8, borderLeft: `2px solid ${C.faint}` }}>
                     {url}
@@ -352,7 +395,6 @@ export default function WatchApp() {
                 ))}
               </div>
             )}
-
             {activeTab === 'messages' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <Label text="INTERCEPTED MESSAGES" />
@@ -366,19 +408,18 @@ export default function WatchApp() {
                       {msg.from} {msg.flagged && '■ FLAGGED'}
                     </div>
                     <div style={{ fontSize: 11, color: C.text, lineHeight: 1.5 }}>
-                      “{msg.body}”
+                      "{msg.body}"
                     </div>
                   </div>
                 ))}
               </div>
             )}
-
             {activeTab === 'jobs' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <Label text="JOB HISTORY" />
                 {current.jobHistory.map((j, i) => (
-                  <div key={i} style={{ fontSize: 11, color:
-                    j.startsWith('[') ? C.faint : C.muted,
+                  <div key={i} style={{ fontSize: 11,
+                    color: j.startsWith('[') ? C.faint : C.muted,
                     fontStyle: j.startsWith('[') ? 'italic' : 'normal',
                     paddingLeft: 8, borderLeft: `2px solid ${C.faint}` }}>
                     {j}
@@ -392,43 +433,31 @@ export default function WatchApp() {
         {/* Right — decision panel */}
         <div style={{ width: 220, display: 'flex', flexDirection: 'column',
           overflow: 'hidden', flexShrink: 0 }}>
-
           <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`,
             background: C.surf2, flexShrink: 0 }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.1em', color: C.muted }}>
-              DECISION
-            </div>
+            <div style={{ fontSize: 10, letterSpacing: '0.1em', color: C.muted }}>DECISION</div>
           </div>
-
           <div style={{ flex: 1, overflow: 'auto', padding: 12,
             display: 'flex', flexDirection: 'column', gap: 8 }}>
 
             {isDone ? (
-              // ─ outcome view
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontSize: 10, color: C.success, letterSpacing: '0.08em' }}>
-                  ■ SUBMITTED
-                </div>
+                <div style={{ fontSize: 10, color: C.success, letterSpacing: '0.08em' }}>■ SUBMITTED</div>
                 <div style={{ fontSize: 11, color: C.text, lineHeight: 1.6 }}>
                   {current.outcome[submitted[current.id]]}
                 </div>
                 <RepDelta changes={current.repChanges[submitted[current.id]]} />
               </div>
             ) : (
-              // ─ selection view
               <>
                 {DECISIONS.map(d => {
-                  // null.54 only allows escalate
                   if (isNull54 && d.key !== 'escalate') return null
-                  // bury requires shadow >= 40
                   if (d.key === 'bury' && !canBury) return (
                     <div key={d.key} style={{ padding: '8px 10px', borderRadius: 6,
                       border: `1px solid ${C.faint}`, opacity: 0.35,
                       fontSize: 11, color: C.faint }}>
                       {d.label}
-                      <div style={{ fontSize: 10, marginTop: 2 }}>
-                        Requires Shadow ≥ 40
-                      </div>
+                      <div style={{ fontSize: 10, marginTop: 2 }}>Requires Shadow ≥ 40</div>
                     </div>
                   )
                   const isSelected = selected === d.key
@@ -438,20 +467,14 @@ export default function WatchApp() {
                         border: `1px solid ${isSelected ? d.color : C.border}`,
                         background: isSelected ? `${d.color}18` : C.surface,
                         color: isSelected ? d.color : C.muted,
-                        textAlign: 'left', fontFamily: 'inherit',
-                        transition: 'all 0.15s' }}>
+                        textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                       <div style={{ fontSize: 11, marginBottom: 2 }}>{d.label}</div>
                       <div style={{ fontSize: 10, opacity: 0.7 }}>{d.desc}</div>
-                      {isSelected && (
-                        <RepDelta changes={current.repChanges[d.key]} />
-                      )}
+                      {isSelected && <RepDelta changes={current.repChanges[d.key]} />}
                     </button>
                   )
                 })}
-
-                <button
-                  onClick={handleSubmit}
-                  disabled={!selected}
+                <button onClick={handleSubmit} disabled={!selected}
                   style={{ marginTop: 8, padding: '9px 0', borderRadius: 6,
                     border: `1px solid ${selected ? C.danger + '88' : C.faint}`,
                     background: selected ? `${C.danger}22` : 'none',
@@ -470,11 +493,9 @@ export default function WatchApp() {
   )
 }
 
-// ── helpers ────────────────────────────────────────────────────────────────────
 function Label({ text }: { text: string }) {
   return (
-    <div style={{ fontSize: 9, letterSpacing: '0.12em', color: '#3a3a4a',
-      marginBottom: 4 }}>
+    <div style={{ fontSize: 9, letterSpacing: '0.12em', color: '#3a3a4a', marginBottom: 4 }}>
       {text}
     </div>
   )

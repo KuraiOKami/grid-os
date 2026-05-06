@@ -1,18 +1,25 @@
-// ── unlockStore.ts ───────────────────────────────────────────────────────────
-// Global named unlock flags shared across all apps.
-// WatchApp sets flags (e.g. 'lena_arc_protected', 'null54_escalated').
-// GridBrowser reads them to gate access to hidden pages.
+// ── unlockStore.ts ────────────────────────────────────────────────────────────
+// Tracks which apps the player has unlocked / installed.
+// OSShell reads this to decide which desktop icons to show.
 
 import { create } from 'zustand'
 
-interface UnlockStore {
-  flags: Set<string>
-  unlock: (key: string) => void
-  has: (key: string) => boolean
+interface UnlockState {
+  installed: string[]
+  install:   (id: string) => void
+  has:       (id: string) => boolean
 }
 
-export const useUnlockStore = create<UnlockStore>((set, get) => ({
-  flags: new Set(),
-  unlock: (key) => set(state => ({ flags: new Set([...state.flags, key]) })),
-  has: (key) => get().flags.has(key),
+export const useUnlockStore = create<UnlockState>((set, get) => ({
+  // Apps always available from the start (no unlock required)
+  installed: ['browser', 'mail', 'jobs', 'appstore', 'terminal', 'files'],
+
+  install: (id: string) =>
+    set(s =>
+      s.installed.includes(id)
+        ? s
+        : { installed: [...s.installed, id] }
+    ),
+
+  has: (id: string) => get().installed.includes(id),
 }))

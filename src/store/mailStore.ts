@@ -1,154 +1,140 @@
 // ── mailStore.ts ─────────────────────────────────────────────────────────────
-// Global mail store. Emails are the primary delivery channel for:
-//   - Job offers from corps and anonymous contacts
-//   - App unlock codes from the App Store
-//   - Lore / world events
-//   - NPC replies when player actions affect them
+// Zustand store for the in-game mail system.
+// Seed mails load on first access. `send()` prepends a new mail.
+// `markRead()` decrements the unread counter.
 
 import { create } from 'zustand'
 
-export type MailTag = 'job' | 'system' | 'lore' | 'unlock' | 'npc' | 'threat'
-
 export interface Mail {
-  id: string
-  from: string
+  id:      string
+  tag:     'SYSTEM' | 'LORE' | 'JOB' | 'NPC' | 'THREAT' | 'ANON'
+  from:    string
   subject: string
-  body: string          // plain text, may contain \n for line breaks
-  timestamp: string     // display string e.g. "06.05 // 14:32"
-  tag: MailTag
-  read: boolean
-  // If set, opening this mail fires a side-effect (e.g. unlock a flag)
-  onOpen?: () => void
+  date:    string
+  body:    string
+  unread:  boolean
+  dot?:    string   // accent color for the unread dot
+  watchCode?: string  // if present, mail contains a Watch access code
 }
 
-interface MailStore {
-  mails: Mail[]
-  send:  (mail: Omit<Mail, 'id' | 'read'>) => void
-  markRead: (id: string) => void
-  unreadCount: () => number
-}
-
-function uid() { return `mail-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
-function now() {
-  const d = new Date()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${dd}.${mm} // ${hh}:${min}`
-}
-
-// ─ seed inbox ──────────────────────────────────────────────────────────────────
 const SEED_MAILS: Mail[] = [
   {
-    id: 'seed-001',
+    id: 'sys-001',
+    tag: 'SYSTEM',
     from: 'system@gridos.corp',
     subject: 'Welcome to GridOS — Citizen Onboarding',
+    date: '06.05 // 09:00',
+    unread: true,
+    dot: '#00e5ff',
     body: `Your node has been registered.
 
-You have been assigned a standard-tier citizen profile.
-All activity on this terminal is logged and may be reviewed
-by a Compliance Operator at any time.
+You have been assigned a standard-tier citizen profile. All activity on this terminal is logged and may be reviewed by a Compliance Operator at any time.
 
 Stay productive. Stay visible.
 
 — GridOS Citizen Services`,
-    timestamp: '06.05 // 09:00',
-    tag: 'system',
-    read: false,
   },
   {
-    id: 'seed-002',
+    id: 'lore-001',
+    tag: 'LORE',
     from: 'no-reply@pulse.news',
     subject: 'Your daily digest is ready',
-    body: `Headlines for today:
+    date: '06.05 // 09:14',
+    unread: true,
+    body: `PULSE NETWORK  //  MORNING DIGEST
 
-■ GridOS quarterly compliance rate reaches 94.7%
-■ Civic Archive access suspended pending review
-■ Anonymous courier network reports record volume
-■ ROOT BLOOM: officials call claims "fabricated"
+──────────────────────────────────────
+ROOT BLOOM NETWORK — third cell disrupted this week. GridOS officials say containment is "proceeding as scheduled." Anonymous sources say otherwise.
 
-Read more at pulse.news`,
-    timestamp: '06.05 // 09:14',
-    tag: 'lore',
-    read: false,
+CIVIC ARCHIVE — access suspended pending routine maintenance. Estimated downtime: indefinite.
+
+GRIDMART EXPANSION — three new fulfillment nodes brought online in Sector 9. Workforce integration underway.
+
+ANONYMOUS COURIER GUILD — two members listed as inactive. No further details provided.
+──────────────────────────────────────
+
+Stay informed. Stay compliant.
+— Pulse Network`,
   },
   {
-    id: 'seed-003',
+    id: 'job-001',
+    tag: 'JOB',
     from: 'contracts@gridos.corp',
-    subject: 'New contract available — Compliance Analyst',
-    body: `A position has opened in our Compliance Review division.
+    subject: 'New contract available — Compliance Analyst, Level 1',
+    date: '06.05 // 10:02',
+    unread: true,
+    dot: '#00cc88',
+    watchCode: 'WATCH-GRID-01',
+    body: `A contract position has been approved for your profile.
 
-Role: Analyst I — Citizen Review
-Pay: ₳ 420 / session
-Clearance required: Standard
+ROLE: Compliance Review Analyst — Level 1
+CLIENT: GridOS Corp
+PAY: ₢ 120 / review session
+CLEARANCE: Standard
 
-This role involves reviewing citizen activity logs
-and submitting recommendations to our oversight team.
+This role requires access to the Watch compliance review system.
 
-To accept this contract, install the Watch app
-via the App Store.
-
+To install Watch, open the App Store and locate it under RESTRICTED apps.
 Access code: WATCH-GRID-01
 
+This code is single-use and tied to your citizen ID. Do not share it.
+
 — GridOS Contract Services`,
-    timestamp: '06.05 // 10:02',
-    tag: 'job',
-    read: false,
   },
   {
-    id: 'seed-004',
+    id: 'npc-001',
+    tag: 'NPC',
     from: 'anon@void.null',
-    subject: 're: you were asking about the archive',
-    body: `Don't use your real handle for this.
+    subject: 're: you were asking about the archive...',
+    date: '06.05 // 11:47',
+    unread: true,
+    body: `You didn't ask. But you would have eventually.
 
-The archive is real. The flowering pages are cached.
-If you want access, you know what to do.
+The civic archive is still partially accessible. Not through the front door.
 
-Find the right jobs. Make the right calls.
-Some apps aren't on the official store.
+Some apps on the official store aren't the only ones that exist.
 
-— [sender address scrubbed]`,
-    timestamp: '06.05 // 11:47',
-    tag: 'npc',
-    read: false,
+That's all I'm saying.
+
+— [sender scrubbed]`,
   },
   {
-    id: 'seed-005',
+    id: 'threat-001',
+    tag: 'THREAT',
     from: 'system@gridos.corp',
     subject: '[AUTOMATED] Suspicious activity detected on your node',
-    body: `Our systems have flagged unusual browsing patterns
-on your registered terminal.
+    date: '06.05 // 13:30',
+    unread: true,
+    dot: '#ff3b5c',
+    body: `[AUTOMATED SECURITY NOTICE]
 
-This notice is for your awareness.
-No action has been taken at this time.
+Unusual access patterns have been detected on your terminal.
 
-Continued anomalous activity may result in
-a compliance review being opened on your account.
+This notice has been logged.
 
-If you believe this is an error, do nothing.
+If you believe this is an error, no action is required. Your compliance record will reflect this event regardless.
 
-— GridOS Automated Security`,
-    timestamp: '06.05 // 13:30',
-    tag: 'threat',
-    read: false,
+— GridOS Security Division`,
   },
 ]
 
-export const useMailStore = create<MailStore>((set, get) => ({
+interface MailState {
+  mails:       Mail[]
+  unreadCount: () => number
+  markRead:    (id: string) => void
+  send:        (mail: Omit<Mail, 'id'>) => void
+}
+
+export const useMailStore = create<MailState>((set, get) => ({
   mails: SEED_MAILS,
 
-  send: (mail) =>
-    set(state => ({
-      mails: [{ ...mail, id: uid(), read: false }, ...state.mails],
-    })),
+  unreadCount: () => get().mails.filter(m => m.unread).length,
 
-  markRead: (id) =>
-    set(state => ({
-      mails: state.mails.map(m =>
-        m.id === id ? { ...m, read: true } : m
-      ),
-    })),
+  markRead: (id: string) =>
+    set(s => ({ mails: s.mails.map(m => m.id === id ? { ...m, unread: false } : m) })),
 
-  unreadCount: () => get().mails.filter(m => !m.read).length,
+  send: (mail: Omit<Mail, 'id'>) => {
+    const id = `mail-${Date.now()}`
+    set(s => ({ mails: [{ ...mail, id }, ...s.mails] }))
+  },
 }))
