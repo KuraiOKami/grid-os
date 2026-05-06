@@ -240,8 +240,9 @@ function Row({ label, value, color }: { label:string; value:string; color:string
 
 // ── CONTRACTS TAB ────────────────────────────────────────────────────────────
 function ContractsTab({ jobs }: { jobs:Job[] }) {
-  const pending  = jobs.filter(j => !j.accepted)
-  const accepted = jobs.filter(j =>  j.accepted)
+  const pending   = jobs.filter(j => !j.accepted && !j.completed)
+  const active    = jobs.filter(j =>  j.accepted && !j.completed)
+  const completed = jobs.filter(j =>  j.completed)
 
   return (
     <div style={{ padding:14, display:'flex', flexDirection:'column', gap:10 }}>
@@ -262,10 +263,16 @@ function ContractsTab({ jobs }: { jobs:Job[] }) {
           {pending.map(j => <JobCard key={j.id} job={j} onAccept={() => acceptJob(j.id)} />)}
         </>
       )}
-      {accepted.length > 0 && (
+      {active.length > 0 && (
         <>
-          <SectionLabel label="ACCEPTED" color={C.success} />
-          {accepted.map(j => <JobCard key={j.id} job={j} onAccept={() => {}} />)}
+          <SectionLabel label="IN PROGRESS" color={C.accent} />
+          {active.map(j => <JobCard key={j.id} job={j} onAccept={() => {}} />)}
+        </>
+      )}
+      {completed.length > 0 && (
+        <>
+          <SectionLabel label="COMPLETED" color={C.success} />
+          {completed.map(j => <JobCard key={j.id} job={j} onAccept={() => {}} />)}
         </>
       )}
     </div>
@@ -284,20 +291,62 @@ function JobCard({ job, onAccept }: { job:Job; onAccept:()=>void }) {
   const corpColor = job.corp === 'GridOS' ? C.accent
     : job.corp === 'Anonymous' || job.corp.toLowerCase().includes('anon') ? C.danger
     : C.warn
+
+  const typeColor: Record<string, string> = {
+    hack:    C.purple,
+    audit:   C.accent,
+    courier: C.warn,
+    generic: C.muted,
+  }
+  const borderColor = job.completed ? C.success
+    : job.accepted ? C.accent
+    : C.border
+
   return (
-    <div style={{ background:C.surface, border:`1px solid ${C.border}`,
+    <div style={{ background:C.surface, border:`1px solid ${borderColor}44`,
       borderRadius:10, padding:'12px 14px', display:'flex',
-      flexDirection:'column', gap:8 }}>
+      flexDirection:'column', gap:8,
+      opacity: job.completed ? 0.7 : 1 }}>
+
       <div style={{ display:'flex', alignItems:'flex-start',
         justifyContent:'space-between', gap:10 }}>
-        <div>
+        <div style={{ flex:1 }}>
+          {job.type && job.type !== 'generic' && (
+            <span style={{ fontSize:9, letterSpacing:'0.1em',
+              color: typeColor[job.type] ?? C.muted,
+              border:`1px solid ${typeColor[job.type] ?? C.muted}44`,
+              borderRadius:3, padding:'1px 5px', marginBottom:5,
+              display:'inline-block' }}>
+              {job.type.toUpperCase()}
+            </span>
+          )}
           <div style={{ fontSize:13, color:'#eef3ff', marginBottom:4 }}>{job.title}</div>
           <div style={{ fontSize:11, color:corpColor }}>{job.corp}</div>
         </div>
-        <div style={{ fontSize:12, color:C.success, whiteSpace:'nowrap' }}>{job.pay}</div>
+        <div style={{ fontSize:12, color: job.completed ? C.success : C.warn,
+          whiteSpace:'nowrap', textAlign:'right' }}>
+          {job.pay}
+          {job.completed && <div style={{ fontSize:10, color:C.success }}>✓ paid</div>}
+        </div>
       </div>
-      <div style={{ fontSize:10, color:C.faint }}>source: {job.source}</div>
-      {!job.accepted ? (
+
+      {job.briefing && !job.completed && (
+        <div style={{ fontSize:11, color:C.muted, lineHeight:1.5,
+          borderLeft:`2px solid ${typeColor[job.type ?? 'generic'] ?? C.faint}44`,
+          paddingLeft:8 }}>
+          {job.briefing}
+        </div>
+      )}
+
+      {job.source !== 'internal' && (
+        <div style={{ fontSize:10, color:C.faint }}>source: {job.source}</div>
+      )}
+
+      {job.completed ? (
+        <div style={{ alignSelf:'flex-end', fontSize:11, color:C.success, padding:'4px 0' }}>
+          ✓ Completed
+        </div>
+      ) : !job.accepted ? (
         <button onClick={onAccept} style={{
           alignSelf:'flex-end', padding:'7px 14px', borderRadius:6, fontSize:11,
           border:`1px solid ${C.success}66`, background:`${C.success}12`,
@@ -305,8 +354,9 @@ function JobCard({ job, onAccept }: { job:Job; onAccept:()=>void }) {
           Accept
         </button>
       ) : (
-        <div style={{ alignSelf:'flex-end', fontSize:11, color:C.success,
-          padding:'7px 14px' }}>✓ Accepted</div>
+        <div style={{ alignSelf:'flex-end', fontSize:11, color:C.accent, padding:'4px 0' }}>
+          ● In Progress
+        </div>
       )}
     </div>
   )
