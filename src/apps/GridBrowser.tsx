@@ -1,25 +1,16 @@
 import { useMemo, useState } from 'react'
-<<<<<<< HEAD
 
-=======
-import { addJob } from '@/store/jobStore'
-
-// ── types ────────────────────────────────────────────────────────────────────
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
 type LinkItem = {
   label: string
   url: string
 }
 
-<<<<<<< HEAD
-=======
 type JobOffer = {
   title: string
   corp: string
   pay: string
 }
 
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
 type PageData = {
   site: string
   title: string
@@ -27,15 +18,10 @@ type PageData = {
   theme?: 'corp' | 'news' | 'forum' | 'blog' | 'hidden'
   body: string[]
   links: LinkItem[]
-<<<<<<< HEAD
+  job?: JobOffer
 }
 
-=======
-  job?: JobOffer          // optional job that spawns when page is visited
-}
-
-// ── page registry ────────────────────────────────────────────────────────────
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+// ── page registry ─────────────────────────────────────────────────────────────
 const PAGES: Record<string, PageData> = {
   'gridos.corp': {
     site: 'GridOS Corporate',
@@ -49,13 +35,8 @@ const PAGES: Record<string, PageData> = {
     ],
     links: [
       { label: 'Investor Relations', url: 'gridos.corp/investors' },
-<<<<<<< HEAD
-      { label: 'Trust & Safety', url: 'gridos.corp/trust' },
-      { label: 'Careers', url: 'gridos.corp/careers' },
-=======
       { label: 'Trust & Safety',     url: 'gridos.corp/trust' },
       { label: 'Careers',            url: 'gridos.corp/careers' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
     ],
   },
 
@@ -66,21 +47,12 @@ const PAGES: Record<string, PageData> = {
     theme: 'corp',
     body: [
       'GridOS posted record growth in public infrastructure, identity tooling, and behavioral compliance analytics.',
-<<<<<<< HEAD
-      'Shareholder memo: vertical integration remains the company’s strongest strategic moat.',
-      'Analysts note concern over rising “ghost traffic” within unmanaged public nodes.',
-    ],
-    links: [
-      { label: 'Return to Home', url: 'gridos.corp' },
-      { label: 'Read Trust & Safety', url: 'gridos.corp/trust' },
-=======
-      'Shareholder memo: vertical integration remains the company\'s strongest strategic moat.',
+      "Shareholder memo: vertical integration remains the company's strongest strategic moat.",
       'Analysts note concern over rising "ghost traffic" within unmanaged public nodes.',
     ],
     links: [
       { label: 'Return to Home',           url: 'gridos.corp' },
       { label: 'Read Trust & Safety',      url: 'gridos.corp/trust' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
       { label: 'View Pulse News coverage', url: 'pulse.news' },
     ],
   },
@@ -96,13 +68,8 @@ const PAGES: Record<string, PageData> = {
       'Reminder: privacy is a managed privilege, not a default condition.',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Corporate Home', url: 'gridos.corp' },
-      { label: 'Open Public Forum Thread', url: 'yellowthread.forum/thread/gridos-watch' },
-=======
-      { label: 'Corporate Home',        url: 'gridos.corp' },
-      { label: 'Open Forum Thread',     url: 'yellowthread.forum/thread/gridos-watch' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+      { label: 'Corporate Home',    url: 'gridos.corp' },
+      { label: 'Open Forum Thread', url: 'yellowthread.forum/thread/gridos-watch' },
     ],
   },
 
@@ -117,12 +84,7 @@ const PAGES: Record<string, PageData> = {
       'All hires undergo identity mesh review and loyalty scoring.',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Return to Home', url: 'gridos.corp' },
-      { label: 'Read Ghostlily blog', url: 'ghostlily.blog' },
-    ],
-=======
-      { label: 'Return to Home',     url: 'gridos.corp' },
+      { label: 'Return to Home',      url: 'gridos.corp' },
       { label: 'Read Ghostlily blog', url: 'ghostlily.blog' },
     ],
     job: {
@@ -130,7 +92,6 @@ const PAGES: Record<string, PageData> = {
       corp:  'GridOS',
       pay:   '₢ 420 / task',
     },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
   },
 
   'pulse.news': {
@@ -145,13 +106,8 @@ const PAGES: Record<string, PageData> = {
     ],
     links: [
       { label: 'Market Brief: GridOS climbs again', url: 'pulse.news/markets/gridos' },
-<<<<<<< HEAD
-      { label: 'Local outages spread', url: 'pulse.news/outages' },
-      { label: 'Open Ghostlily blog', url: 'ghostlily.blog' },
-=======
       { label: 'Local outages spread',              url: 'pulse.news/outages' },
       { label: 'Open Ghostlily blog',               url: 'ghostlily.blog' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
     ],
   },
 
@@ -163,17 +119,10 @@ const PAGES: Record<string, PageData> = {
     body: [
       'Institutional confidence remains high as GridOS expands deeper into finance, transit, and identity services.',
       'Short sellers continue to bet on a public trust collapse, but no material downside has appeared this quarter.',
-<<<<<<< HEAD
-      'Unverified chatter suggests internal sabotage is being misreported as “routine service decay.”',
-    ],
-    links: [
-      { label: 'Back to Pulse', url: 'pulse.news' },
-=======
       'Unverified chatter suggests internal sabotage is being misreported as "routine service decay."',
     ],
     links: [
       { label: 'Back to Pulse',     url: 'pulse.news' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
       { label: 'Read forum thread', url: 'yellowthread.forum/thread/gridos-watch' },
     ],
   },
@@ -185,21 +134,12 @@ const PAGES: Record<string, PageData> = {
     theme: 'news',
     body: [
       'Citizens across low-priority districts reported authentication failures, payment freezes, and transit routing errors.',
-<<<<<<< HEAD
-      'GridOS issued a short statement calling the incidents “non-systemic.”',
-      'A leaked screenshot appears to reference an internal term: ROOT BLOOM.',
-    ],
-    links: [
-      { label: 'Back to Pulse', url: 'pulse.news' },
-      { label: 'What is ROOT BLOOM?', url: 'ghostlily.blog/root-bloom' },
-=======
       'GridOS issued a short statement calling the incidents "non-systemic."',
       'A leaked screenshot appears to reference an internal term: ROOT BLOOM.',
     ],
     links: [
-      { label: 'Back to Pulse',        url: 'pulse.news' },
-      { label: 'What is ROOT BLOOM?',  url: 'ghostlily.blog/root-bloom' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+      { label: 'Back to Pulse',       url: 'pulse.news' },
+      { label: 'What is ROOT BLOOM?', url: 'ghostlily.blog/root-bloom' },
     ],
   },
 
@@ -214,33 +154,15 @@ const PAGES: Record<string, PageData> = {
       'Thread quality varies between useful leaks and complete nonsense.',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Thread: “GridOS is watching private drafts”', url: 'yellowthread.forum/thread/gridos-watch' },
-      { label: 'Thread: “Ghost traffic near old civic nodes”', url: 'yellowthread.forum/thread/ghost-traffic' },
-      { label: 'Visit Pulse News', url: 'pulse.news' },
-=======
       { label: 'Thread: "GridOS is watching private drafts"',  url: 'yellowthread.forum/thread/gridos-watch' },
       { label: 'Thread: "Ghost traffic near old civic nodes"', url: 'yellowthread.forum/thread/ghost-traffic' },
       { label: 'Freelance board',                             url: 'yellowthread.forum/jobs' },
       { label: 'Visit Pulse News',                            url: 'pulse.news' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
     ],
   },
 
   'yellowthread.forum/thread/gridos-watch': {
     site: 'YellowThread Forum',
-<<<<<<< HEAD
-    title: 'Thread: “GridOS is watching private drafts”',
-    subtitle: '42 replies // 6 removed // 1 account banned',
-    theme: 'forum',
-    body: [
-      'OP: “I had a draft complaint open in a private editor. Next morning my credit score changed.”',
-      'Reply #12: “Trust & Safety reads more than they admit. Check the old archive mirrors before they vanish.”',
-      'Reply #31: “Look at ghostlily.blog. She kept receipts before going quiet.”',
-    ],
-    links: [
-      { label: 'Return to Forum', url: 'yellowthread.forum' },
-=======
     title: 'Thread: "GridOS is watching private drafts"',
     subtitle: '42 replies // 6 removed // 1 account banned',
     theme: 'forum',
@@ -251,18 +173,13 @@ const PAGES: Record<string, PageData> = {
     ],
     links: [
       { label: 'Return to Forum',     url: 'yellowthread.forum' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
       { label: 'Open Ghostlily blog', url: 'ghostlily.blog' },
     ],
   },
 
   'yellowthread.forum/thread/ghost-traffic': {
     site: 'YellowThread Forum',
-<<<<<<< HEAD
-    title: 'Thread: “Ghost traffic near old civic nodes”',
-=======
     title: 'Thread: "Ghost traffic near old civic nodes"',
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
     subtitle: '13 replies // low trust // archived',
     theme: 'forum',
     body: [
@@ -271,17 +188,11 @@ const PAGES: Record<string, PageData> = {
       'A deleted reply referenced: civic.archive/flowering',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Return to Forum', url: 'yellowthread.forum' },
-=======
-      { label: 'Return to Forum',           url: 'yellowthread.forum' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+      { label: 'Return to Forum',          url: 'yellowthread.forum' },
       { label: 'Try civic.archive/flowering', url: 'civic.archive/flowering' },
     ],
   },
 
-<<<<<<< HEAD
-=======
   'yellowthread.forum/jobs': {
     site: 'YellowThread Forum',
     title: 'Freelance Board',
@@ -302,7 +213,6 @@ const PAGES: Record<string, PageData> = {
     },
   },
 
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
   'ghostlily.blog': {
     site: 'ghostlily.blog',
     title: 'ghostlily // notes from the soft edge',
@@ -314,15 +224,9 @@ const PAGES: Record<string, PageData> = {
       'If pages disappear, compare timestamps. If timestamps agree too perfectly, the page was rewritten.',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Entry: ROOT BLOOM', url: 'ghostlily.blog/root-bloom' },
+      { label: 'Entry: ROOT BLOOM',            url: 'ghostlily.blog/root-bloom' },
       { label: 'Entry: missing public records', url: 'ghostlily.blog/missing-records' },
-      { label: 'Open YellowThread', url: 'yellowthread.forum' },
-=======
-      { label: 'Entry: ROOT BLOOM',          url: 'ghostlily.blog/root-bloom' },
-      { label: 'Entry: missing public records', url: 'ghostlily.blog/missing-records' },
-      { label: 'Open YellowThread',          url: 'yellowthread.forum' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+      { label: 'Open YellowThread',            url: 'yellowthread.forum' },
     ],
   },
 
@@ -337,11 +241,7 @@ const PAGES: Record<string, PageData> = {
       'If the bloom reaches archive depth, the past becomes editable.',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Back to Blog', url: 'ghostlily.blog' },
-=======
-      { label: 'Back to Blog',              url: 'ghostlily.blog' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+      { label: 'Back to Blog',               url: 'ghostlily.blog' },
       { label: 'Read missing public records', url: 'ghostlily.blog/missing-records' },
     ],
   },
@@ -357,12 +257,7 @@ const PAGES: Record<string, PageData> = {
       'If civic.archive/flowering loads for you, do not trust the first page you see.',
     ],
     links: [
-<<<<<<< HEAD
-      { label: 'Back to Blog', url: 'ghostlily.blog' },
-      { label: 'Open civic.archive/flowering', url: 'civic.archive/flowering' },
-    ],
-=======
-      { label: 'Back to Blog',               url: 'ghostlily.blog' },
+      { label: 'Back to Blog',                 url: 'ghostlily.blog' },
       { label: 'Open civic.archive/flowering', url: 'civic.archive/flowering' },
     ],
     job: {
@@ -370,7 +265,6 @@ const PAGES: Record<string, PageData> = {
       corp:  'Unknown client',
       pay:   '₢ 500 flat',
     },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
   },
 
   'civic.archive/flowering': {
@@ -381,43 +275,6 @@ const PAGES: Record<string, PageData> = {
     body: [
       'Archive fragment recovered. District census incomplete. Infrastructure ownership field overwritten.',
       'Pre-GridOS municipal records indicate public routing systems were once independently governed.',
-<<<<<<< HEAD
-      'A final note remains in the metadata: “they bought the roads, then the names, then the memory of both.”',
-    ],
-    links: [
-      { label: 'Return to Ghostlily blog', url: 'ghostlily.blog/missing-records' },
-      { label: 'Corporate response', url: 'gridos.corp/trust' },
-    ],
-  },
-}
-
-const THEME_STYLES = {
-  corp: {
-    header: '#00e5ff',
-    badgeBg: 'rgba(0,229,255,0.12)',
-    badgeBorder: 'rgba(0,229,255,0.35)',
-  },
-  news: {
-    header: '#ffd166',
-    badgeBg: 'rgba(255,209,102,0.12)',
-    badgeBorder: 'rgba(255,209,102,0.35)',
-  },
-  forum: {
-    header: '#7bd389',
-    badgeBg: 'rgba(123,211,137,0.12)',
-    badgeBorder: 'rgba(123,211,137,0.35)',
-  },
-  blog: {
-    header: '#d6a2ff',
-    badgeBg: 'rgba(214,162,255,0.12)',
-    badgeBorder: 'rgba(214,162,255,0.35)',
-  },
-  hidden: {
-    header: '#ff6b6b',
-    badgeBg: 'rgba(255,107,107,0.12)',
-    badgeBorder: 'rgba(255,107,107,0.35)',
-  },
-=======
       'A final note remains in the metadata: "they bought the roads, then the names, then the memory of both."',
     ],
     links: [
@@ -432,33 +289,24 @@ const THEME_STYLES = {
   },
 }
 
-// ── theme map ────────────────────────────────────────────────────────────────
+// ── theme map ─────────────────────────────────────────────────────────────────
 const THEME_STYLES = {
   corp:   { header: '#00e5ff', badgeBg: 'rgba(0,229,255,0.12)',   badgeBorder: 'rgba(0,229,255,0.35)' },
   news:   { header: '#ffd166', badgeBg: 'rgba(255,209,102,0.12)', badgeBorder: 'rgba(255,209,102,0.35)' },
   forum:  { header: '#7bd389', badgeBg: 'rgba(123,211,137,0.12)', badgeBorder: 'rgba(123,211,137,0.35)' },
   blog:   { header: '#d6a2ff', badgeBg: 'rgba(214,162,255,0.12)', badgeBorder: 'rgba(214,162,255,0.35)' },
   hidden: { header: '#ff6b6b', badgeBg: 'rgba(255,107,107,0.12)', badgeBorder: 'rgba(255,107,107,0.35)' },
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
 }
 
 const DEFAULT_URL = 'gridos.corp'
 
-<<<<<<< HEAD
-export default function GridBrowser() {
-  const [currentUrl, setCurrentUrl] = useState(DEFAULT_URL)
-  const [input, setInput] = useState(DEFAULT_URL)
-  const [history, setHistory] = useState<string[]>([DEFAULT_URL])
-  const [historyIndex, setHistoryIndex] = useState(0)
-=======
-// ── component ────────────────────────────────────────────────────────────────
+// ── component ─────────────────────────────────────────────────────────────────
 export default function GridBrowser() {
   const [currentUrl, setCurrentUrl] = useState(DEFAULT_URL)
   const [input, setInput]           = useState(DEFAULT_URL)
   const [history, setHistory]       = useState<string[]>([DEFAULT_URL])
   const [histIndex, setHistIndex]   = useState(0)
   const [toast, setToast]           = useState<string | null>(null)
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
 
   const page = PAGES[currentUrl] ?? null
 
@@ -466,6 +314,11 @@ export default function GridBrowser() {
     if (!page) return THEME_STYLES.corp
     return THEME_STYLES[page.theme ?? 'corp']
   }, [page])
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3500)
+  }
 
   function goTo(url: string) {
     const normalized = url.trim().toLowerCase()
@@ -475,92 +328,14 @@ export default function GridBrowser() {
     setInput(normalized)
 
     setHistory(prev => {
-<<<<<<< HEAD
-      const next = prev.slice(0, historyIndex + 1)
-      next.push(normalized)
-      return next
-    })
-    setHistoryIndex(prev => prev + 1)
-  }
-
-  function goBack() {
-    if (historyIndex <= 0) return
-    const nextIndex = historyIndex - 1
-    const nextUrl = history[nextIndex]
-    setHistoryIndex(nextIndex)
-    setCurrentUrl(nextUrl)
-    setInput(nextUrl)
-  }
-
-  function goForward() {
-    if (historyIndex >= history.length - 1) return
-    const nextIndex = historyIndex + 1
-    const nextUrl = history[nextIndex]
-    setHistoryIndex(nextIndex)
-    setCurrentUrl(nextUrl)
-    setInput(nextUrl)
-  }
-
-  function goHome() {
-    goTo(DEFAULT_URL)
-  }
-
-  function submitAddressBar(e: React.FormEvent) {
-    e.preventDefault()
-    goTo(input)
-  }
-
-  return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#090b12',
-        color: '#c8c8d8',
-        fontFamily: 'Inter, system-ui, sans-serif',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '10px 12px',
-          borderBottom: '1px solid #222634',
-          background: '#0f1320',
-        }}
-      >
-        <button onClick={goBack} style={navBtn(historyIndex > 0)}>←</button>
-        <button onClick={goForward} style={navBtn(historyIndex < history.length - 1)}>→</button>
-        <button onClick={goHome} style={navBtn(true)}>⌂</button>
-
-        <form onSubmit={submitAddressBar} style={{ flex: 1 }}>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            style={{
-              width: '100%',
-              background: '#0a0d16',
-              color: '#d8deea',
-              border: '1px solid #283042',
-              borderRadius: 6,
-              padding: '9px 12px',
-              outline: 'none',
-              fontSize: 13,
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
-=======
       const next = prev.slice(0, histIndex + 1)
       next.push(normalized)
       return next
     })
     setHistIndex(i => i + 1)
 
-    // emit job if page defines one
     const target = PAGES[normalized]
     if (target?.job) {
-      addJob({ title: target.job.title, corp: target.job.corp, pay: target.job.pay, source: normalized })
       showToast(`New job posted to Job Board: "${target.job.title}"`)
     }
   }
@@ -577,178 +352,46 @@ export default function GridBrowser() {
     setHistIndex(ni); setCurrentUrl(history[ni]); setInput(history[ni])
   }
 
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3500)
-  }
-
   return (
-    <div style={{ height:'100%', display:'flex', flexDirection:'column',
-      background:'#090b12', color:'#c8c8d8', fontFamily:"Inter, system-ui, sans-serif",
-      position:'relative' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
+      background: '#090b12', color: '#c8c8d8', fontFamily: 'Inter, system-ui, sans-serif',
+      position: 'relative' }}>
 
-      {/* ── Chrome ── */}
-      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px',
-        borderBottom:'1px solid #222634', background:'#0f1320', flexShrink:0 }}>
-
-        <button onClick={goBack}    style={navBtn(histIndex > 0)}>←</button>
-        <button onClick={goForward} style={navBtn(histIndex < history.length - 1)}>→</button>
+      {/* Chrome */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+        borderBottom: '1px solid #222634', background: '#0f1320', flexShrink: 0 }}>
+        <button onClick={goBack}              style={navBtn(histIndex > 0)}>←</button>
+        <button onClick={goForward}           style={navBtn(histIndex < history.length - 1)}>→</button>
         <button onClick={() => goTo(DEFAULT_URL)} style={navBtn(true)}>⌂</button>
 
-        <form onSubmit={e => { e.preventDefault(); goTo(input) }} style={{ flex:1 }}>
+        <form onSubmit={e => { e.preventDefault(); goTo(input) }} style={{ flex: 1 }}>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             spellCheck={false}
-            style={{ width:'100%', background:'#0a0d16', color:'#d8deea',
-              border:'1px solid #283042', borderRadius:6, padding:'9px 12px',
-              outline:'none', fontSize:13, fontFamily:"'JetBrains Mono', monospace" }}
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
+            style={{ width: '100%', background: '#0a0d16', color: '#d8deea',
+              border: '1px solid #283042', borderRadius: 6, padding: '9px 12px',
+              outline: 'none', fontSize: 13, fontFamily: "'JetBrains Mono', monospace" }}
           />
         </form>
       </div>
 
-<<<<<<< HEAD
-      <div
-        style={{
-          padding: 18,
-          overflow: 'auto',
-          height: '100%',
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 220px)',
-        }}
-      >
-        {!page ? (
-          <div style={missingPageStyle}>
-            <div style={{ fontSize: 28, color: '#ff6b6b', marginBottom: 8 }}>404</div>
-            <div style={{ fontSize: 18, marginBottom: 6 }}>Page not found</div>
-            <div style={{ color: '#8892a6', marginBottom: 14 }}>
-              No public route exists for <code>{currentUrl}</code>
-            </div>
-            <button onClick={goHome} style={linkButton('#00e5ff')}>Return to GridOS home</button>
-          </div>
-        ) : (
-          <div style={{ maxWidth: 860, margin: '0 auto' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 10px',
-                borderRadius: 999,
-                border: `1px solid ${theme.badgeBorder}`,
-                background: theme.badgeBg,
-                color: theme.header,
-                fontSize: 12,
-                marginBottom: 14,
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            >
-              {page.site}
-            </div>
-
-            <h1
-              style={{
-                fontSize: 30,
-                lineHeight: 1.1,
-                marginBottom: 8,
-                color: '#eef3ff',
-              }}
-            >
-              {page.title}
-            </h1>
-
-            {page.subtitle && (
-              <p
-                style={{
-                  fontSize: 15,
-                  color: '#96a1b5',
-                  marginBottom: 22,
-                  maxWidth: 680,
-                }}
-              >
-                {page.subtitle}
-              </p>
-            )}
-
-            <div
-              style={{
-                display: 'grid',
-                gap: 14,
-                marginBottom: 24,
-              }}
-            >
-              {page.body.map((paragraph, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: '#0d111a',
-                    border: '1px solid #202636',
-                    borderRadius: 10,
-                    padding: 14,
-                    color: '#cfd6e4',
-                    lineHeight: 1.6,
-                    fontSize: 14,
-                  }}
-                >
-                  {paragraph}
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{
-                borderTop: '1px solid #232938',
-                paddingTop: 18,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: theme.header,
-                  marginBottom: 10,
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}
-              >
-                Linked pages
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {page.links.map((link) => (
-                  <button
-                    key={link.url}
-                    onClick={() => goTo(link.url)}
-                    style={linkButton(theme.header)}
-                  >
-                    {link.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-=======
-      {/* ── Page ── */}
-      <div style={{ padding:18, overflow:'auto', flex:1,
-        background:'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 220px)' }}>
-
-        {!page ? (
-          <MissingPage currentUrl={currentUrl} onHome={() => goTo(DEFAULT_URL)} />
-        ) : (
-          <PageView page={page} theme={theme} onNavigate={goTo} />
-        )}
+      {/* Page */}
+      <div style={{ padding: 18, overflow: 'auto', flex: 1,
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 220px)' }}>
+        {!page
+          ? <MissingPage currentUrl={currentUrl} onHome={() => goTo(DEFAULT_URL)} />
+          : <PageView page={page} theme={theme} onNavigate={goTo} />
+        }
       </div>
 
-      {/* ── Toast ── */}
+      {/* Toast */}
       {toast && (
-        <div style={{ position:'absolute', bottom:16, left:'50%', transform:'translateX(-50%)',
-          background:'#0d111a', border:'1px solid #7bd38966', color:'#7bd389',
-          padding:'10px 18px', borderRadius:8, fontSize:12,
-          fontFamily:"'JetBrains Mono', monospace", whiteSpace:'nowrap',
-          boxShadow:'0 4px 20px #00000088', pointerEvents:'none' }}>
+        <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+          background: '#0d111a', border: '1px solid #7bd38966', color: '#7bd389',
+          padding: '10px 18px', borderRadius: 8, fontSize: 12,
+          fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap',
+          boxShadow: '0 4px 20px #00000088', pointerEvents: 'none' }}>
           ✦ {toast}
         </div>
       )}
@@ -756,55 +399,55 @@ export default function GridBrowser() {
   )
 }
 
-// ── PageView ─────────────────────────────────────────────────────────────────
+// ── PageView ──────────────────────────────────────────────────────────────────
 function PageView({ page, theme, onNavigate }:
   { page: PageData; theme: typeof THEME_STYLES.corp; onNavigate: (url: string) => void }) {
   return (
-    <div style={{ maxWidth:860, margin:'0 auto' }}>
-      <div style={{ display:'inline-flex', alignItems:'center', gap:8,
-        padding:'6px 10px', borderRadius:999,
-        border:`1px solid ${theme.badgeBorder}`, background:theme.badgeBg,
-        color:theme.header, fontSize:12, marginBottom:14,
-        fontFamily:"'JetBrains Mono', monospace" }}>
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '6px 10px', borderRadius: 999,
+        border: `1px solid ${theme.badgeBorder}`, background: theme.badgeBg,
+        color: theme.header, fontSize: 12, marginBottom: 14,
+        fontFamily: "'JetBrains Mono', monospace" }}>
         {page.site}
       </div>
 
-      <h1 style={{ fontSize:30, lineHeight:1.1, marginBottom:8, color:'#eef3ff' }}>
+      <h1 style={{ fontSize: 30, lineHeight: 1.1, marginBottom: 8, color: '#eef3ff' }}>
         {page.title}
       </h1>
 
       {page.subtitle && (
-        <p style={{ fontSize:15, color:'#96a1b5', marginBottom:22, maxWidth:680 }}>
+        <p style={{ fontSize: 15, color: '#96a1b5', marginBottom: 22, maxWidth: 680 }}>
           {page.subtitle}
         </p>
       )}
 
-      <div style={{ display:'grid', gap:14, marginBottom:24 }}>
+      <div style={{ display: 'grid', gap: 14, marginBottom: 24 }}>
         {page.body.map((para, i) => (
-          <div key={i} style={{ background:'#0d111a', border:'1px solid #202636',
-            borderRadius:10, padding:14, color:'#cfd6e4', lineHeight:1.6, fontSize:14 }}>
+          <div key={i} style={{ background: '#0d111a', border: '1px solid #202636',
+            borderRadius: 10, padding: 14, color: '#cfd6e4', lineHeight: 1.6, fontSize: 14 }}>
             {para}
           </div>
         ))}
       </div>
 
       {page.job && (
-        <div style={{ marginBottom:20, padding:'12px 14px', borderRadius:10,
-          border:`1px solid ${theme.header}44`, background:`${theme.header}0d` }}>
-          <span style={{ fontSize:11, color:theme.header,
-            fontFamily:"'JetBrains Mono', monospace", letterSpacing:'0.06em' }}>
-            ✦ JOB AVAILABLE — {page.job.title} · {page.corp} · {page.job.pay}
+        <div style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10,
+          border: `1px solid ${theme.header}44`, background: `${theme.header}0d` }}>
+          <span style={{ fontSize: 11, color: theme.header,
+            fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.06em' }}>
+            ✦ JOB AVAILABLE — {page.job.title} · {page.job.corp} · {page.job.pay}
           </span>
         </div>
       )}
 
-      <div style={{ borderTop:'1px solid #232938', paddingTop:18 }}>
-        <div style={{ fontSize:12, letterSpacing:'0.08em', textTransform:'uppercase',
-          color:theme.header, marginBottom:10,
-          fontFamily:"'JetBrains Mono', monospace" }}>
+      <div style={{ borderTop: '1px solid #232938', paddingTop: 18 }}>
+        <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase',
+          color: theme.header, marginBottom: 10,
+          fontFamily: "'JetBrains Mono', monospace" }}>
           Linked pages
         </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {page.links.map(link => (
             <button key={link.url} onClick={() => onNavigate(link.url)}
               style={linkBtn(theme.header)}>
@@ -813,59 +456,19 @@ function PageView({ page, theme, onNavigate }:
           ))}
         </div>
       </div>
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
     </div>
   )
 }
 
-<<<<<<< HEAD
-function navBtn(enabled: boolean): React.CSSProperties {
-  return {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    border: '1px solid #283042',
-    background: enabled ? '#121827' : '#0d121d',
-    color: enabled ? '#d7e0ef' : '#566074',
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    fontSize: 14,
-  }
-}
-
-function linkButton(color: string): React.CSSProperties {
-  return {
-    padding: '10px 12px',
-    borderRadius: 8,
-    border: `1px solid ${color}44`,
-    background: `${color}12`,
-    color,
-    cursor: 'pointer',
-    fontSize: 13,
-  }
-}
-
-const missingPageStyle: React.CSSProperties = {
-  height: '100%',
-  minHeight: 260,
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-start',
-  justifyContent: 'center',
-  background: '#0d111a',
-  border: '1px solid #202636',
-  borderRadius: 12,
-  padding: 24,
-}
-=======
 // ── MissingPage ───────────────────────────────────────────────────────────────
-function MissingPage({ currentUrl, onHome }: { currentUrl:string; onHome:()=>void }) {
+function MissingPage({ currentUrl, onHome }: { currentUrl: string; onHome: () => void }) {
   return (
-    <div style={{ minHeight:260, display:'flex', flexDirection:'column',
-      alignItems:'flex-start', justifyContent:'center',
-      background:'#0d111a', border:'1px solid #202636', borderRadius:12, padding:24 }}>
-      <div style={{ fontSize:28, color:'#ff6b6b', marginBottom:8 }}>404</div>
-      <div style={{ fontSize:18, marginBottom:6 }}>Page not found</div>
-      <div style={{ color:'#8892a6', marginBottom:14 }}>
+    <div style={{ minHeight: 260, display: 'flex', flexDirection: 'column',
+      alignItems: 'flex-start', justifyContent: 'center',
+      background: '#0d111a', border: '1px solid #202636', borderRadius: 12, padding: 24 }}>
+      <div style={{ fontSize: 28, color: '#ff6b6b', marginBottom: 8 }}>404</div>
+      <div style={{ fontSize: 18, marginBottom: 6 }}>Page not found</div>
+      <div style={{ color: '#8892a6', marginBottom: 14 }}>
         No public route exists for <code>{currentUrl}</code>
       </div>
       <button onClick={onHome} style={linkBtn('#00e5ff')}>Return to GridOS home</button>
@@ -876,21 +479,20 @@ function MissingPage({ currentUrl, onHome }: { currentUrl:string; onHome:()=>voi
 // ── helpers ───────────────────────────────────────────────────────────────────
 function navBtn(enabled: boolean): React.CSSProperties {
   return {
-    width:32, height:32, borderRadius:6,
-    border:'1px solid #283042',
+    width: 32, height: 32, borderRadius: 6,
+    border: '1px solid #283042',
     background: enabled ? '#121827' : '#0d121d',
     color: enabled ? '#d7e0ef' : '#566074',
     cursor: enabled ? 'pointer' : 'not-allowed',
-    fontSize:14,
+    fontSize: 14,
   }
 }
 
 function linkBtn(color: string): React.CSSProperties {
   return {
-    padding:'10px 12px', borderRadius:8,
-    border:`1px solid ${color}44`,
-    background:`${color}12`,
-    color, cursor:'pointer', fontSize:13,
+    padding: '10px 12px', borderRadius: 8,
+    border: `1px solid ${color}44`,
+    background: `${color}12`,
+    color, cursor: 'pointer', fontSize: 13,
   }
 }
->>>>>>> b0c77f0c92532e7476b5987ff783692496a7fabf
