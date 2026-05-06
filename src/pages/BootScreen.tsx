@@ -1,56 +1,72 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const BOOT_LINES = [
-  { text: 'GridOS v4.1.7 — Copyright © GridOS Corp. All rights reserved.', accent: false },
-  { text: 'Initializing kernel... OK', accent: false },
-  { text: 'Mounting encrypted volumes... OK', accent: false },
-  { text: 'Loading user profile... OK', accent: false },
-  { text: 'Connecting to GridNet... OK', accent: false },
-  { text: 'Starting desktop environment...', accent: false },
-  { text: '', accent: false },
-  { text: '> Welcome back, User.', accent: true },
+const LINES = [
+  { t: 'GridOS v4.1.7 — Copyright © GridOS Corp. All rights reserved.', hi: false },
+  { t: 'Initializing kernel........................................... OK', hi: false },
+  { t: 'Mounting encrypted volumes................................... OK', hi: false },
+  { t: 'Loading user profile......................................... OK', hi: false },
+  { t: 'Connecting to GridNet........................................ OK', hi: false },
+  { t: 'Starting desktop environment.................................',   hi: false },
+  { t: '', hi: false },
+  { t: '> Welcome back, User.', hi: true },
 ]
+
+const C = { bg:'#0a0a0f', muted:'#6b6b80', accent:'#00e5ff' }
 
 export default function BootScreen() {
   const navigate = useNavigate()
-  const [lines, setLines] = useState<typeof BOOT_LINES>( [])
-  const [done, setDone] = useState(false)
+  const [lines, setLines] = useState<typeof LINES>([])
+  const [done, setDone]   = useState(false)
 
   useEffect(() => {
     let i = 0
-    const interval = setInterval(() => {
-      if (i < BOOT_LINES.length) {
-        setLines(prev => [...prev, BOOT_LINES[i]])
-        i++
-      } else {
-        clearInterval(interval)
-        setDone(true)
-      }
-    }, 220)
-    return () => clearInterval(interval)
+    const id = setInterval(() => {
+      if (i < LINES.length) { setLines(p => [...p, LINES[i++]]) }
+      else { clearInterval(id); setDone(true) }
+    }, 210)
+    return () => clearInterval(id)
   }, [])
 
   useEffect(() => {
-    if (done) {
-      const t = setTimeout(() => navigate('/os'), 1000)
-      return () => clearTimeout(t)
-    }
+    if (!done) return
+    const id = setTimeout(() => navigate('/os'), 900)
+    return () => clearTimeout(id)
   }, [done, navigate])
 
   return (
-    <div className="boot-screen">
-      <div className="boot-inner">
-        <div className="boot-logo">GRID<span>OS</span></div>
-        <div className="boot-lines">
-          {lines.map((line, i) => (
-            <div key={i} className={`boot-line${line.accent ? ' accent' : ''}`}>
-              {line.text || '\u00A0'}
+    <div style={{ width:'100vw', height:'100vh', background:C.bg,
+      display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ maxWidth:640, width:'100%', padding:'48px 32px',
+        fontFamily:"'JetBrains Mono',monospace", fontSize:13 }}>
+
+        <div style={{ color:C.accent, fontSize:26, fontWeight:'bold',
+          letterSpacing:'0.12em', marginBottom:28 }}>
+          GRID<span style={{ color:C.muted }}>OS</span>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          {lines.map((l, i) => (
+            <div key={i} style={{ color: l.hi ? C.accent : C.muted }}>
+              {l.t || '\u00A0'}
             </div>
           ))}
-          {!done && <div className="boot-line cursor" />}
+          {!done && (
+            <div style={{ color:C.muted }}>
+              <BlinkCursor />
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+function BlinkCursor() {
+  const [on, setOn] = useState(true)
+  useEffect(() => {
+    const id = setInterval(() => setOn(p => !p), 500)
+    return () => clearInterval(id)
+  }, [])
+  return <span style={{ color:'#00e5ff' }}>{on ? '_' : '\u00A0'}</span>
 }
