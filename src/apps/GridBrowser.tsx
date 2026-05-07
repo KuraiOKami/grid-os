@@ -483,37 +483,36 @@ type ThemeConfig = {
   headerBg: string
   headerBorder: string
   divider: string
-  // layout variant — drives which skeleton is rendered
   layout: 'corp' | 'news' | 'blog' | 'archive' | 'void' | 'forum'
 }
 
 const THEME_STYLES: Record<SiteTheme, ThemeConfig> = {
   corp: {
-    bg: 'bg-slate-950', text: 'text-slate-200', accent: 'text-blue-400', muted: 'text-slate-500',
-    border: 'border-blue-900/40', tag: 'bg-blue-950 text-blue-300',
-    headerBg: 'bg-slate-900', headerBorder: 'border-blue-900/50',
-    divider: 'border-blue-900/25',
+    bg: 'bg-slate-50', text: 'text-slate-800', accent: 'text-blue-700', muted: 'text-slate-500',
+    border: 'border-slate-200', tag: 'bg-blue-50 text-blue-700',
+    headerBg: 'bg-white', headerBorder: 'border-slate-200',
+    divider: 'border-slate-100',
     layout: 'corp',
   },
   news: {
-    bg: 'bg-zinc-950', text: 'text-zinc-100', accent: 'text-amber-400', muted: 'text-zinc-500',
-    border: 'border-amber-900/40', tag: 'bg-amber-950 text-amber-300',
-    headerBg: 'bg-zinc-900', headerBorder: 'border-amber-900/50',
-    divider: 'border-amber-900/30',
+    bg: 'bg-neutral-50', text: 'text-neutral-900', accent: 'text-orange-600', muted: 'text-neutral-500',
+    border: 'border-neutral-200', tag: 'bg-orange-50 text-orange-700',
+    headerBg: 'bg-neutral-900', headerBorder: 'border-neutral-800',
+    divider: 'border-neutral-200',
     layout: 'news',
   },
   forum: {
-    bg: 'bg-neutral-950', text: 'text-neutral-100', accent: 'text-yellow-400', muted: 'text-neutral-500',
-    border: 'border-yellow-900/30', tag: 'bg-yellow-950 text-yellow-300',
-    headerBg: 'bg-neutral-900', headerBorder: 'border-yellow-900/40',
-    divider: 'border-yellow-900/25',
+    bg: 'bg-neutral-100', text: 'text-neutral-800', accent: 'text-yellow-700', muted: 'text-neutral-500',
+    border: 'border-neutral-200', tag: 'bg-yellow-100 text-yellow-800',
+    headerBg: 'bg-yellow-500', headerBorder: 'border-yellow-600',
+    divider: 'border-neutral-200',
     layout: 'forum',
   },
   blog: {
-    bg: 'bg-stone-950', text: 'text-stone-200', accent: 'text-emerald-400', muted: 'text-stone-500',
-    border: 'border-emerald-900/30', tag: 'bg-emerald-950 text-emerald-300',
-    headerBg: 'bg-stone-950', headerBorder: 'border-emerald-900/30',
-    divider: 'border-stone-800',
+    bg: 'bg-stone-50', text: 'text-stone-800', accent: 'text-emerald-700', muted: 'text-stone-500',
+    border: 'border-stone-200', tag: 'bg-emerald-50 text-emerald-700',
+    headerBg: 'bg-stone-50', headerBorder: 'border-stone-200',
+    divider: 'border-stone-200',
     layout: 'blog',
   },
   hidden: {
@@ -531,12 +530,23 @@ const THEME_STYLES: Record<SiteTheme, ThemeConfig> = {
     layout: 'void',
   },
   personal: {
-    bg: 'bg-slate-950', text: 'text-slate-200', accent: 'text-violet-400', muted: 'text-slate-500',
-    border: 'border-violet-900/30', tag: 'bg-violet-950 text-violet-300',
-    headerBg: 'bg-slate-900', headerBorder: 'border-violet-900/40',
-    divider: 'border-violet-900/25',
+    bg: 'bg-slate-50', text: 'text-slate-800', accent: 'text-violet-700', muted: 'text-slate-500',
+    border: 'border-slate-200', tag: 'bg-violet-50 text-violet-700',
+    headerBg: 'bg-white', headerBorder: 'border-slate-200',
+    divider: 'border-slate-100',
     layout: 'blog',
   },
+}
+
+// ── layout props type ─────────────────────────────────────────────────────
+type LayoutProps = {
+  page: PageData
+  t: ThemeConfig
+  url: string
+  navigate: (target: string) => void
+  gateBlocked: boolean
+  isLive: boolean
+  forumPosts: SiteContentRow[]
 }
 
 // ── shared sub-components ─────────────────────────────────────────────────
@@ -544,117 +554,150 @@ const THEME_STYLES: Record<SiteTheme, ThemeConfig> = {
 function ForumPost({ row, t }: { row: SiteContentRow; t: ThemeConfig }) {
   if (row.post_removed) {
     return (
-      <div className={`px-3 py-2 rounded border ${t.border} opacity-40 italic text-xs`}>
+      <div className="px-4 py-3 rounded-lg border border-neutral-200 bg-neutral-50 opacity-50 italic text-xs text-neutral-400">
         {row.post_body}
       </div>
     )
   }
+  const handle = row.post_handle ?? row.post_author ?? 'anon'
+  const initials = handle.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || '??'
   return (
-    <div className={`px-3 py-2 rounded border ${t.border} space-y-1`}>
+    <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3 space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className={`text-xs font-mono ${t.accent}`}>{row.post_handle ?? row.post_author}</span>
+        <div className="w-6 h-6 rounded-full bg-yellow-200 flex items-center justify-center shrink-0">
+          <span className="text-yellow-900 text-xs font-bold leading-none">{initials}</span>
+        </div>
+        <span className="text-xs font-semibold text-neutral-700">{handle}</span>
         {row.post_replies != null && row.post_replies > 0 && (
-          <span className="text-xs opacity-40">{row.post_replies} replies</span>
+          <span className="text-xs text-neutral-400 ml-auto">{row.post_replies} replies</span>
         )}
       </div>
-      <p className="text-sm leading-relaxed opacity-90">{row.post_body}</p>
-    </div>
-  )
-}
-
-function GateDenied({ page, t }: { page: PageData; t: ThemeConfig }) {
-  return (
-    <div className={`border ${t.border} rounded px-3 py-3 space-y-1`}>
-      <p className="text-xs text-red-400">⛔ ACCESS DENIED</p>
-      <p className="text-xs opacity-60">{page.gateHint ?? 'You do not have the required access level for this node.'}</p>
+      <p className="text-xs text-neutral-600 leading-relaxed pl-8">{row.post_body}</p>
     </div>
   )
 }
 
 function ContractCard({ job, url, t }: { job: JobOffer; url: string; t: ThemeConfig }) {
   return (
-    <div className={`border ${t.border} rounded px-3 py-2 space-y-1`}>
-      <div className="text-xs opacity-40 uppercase tracking-wider">available contract</div>
-      <div className={`text-xs font-semibold ${t.accent}`}>{job.title}</div>
-      <div className="text-xs opacity-60">{job.corp} · {job.pay}</div>
+    <div className={`border ${t.border} rounded-lg px-4 py-3 space-y-1.5 bg-white/60`}>
+      <div className="text-xs text-neutral-400 uppercase tracking-wider font-medium">Available Contract</div>
+      <div className="text-sm font-semibold text-neutral-800">{job.title}</div>
+      <div className="text-xs text-neutral-500">{job.corp} · {job.pay}</div>
       <button
         onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay })}
-        className={`mt-1 text-xs px-2 py-0.5 rounded border ${t.border} hover:bg-white/5 transition-colors`}
+        className="mt-1 text-xs px-3 py-1 rounded border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors font-medium"
       >
-        Accept contract
+        Accept Contract
+      </button>
+    </div>
+  )
+}
+
+function VoidContractCard({ job, url }: { job: JobOffer; url: string }) {
+  return (
+    <div className="border border-red-900/40 rounded px-3 py-2 space-y-1 font-mono">
+      <div className="text-xs text-red-900/60 uppercase tracking-wider">// contract</div>
+      <div className="text-xs font-semibold text-red-300">{job.title}</div>
+      <div className="text-xs text-red-900/70">{job.corp} · {job.pay}</div>
+      <button
+        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay })}
+        className="mt-1 text-xs px-2 py-0.5 rounded border border-red-900/40 text-red-500/70 hover:text-red-300 transition-colors"
+      >
+        accept
       </button>
     </div>
   )
 }
 
 // ── LAYOUT: CORP ──────────────────────────────────────────────────────────
-// Cold, official, institutional. Full-width hero bar, two-column nav footer,
-// bold section labels that look like internal document headers.
-function LayoutCorp({
-  page, t, url, navigate, gateBlocked, isLive, forumPosts,
-}: LayoutProps) {
+// Real enterprise website. Light mode, white cards, blue hero, proper nav.
+function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Hero band — full-width blue gradient with corp seal feel */}
-      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-950 border-b border-blue-900/40 px-5 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1 flex-1">
-            {isLive && (
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                <span className="text-xs text-blue-400/50 uppercase tracking-widest">live node</span>
-              </div>
-            )}
-            <h1 className="text-sm font-bold text-blue-200 leading-tight tracking-wide">{page.title}</h1>
-            {page.subtitle && <p className="text-xs text-slate-400 italic">{page.subtitle}</p>}
+    <div className="flex-1 overflow-y-auto bg-slate-50 text-slate-800 font-sans text-sm flex flex-col">
+      {/* Top nav bar */}
+      <div className="bg-white border-b border-slate-200 px-5 py-2.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          {/* Corp logo mark */}
+          <div className="flex items-center gap-1.5">
+            <div className="w-5 h-5 bg-blue-700 rounded flex items-center justify-center">
+              <span className="text-white text-xs font-black leading-none">G</span>
+            </div>
+            <span className="text-xs font-bold text-slate-800 tracking-tight">{page.site}</span>
           </div>
-          {/* Corp seal — right-aligned badge */}
-          <div className="shrink-0 text-right">
-            <div className="text-xs text-blue-500/60 uppercase tracking-widest leading-tight">GridOS</div>
-            <div className="text-xs text-blue-700/50 uppercase tracking-widest">Corp.</div>
-          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {page.links.slice(0, 3).map((lnk, i) => (
+            <button key={i} onClick={() => navigate(lnk.url)}
+              className="text-xs text-slate-500 hover:text-slate-800 transition-colors hidden sm:block">
+              {lnk.label}
+            </button>
+          ))}
+          {isLive && (
+            <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <span className="text-xs text-green-700 font-medium">Live</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Notice strip — compliance disclaimer style */}
-      <div className="border-b border-blue-900/20 px-5 py-1.5 bg-slate-950">
-        <p className="text-xs text-slate-600 uppercase tracking-widest">
-          OFFICIAL GRID NODE · AUTHENTICATED · ALL ACTIVITY LOGGED
-        </p>
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-6 py-8 text-white shrink-0">
+        <div className="inline-flex items-center gap-1.5 bg-blue-700/40 border border-blue-600/30 rounded-full px-3 py-1 mb-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-300" />
+          <span className="text-xs text-blue-200 uppercase tracking-wider font-medium">Official Communication</span>
+        </div>
+        <h1 className="text-xl font-bold text-white leading-tight mb-1">{page.title}</h1>
+        {page.subtitle && <p className="text-sm text-blue-200 leading-relaxed">{page.subtitle}</p>}
       </div>
 
-      <div className="px-5 py-4 space-y-5">
+      {/* Content */}
+      <div className="px-5 py-6 space-y-6 flex-1">
         {gateBlocked ? (
-          <GateDenied page={page} t={t} />
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-red-500 text-sm">⛔</span>
+              <p className="text-sm font-semibold text-red-700">Access Restricted</p>
+            </div>
+            <p className="text-xs text-red-500 leading-relaxed">{page.gateHint ?? 'You do not have the required clearance level.'}</p>
+          </div>
         ) : (
           <>
-            {/* Body — displayed as numbered official statements */}
             {page.body.length > 0 && (
-              <div className="space-y-0">
-                <div className="text-xs text-blue-700/60 uppercase tracking-widest mb-2">STATEMENT</div>
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 {page.body.map((line, i) => (
-                  <div key={i} className="flex gap-3 py-2 border-b border-blue-900/15 last:border-0">
-                    <span className="text-xs text-blue-900 tabular-nums shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
-                    <p className="text-xs text-slate-300 leading-relaxed">{line}</p>
+                  <div key={i} className="px-5 py-4 flex gap-4 items-start border-b border-slate-100 last:border-0">
+                    <span className="text-xs font-mono text-slate-300 shrink-0 mt-0.5 tabular-nums w-5 text-right">{i + 1}</span>
+                    <p className="text-sm text-slate-600 leading-relaxed">{line}</p>
                   </div>
                 ))}
               </div>
             )}
 
-            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+            {page.job && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs bg-blue-700 text-white px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Open Role</span>
+                </div>
+                <p className="text-sm font-bold text-blue-900">{page.job.title}</p>
+                <p className="text-xs text-blue-600">{page.job.corp} · {page.job.pay}</p>
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                  className="text-xs bg-blue-700 hover:bg-blue-800 text-white px-4 py-1.5 rounded-lg transition-colors font-medium">
+                  Apply Now →
+                </button>
+              </div>
+            )}
 
-            {/* Nav links — corp footer style: two columns */}
             {page.links.length > 0 && (
-              <div className="pt-1">
-                <div className="text-xs text-blue-700/60 uppercase tracking-widest mb-2">NAVIGATION</div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">Quick Links</p>
+                <div className="space-y-2">
                   {page.links.map((lnk, i) => (
-                    <button
-                      key={i}
-                      onClick={() => navigate(lnk.url)}
-                      className="text-left text-xs text-blue-400 hover:text-blue-200 transition-colors truncate"
-                    >
-                      › {lnk.label}
+                    <button key={i} onClick={() => navigate(lnk.url)}
+                      className="w-full flex items-center gap-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg px-4 py-3 text-left transition-all group">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                      <span className="text-sm text-slate-700 group-hover:text-blue-700 transition-colors">{lnk.label}</span>
+                      <span className="ml-auto text-slate-300 group-hover:text-blue-400 text-base leading-none">›</span>
                     </button>
                   ))}
                 </div>
@@ -664,80 +707,93 @@ function LayoutCorp({
         )}
       </div>
 
-      {/* Footer bar */}
-      <div className="px-5 py-2 border-t border-blue-900/20 bg-slate-950 mt-auto">
-        <p className="text-xs text-slate-700 uppercase tracking-widest">
-          © GridOS Corp. · Unified Access Compact · All rights reserved.
-        </p>
+      <div className="px-5 py-3 border-t border-slate-200 bg-white shrink-0">
+        <p className="text-xs text-slate-400">© GridOS Corp. All activity is monitored and logged under the Unified Access Compact.</p>
       </div>
     </div>
   )
 }
 
 // ── LAYOUT: NEWS ──────────────────────────────────────────────────────────
-// Newspaper/wire service feel. Masthead with live timestamp, body paragraphs
-// rendered as article cards with a category tag prefix.
-function LayoutNews({
-  page, t, url, navigate, gateBlocked, isLive, forumPosts,
-}: LayoutProps) {
-  // Fake timestamp for immersion
-  const ts = '07.05.26 // UPDATED LIVE'
-  // Map body lines → article cards: first word(s) become a tag if they look like a category
+// Real newspaper / wire service. Dark masthead, article body, pull quotes.
+function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
+  const siteName = page.site.toUpperCase()
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-neutral-50 text-neutral-900 font-sans text-sm flex flex-col">
       {/* Masthead */}
-      <div className="bg-amber-950/30 border-b-2 border-amber-600/50 px-4 py-3">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="text-xs text-amber-500/60 uppercase tracking-widest font-bold">{page.site}</span>
+      <div className="bg-neutral-900 px-4 py-2.5 flex items-center justify-between shrink-0">
+        <span className="text-xs font-black text-amber-400 tracking-widest uppercase">{siteName}</span>
+        <div className="flex items-center gap-2.5">
           {isLive && (
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs text-red-400 uppercase tracking-widest">LIVE</span>
-            </div>
+            <span className="flex items-center gap-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide">
+              <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+              Live
+            </span>
           )}
+          <span className="text-xs text-neutral-500 font-mono">07 MAY 2026</span>
         </div>
-        <h1 className="text-sm font-bold text-zinc-100 leading-snug">{page.title}</h1>
-        {page.subtitle && (
-          <p className="text-xs text-zinc-400 mt-0.5">{page.subtitle}</p>
-        )}
-        <div className="text-xs text-amber-700/70 mt-1.5 uppercase tracking-wide">{ts}</div>
       </div>
 
-      <div className="px-4 py-3 space-y-4">
+      {/* Section tag + Headline */}
+      <div className="bg-white border-b-2 border-neutral-900 px-5 py-5 shrink-0">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wide">Markets</span>
+          <span className="text-xs text-neutral-400">·</span>
+          <span className="text-xs text-neutral-500">07 May 2026</span>
+        </div>
+        <h1 className="text-lg font-black text-neutral-900 leading-tight">{page.title}</h1>
+        {page.subtitle && <p className="text-sm text-neutral-500 mt-1.5 italic font-light border-l-4 border-amber-400 pl-3">{page.subtitle}</p>}
+      </div>
+
+      {/* Byline strip */}
+      <div className="px-5 py-2 bg-neutral-100 border-b border-neutral-200 shrink-0">
+        <p className="text-xs text-neutral-500">By <span className="font-semibold text-neutral-700">{page.site} Staff</span> · Automated wire feed</p>
+      </div>
+
+      {/* Article */}
+      <div className="px-5 py-5 space-y-6 flex-1">
         {gateBlocked ? (
-          <GateDenied page={page} t={t} />
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-amber-800">🔒 Subscriber Content</p>
+            <p className="text-xs text-amber-600 mt-1">{page.gateHint ?? 'This article requires a verified subscriber account.'}</p>
+          </div>
         ) : (
           <>
-            {/* Body as article cards */}
             {page.body.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-0">
                 {page.body.map((line, i) => (
-                  <div key={i} className="border-l-2 border-amber-700/40 pl-3 py-0.5">
-                    <p className="text-xs text-zinc-300 leading-relaxed">{line}</p>
-                  </div>
+                  i === 1 && page.body.length > 2 ? (
+                    <div key={i} className="my-4 border-l-4 border-amber-500 pl-4 py-2 bg-amber-50 rounded-r-lg">
+                      <p className="text-sm text-neutral-700 italic font-medium leading-relaxed">{line}</p>
+                    </div>
+                  ) : (
+                    <p key={i} className="text-sm text-neutral-700 leading-relaxed py-2.5 border-b border-neutral-100 last:border-0">{line}</p>
+                  )
                 ))}
               </div>
             )}
 
-            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+            {page.job && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-1.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Sponsored · Job Listing</p>
+                <p className="text-sm font-semibold text-neutral-800">{page.job.title}</p>
+                <p className="text-xs text-neutral-500">{page.job.corp} · {page.job.pay}</p>
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded font-semibold transition-colors">
+                  Learn More
+                </button>
+              </div>
+            )}
 
-            {/* Related articles */}
             {page.links.length > 0 && (
-              <div>
-                <div className="text-xs text-amber-700/60 uppercase tracking-widest border-t border-amber-900/30 pt-3 mb-2">
-                  RELATED ARTICLES
-                </div>
-                <div className="space-y-1">
+              <div className="border-t-2 border-neutral-900 pt-4">
+                <p className="text-xs font-black uppercase tracking-widest text-neutral-500 mb-3">More Coverage</p>
+                <div className="space-y-0">
                   {page.links.map((lnk, i) => (
-                    <button
-                      key={i}
-                      onClick={() => navigate(lnk.url)}
-                      className="block w-full text-left group"
-                    >
-                      <span className="text-xs text-amber-500/50 mr-1.5">■</span>
-                      <span className="text-xs text-amber-300 group-hover:text-amber-100 underline-offset-2 hover:underline transition-colors">
-                        {lnk.label}
-                      </span>
+                    <button key={i} onClick={() => navigate(lnk.url)}
+                      className="w-full text-left border-b border-neutral-100 last:border-0 py-2.5 group flex items-center gap-2">
+                      <span className="text-amber-500 shrink-0 text-base leading-none">›</span>
+                      <span className="text-sm text-neutral-800 group-hover:text-amber-600 font-medium transition-colors">{lnk.label}</span>
                     </button>
                   ))}
                 </div>
@@ -751,78 +807,81 @@ function LayoutNews({
 }
 
 // ── LAYOUT: BLOG ──────────────────────────────────────────────────────────
-// Personal, narrow, journal-like. No official chrome. Body reads like prose.
-// Author sigil in header. Links look hand-written.
-function LayoutBlog({
-  page, t, url, navigate, gateBlocked, isLive, forumPosts,
-}: LayoutProps) {
-  // Extract "author" from site name (e.g. "ghostlily.blog" → "ghostlily")
-  const author = page.site.replace(/\.blog$/, '').replace(/\.dev$/, '')
+// Real personal blog. Clean editorial, serif feel, minimal chrome.
+function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
+  const author = page.site.replace(/\.(blog|dev|net)$/, '')
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Personal header — no corp chrome, just name + post title */}
-      <div className="px-5 pt-5 pb-3 border-b border-stone-800/60">
-        <div className="flex items-center gap-2 mb-3">
-          {/* Author sigil: a small hand-crafted circle glyph */}
-          <div className="w-5 h-5 rounded-full border border-emerald-700/50 flex items-center justify-center shrink-0">
-            <span className="text-emerald-500 text-xs leading-none">{author[0]?.toUpperCase()}</span>
+    <div className="flex-1 overflow-y-auto bg-stone-50 text-stone-800 font-sans text-sm flex flex-col">
+      {/* Minimal header */}
+      <div className="bg-white border-b border-stone-200 px-5 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-emerald-800 flex items-center justify-center shrink-0">
+            <span className="text-white text-xs font-bold">{author[0]?.toUpperCase()}</span>
           </div>
-          <span className="text-xs text-stone-500">{page.site}</span>
-          {isLive && (
-            <div className="flex items-center gap-1 ml-auto">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs text-emerald-600/60">live</span>
-            </div>
-          )}
+          <div>
+            <span className="text-xs font-bold text-stone-800 block leading-tight">{page.site}</span>
+            <span className="text-xs text-stone-400 leading-tight">personal blog</span>
+          </div>
         </div>
-        <h1 className="text-sm font-bold text-emerald-400 leading-snug">{page.title}</h1>
-        {page.subtitle && (
-          <p className="text-xs text-stone-500 italic mt-0.5">{page.subtitle}</p>
+        {isLive && (
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs text-stone-400">live</span>
+          </div>
         )}
       </div>
 
-      {/* Narrow prose column — blog-width reading */}
-      <div className="px-5 py-4 space-y-5 max-w-sm">
+      {/* Post header */}
+      <div className="px-6 pt-7 pb-5 border-b border-stone-200 bg-white shrink-0">
+        <h1 className="text-lg font-bold text-stone-900 leading-snug">{page.title}</h1>
+        {page.subtitle && <p className="text-sm text-stone-500 italic mt-1.5">{page.subtitle}</p>}
+        <div className="flex items-center gap-2 mt-4 text-xs text-stone-400">
+          <span className="font-medium text-stone-600">{author}</span>
+          <span>·</span>
+          <span>07 May 2026</span>
+          <span>·</span>
+          <span>{page.body.reduce((n, l) => n + l.split(' ').length, 0)} words</span>
+        </div>
+      </div>
+
+      {/* Post body */}
+      <div className="px-6 py-6 space-y-6 flex-1 max-w-prose">
         {gateBlocked ? (
-          <GateDenied page={page} t={t} />
+          <div className="bg-stone-100 border border-stone-300 rounded-lg p-4">
+            <p className="text-sm font-semibold text-stone-700">🔒 Private Entry</p>
+            <p className="text-xs text-stone-500 mt-1">{page.gateHint ?? 'This post is not publicly accessible.'}</p>
+          </div>
         ) : (
           <>
-            {/* Body as continuous prose — no numbering, no tags */}
             {page.body.length > 0 && (
-              <div className="space-y-3">
+              <div className="prose prose-sm prose-stone max-w-none space-y-4">
                 {page.body.map((line, i) => (
-                  <p key={i} className="text-xs text-stone-300 leading-loose">{line}</p>
+                  <p key={i} className="text-sm text-stone-700 leading-loose">{line}</p>
                 ))}
               </div>
             )}
 
-            {/* Contract — looks jarring on purpose, dropped in from outside */}
             {page.job && (
-              <div className="border border-dashed border-stone-700 rounded px-3 py-2 space-y-1 bg-stone-900/40">
-                <div className="text-xs text-stone-600 uppercase tracking-wider">// contract dropped here</div>
-                <div className={`text-xs font-semibold ${t.accent}`}>{page.job.title}</div>
-                <div className="text-xs text-stone-500">{page.job.corp} · {page.job.pay}</div>
-                <button
-                  onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
-                  className="mt-1 text-xs px-2 py-0.5 rounded border border-stone-700 text-stone-400 hover:bg-stone-800 transition-colors"
-                >
-                  accept
+              <div className="border border-dashed border-stone-300 rounded-lg px-4 py-4 space-y-2 bg-stone-100/60">
+                <p className="text-xs text-stone-400 uppercase tracking-wider font-medium">// dropped here</p>
+                <p className="text-sm font-semibold text-stone-800">{page.job.title}</p>
+                <p className="text-xs text-stone-500">{page.job.corp} · {page.job.pay}</p>
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                  className="text-xs border border-stone-400 text-stone-600 hover:bg-stone-200 px-3 py-1 rounded transition-colors">
+                  Accept
                 </button>
               </div>
             )}
 
-            {/* Links — look like hand-written footnotes */}
             {page.links.length > 0 && (
-              <div className="pt-2 border-t border-stone-800 space-y-1">
-                <div className="text-xs text-stone-600 mb-1">— links</div>
+              <div className="pt-6 border-t border-stone-200 space-y-2.5">
+                <p className="text-xs text-stone-400 uppercase tracking-wider font-medium mb-3">— See Also —</p>
                 {page.links.map((lnk, i) => (
-                  <button
-                    key={i}
-                    onClick={() => navigate(lnk.url)}
-                    className="block text-left text-xs text-emerald-500/70 hover:text-emerald-300 transition-colors"
-                  >
-                    ↳ {lnk.label}
+                  <button key={i} onClick={() => navigate(lnk.url)}
+                    className="flex items-center gap-2 text-xs text-emerald-700 hover:text-emerald-900 transition-colors group">
+                    <span className="text-emerald-400 group-hover:text-emerald-600">↳</span>
+                    <span className="underline underline-offset-2">{lnk.label}</span>
                   </button>
                 ))}
               </div>
@@ -835,46 +894,40 @@ function LayoutBlog({
 }
 
 // ── LAYOUT: ARCHIVE ───────────────────────────────────────────────────────
-// Government archive / civic records feel. Bureaucratic, tabular, stamp marks,
-// dashed borders, faded classification headers.
-function LayoutArchive({
-  page, t, url, navigate, gateBlocked, isLive, forumPosts,
-}: LayoutProps) {
+// WikiLeaks / civic document dump. Dark mono, record IDs, dashed borders.
+function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Archive stamp header */}
-      <div className="px-4 pt-4 pb-3 border-b border-dashed border-cyan-900/40">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5">
-            <div className="text-xs text-cyan-700/60 uppercase tracking-widest">
-              CIVIC ARCHIVE SYSTEM · MIRROR NODE
+    <div className="flex-1 overflow-y-auto bg-zinc-950 text-zinc-300 font-mono text-xs flex flex-col">
+      <div className="px-4 py-3 border-b border-cyan-900/30 bg-zinc-900/80 shrink-0">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-cyan-700/60 uppercase tracking-widest text-xs">{page.site}</span>
+          {isLive && (
+            <div className="flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse" />
+              <span className="text-cyan-600/60 text-xs">mirror live</span>
             </div>
-            <h1 className="text-sm font-bold text-cyan-300 leading-snug">{page.title}</h1>
-            {page.subtitle && (
-              <p className="text-xs text-zinc-500 italic">{page.subtitle}</p>
-            )}
-          </div>
-          {/* Integrity stamp */}
-          <div className="shrink-0 border border-dashed border-cyan-900/40 rounded px-2 py-1 text-right">
-            <div className="text-xs text-cyan-800/70 uppercase">STATUS</div>
-            <div className={`text-xs ${isLive ? 'text-cyan-500' : 'text-zinc-600'}`}>
-              {isLive ? 'MIRROR LIVE' : 'CACHED'}
-            </div>
-          </div>
+          )}
+        </div>
+        <h1 className="text-sm font-semibold text-cyan-300 leading-snug">{page.title}</h1>
+        {page.subtitle && <p className="text-xs text-zinc-500 italic mt-0.5">{page.subtitle}</p>}
+        <div className="mt-2 pt-1.5 border-t border-cyan-900/20 text-xs text-cyan-900/60 uppercase tracking-widest">
+          CLASSIFIED ARCHIVE · MIRROR 441-C · READ ONLY
         </div>
       </div>
 
-      <div className="px-4 py-3 space-y-4">
+      <div className="px-4 py-4 space-y-5 flex-1">
         {gateBlocked ? (
-          <GateDenied page={page} t={t} />
+          <div className="border border-red-900/40 rounded px-3 py-2 bg-red-950/10">
+            <p className="text-xs text-red-400 font-bold">⛔ CLEARANCE REQUIRED</p>
+            <p className="text-xs text-zinc-500 mt-1">{page.gateHint ?? 'Insufficient access level for this node.'}</p>
+          </div>
         ) : (
           <>
-            {/* Body as record entries — looks like a document with field rows */}
             {page.body.length > 0 && (
               <div className="border border-dashed border-cyan-900/30 rounded divide-y divide-cyan-900/20">
                 {page.body.map((line, i) => (
-                  <div key={i} className="px-3 py-2 flex gap-3 items-start">
-                    <span className="text-xs text-cyan-800/50 uppercase tracking-widest shrink-0 mt-0.5">
+                  <div key={i} className="px-3 py-2.5 flex gap-3 items-start">
+                    <span className="text-xs text-cyan-800/50 uppercase tracking-widest shrink-0 mt-0.5 tabular-nums">
                       REC-{String(i + 1).padStart(3, '0')}
                     </span>
                     <p className="text-xs text-zinc-300 leading-relaxed">{line}</p>
@@ -883,22 +936,26 @@ function LayoutArchive({
               </div>
             )}
 
-            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+            {page.job && (
+              <div className="border border-dashed border-cyan-900/30 rounded px-3 py-2 space-y-1">
+                <div className="text-xs text-cyan-800/50 uppercase tracking-wider">// contract</div>
+                <div className="text-xs font-semibold text-cyan-300">{page.job.title}</div>
+                <div className="text-xs text-zinc-500">{page.job.corp} · {page.job.pay}</div>
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                  className="mt-1 text-xs px-2 py-0.5 rounded border border-cyan-900/40 text-cyan-600 hover:text-cyan-300 transition-colors">
+                  accept contract
+                </button>
+              </div>
+            )}
 
-            {/* Links as cross-reference table */}
             {page.links.length > 0 && (
               <div>
-                <div className="text-xs text-cyan-800/60 uppercase tracking-widest mb-2">
-                  CROSS-REFERENCES
-                </div>
+                <div className="text-xs text-cyan-800/60 uppercase tracking-widest mb-2">CROSS-REFERENCES</div>
                 <div className="border border-dashed border-cyan-900/30 rounded divide-y divide-cyan-900/20">
                   {page.links.map((lnk, i) => (
-                    <button
-                      key={i}
-                      onClick={() => navigate(lnk.url)}
-                      className="w-full text-left flex items-center gap-3 px-3 py-1.5 hover:bg-cyan-950/30 transition-colors"
-                    >
-                      <span className="text-xs text-cyan-900 tabular-nums shrink-0">[{String(i + 1).padStart(2, '0')}]</span>
+                    <button key={i} onClick={() => navigate(lnk.url)}
+                      className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-cyan-950/30 transition-colors">
+                      <span className="text-xs text-cyan-900/70 tabular-nums shrink-0">[{String(i + 1).padStart(2, '0')}]</span>
                       <span className="text-xs text-cyan-400 hover:text-cyan-200 transition-colors">{lnk.label}</span>
                     </button>
                   ))}
@@ -913,52 +970,44 @@ function LayoutArchive({
 }
 
 // ── LAYOUT: VOID ──────────────────────────────────────────────────────────
-// Dark market. No logos, no polish. Hostile, sparse, red-on-black.
-// Listings look like raw console output. Trust nothing.
-function LayoutVoid({
-  page, t, url, navigate, gateBlocked, isLive, forumPosts,
-}: LayoutProps) {
+// Dark market terminal. Hostile, sparse, red-on-black.
+function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Minimal hostile header — no branding, just a warning */}
-      <div className="px-4 pt-3 pb-2 border-b border-red-900/30">
-        <div className="text-xs text-red-900/70 uppercase tracking-widest mb-1">
+    <div className="flex-1 overflow-y-auto bg-black text-red-200 font-mono text-xs flex flex-col">
+      <div className="px-4 pt-3 pb-2 border-b border-red-900/30 shrink-0">
+        <div className="text-xs text-red-900/70 uppercase tracking-widest mb-1.5 animate-pulse">
           !! UNREGISTERED NODE !! GRID ROUTING DISABLED !!
         </div>
         <h1 className="text-sm font-bold text-red-300 leading-snug">{page.title}</h1>
-        {page.subtitle && (
-          <p className="text-xs text-red-900/60 mt-0.5">{page.subtitle}</p>
-        )}
+        {page.subtitle && <p className="text-xs text-red-900/60 mt-0.5">{page.subtitle}</p>}
       </div>
 
-      <div className="px-4 py-3 space-y-4">
+      <div className="px-4 py-3 space-y-4 flex-1">
         {gateBlocked ? (
-          <GateDenied page={page} t={t} />
+          <div className="border border-red-900/40 px-3 py-2 rounded">
+            <p className="text-xs text-red-500 font-bold">⛔ ACCESS DENIED</p>
+            <p className="text-xs text-red-900/60 mt-1">{page.gateHint ?? 'You lack the required standing.'}</p>
+          </div>
         ) : (
           <>
-            {/* Body as raw console dump */}
             {page.body.length > 0 && (
-              <div className="bg-red-950/10 border border-red-900/20 rounded px-3 py-2 space-y-1.5">
+              <div className="bg-red-950/10 border border-red-900/20 rounded px-3 py-2.5 space-y-2">
                 {page.body.map((line, i) => (
-                  <p key={i} className="text-xs text-red-200/70 leading-relaxed font-mono">
+                  <p key={i} className="text-xs text-red-200/70 leading-relaxed">
                     <span className="text-red-900/60 mr-1.5">&gt;</span>{line}
                   </p>
                 ))}
               </div>
             )}
 
-            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+            {page.job && <VoidContractCard job={page.job} url={url} />}
 
-            {/* Links — no labels, just raw paths */}
             {page.links.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="text-xs text-red-900/50 uppercase tracking-widest">-- NAV --</div>
                 {page.links.map((lnk, i) => (
-                  <button
-                    key={i}
-                    onClick={() => navigate(lnk.url)}
-                    className="block text-left text-xs text-red-500/70 hover:text-red-300 transition-colors"
-                  >
+                  <button key={i} onClick={() => navigate(lnk.url)}
+                    className="block text-left text-xs text-red-500/70 hover:text-red-300 transition-colors">
                     [{i}] {lnk.label}
                   </button>
                 ))}
@@ -972,45 +1021,66 @@ function LayoutVoid({
 }
 
 // ── LAYOUT: FORUM ─────────────────────────────────────────────────────────
-// Thread board. Header shows board name and post count. Body entries look like replies.
-function LayoutForum({
-  page, t, url, navigate, gateBlocked, isLive, forumPosts,
-}: LayoutProps) {
+// Real forum board — Reddit/HN style. Yellow header, thread cards, user avatars.
+function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Board header */}
-      <div className="px-4 py-3 border-b border-yellow-900/30 bg-yellow-950/20">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-yellow-600/70 uppercase tracking-widest">{page.site}</span>
-          {isLive && (
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-              <span className="text-xs text-yellow-600/60">live</span>
-            </div>
-          )}
-        </div>
-        <h1 className="text-sm font-bold text-yellow-300 leading-snug">{page.title}</h1>
-        {page.subtitle && (
-          <p className="text-xs text-neutral-500 italic mt-0.5">{page.subtitle}</p>
+    <div className="flex-1 overflow-y-auto bg-neutral-100 text-neutral-800 font-sans text-sm flex flex-col">
+      {/* Board nav */}
+      <div className="bg-yellow-500 px-4 py-2.5 flex items-center justify-between shrink-0">
+        <span className="text-xs font-black text-yellow-900 uppercase tracking-wide">{page.site}</span>
+        {isLive && (
+          <div className="flex items-center gap-1 bg-yellow-600/30 px-2 py-0.5 rounded-full">
+            <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
+            <span className="text-xs text-yellow-900 font-bold">LIVE</span>
+          </div>
         )}
       </div>
 
-      <div className="px-4 py-3 space-y-3">
+      {/* Thread header */}
+      <div className="bg-white border-b border-neutral-200 px-4 py-4 shrink-0">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded bg-yellow-100 border border-yellow-300 flex items-center justify-center shrink-0 mt-0.5">
+            <span className="text-yellow-700 font-black text-sm">▲</span>
+          </div>
+          <div className="flex-1">
+            <h1 className="text-sm font-bold text-neutral-900 leading-snug">{page.title}</h1>
+            {page.subtitle && <p className="text-xs text-neutral-400 italic mt-0.5">{page.subtitle}</p>}
+            <div className="flex items-center gap-3 mt-1.5 text-xs text-neutral-400">
+              <span>{forumPosts.length > 0 ? forumPosts.length : page.body.length} replies</span>
+              <span>·</span>
+              <span>07 May 2026</span>
+              <span>·</span>
+              <span className="text-neutral-500 font-medium">thread/gridos-watch</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-3 space-y-2 flex-1">
         {gateBlocked ? (
-          <GateDenied page={page} t={t} />
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-red-700">⛔ Access Restricted</p>
+            <p className="text-xs text-red-500 mt-1">{page.gateHint ?? 'You need more standing to view this thread.'}</p>
+          </div>
         ) : (
           <>
-            {/* Body paragraphs as OP post */}
+            {/* OP post */}
             {page.body.length > 0 && (
-              <div className="border border-yellow-900/25 rounded px-3 py-2 space-y-2">
-                <div className="text-xs text-yellow-700/60 uppercase tracking-wider">OP</div>
+              <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center shrink-0">
+                    <span className="text-yellow-900 text-xs font-black leading-none">OP</span>
+                  </div>
+                  <span className="text-xs font-bold text-neutral-700">Original Post</span>
+                  <span className="text-xs text-neutral-400 ml-auto">07 May</span>
+                </div>
                 {page.body.map((line, i) => (
-                  <p key={i} className="text-xs text-neutral-300 leading-relaxed">{line}</p>
+                  <p key={i} className="text-xs text-neutral-600 leading-relaxed pl-7">{line}</p>
                 ))}
               </div>
             )}
 
-            {/* Forum posts */}
+            {/* Replies */}
             {forumPosts.length > 0 && (
               <div className="space-y-2">
                 {forumPosts.map(p => (
@@ -1022,17 +1092,16 @@ function LayoutForum({
             {page.job && <ContractCard job={page.job} url={url} t={t} />}
 
             {page.links.length > 0 && (
-              <div className="pt-1 border-t border-yellow-900/20 space-y-1">
-                <div className="text-xs text-yellow-800/50 uppercase tracking-widest mb-1">RELATED THREADS</div>
-                {page.links.map((lnk, i) => (
-                  <button
-                    key={i}
-                    onClick={() => navigate(lnk.url)}
-                    className="block text-left text-xs text-yellow-400/80 hover:text-yellow-200 transition-colors"
-                  >
-                    ▸ {lnk.label}
-                  </button>
-                ))}
+              <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3">
+                <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Related Threads</p>
+                <div className="space-y-1.5">
+                  {page.links.map((lnk, i) => (
+                    <button key={i} onClick={() => navigate(lnk.url)}
+                      className="block text-left text-xs text-yellow-700 hover:text-yellow-900 transition-colors">
+                      ▸ <span className="underline underline-offset-2">{lnk.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </>
@@ -1040,17 +1109,6 @@ function LayoutForum({
       </div>
     </div>
   )
-}
-
-// ── layout props type ─────────────────────────────────────────────────────
-type LayoutProps = {
-  page: PageData
-  t: ThemeConfig
-  url: string
-  navigate: (target: string) => void
-  gateBlocked: boolean
-  isLive: boolean
-  forumPosts: SiteContentRow[]
 }
 
 // ── main component ────────────────────────────────────────────────────────
@@ -1101,14 +1159,15 @@ export default function GridBrowser() {
 
   const layoutProps: LayoutProps = { page: page!, t, url, navigate, gateBlocked, isLive, forumPosts }
 
+  // Address bar is always dark/mono regardless of page theme for the OS chrome feel
   return (
-    <div className={`flex flex-col h-full ${t.bg} ${t.text} font-mono text-sm`}>
+    <div className="flex flex-col h-full bg-slate-900 font-mono text-sm">
 
       {/* ── address bar ── */}
-      <div className={`flex items-center gap-2 px-3 py-2 border-b ${t.headerBorder} ${t.headerBg}`}>
-        <span className={`text-xs ${t.accent} opacity-60 select-none`}>GRID://</span>
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700 bg-slate-900 shrink-0">
+        <span className="text-xs text-slate-500 select-none">GRID://</span>
         <input
-          className="flex-1 bg-transparent outline-none text-xs tracking-wide caret-current"
+          className="flex-1 bg-transparent outline-none text-xs tracking-wide text-slate-200 caret-slate-400 placeholder-slate-600"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && navigate(input)}
@@ -1116,7 +1175,7 @@ export default function GridBrowser() {
         />
         <button
           onClick={() => navigate(input)}
-          className={`text-xs px-2 py-0.5 rounded border ${t.border} hover:bg-white/5 transition-colors`}
+          className="text-xs px-2 py-0.5 rounded border border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors"
         >
           GO
         </button>
@@ -1124,17 +1183,17 @@ export default function GridBrowser() {
 
       {/* ── status strips ── */}
       {isLoadingFromDB && (
-        <div className="px-4 py-2 opacity-40 text-xs animate-pulse">connecting to grid node…</div>
+        <div className="px-4 py-2 opacity-40 text-xs animate-pulse text-slate-400 bg-slate-900">connecting to grid node…</div>
       )}
       {supaResult.status === 'error' && (
-        <div className="px-4 py-1.5 text-xs opacity-30 italic border-b border-current/10">
+        <div className="px-4 py-1.5 text-xs opacity-30 italic border-b border-slate-700 text-slate-400 bg-slate-900">
           ⚠ remote sync degraded — serving cached data
         </div>
       )}
 
       {/* ── 404 ── */}
       {!page && !isLoadingFromDB && (
-        <div className="px-4 py-4 space-y-1 flex-1">
+        <div className="px-4 py-4 space-y-1 flex-1 bg-slate-900 text-slate-400">
           <p className="text-red-400">404 — node not found</p>
           <p className="opacity-40 text-xs">{url} is not responding or does not exist.</p>
         </div>
