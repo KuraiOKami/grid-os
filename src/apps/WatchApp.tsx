@@ -1,34 +1,46 @@
 // ── WatchApp.tsx ────────────────────────────────────────────────────────────
-// Compliance surveillance app. Players review NPC citizen case files
-// and submit decisions that shift the dual reputation axes.
-// After the first submission, a reactive mail is sent via mailStore.
+// Compliance surveillance app — Orwell-style case review.
+// Read evidence across 5 data tabs, mark suspicious items, then submit a verdict.
+// Escalate is gated behind marked evidence. Decisions pay ₳ and shift rep.
 
 import { useState, useRef } from 'react'
-import { useRepStore } from '@/store/reputationStore'
-import { useMailStore } from '@/store/mailStore'
+import { useRepStore }    from '@/store/reputationStore'
+import { useMailStore }   from '@/store/mailStore'
+import { useWalletStore } from '@/store/walletStore'
+import { useCareerStore } from '@/store/careerStore'
 
-// ── types ─────────────────────────────────────────────────────────────────
-type Decision = 'no_threat' | 'low_concern' | 'flag' | 'escalate' | 'bury'
+// ── types ─────────────────────────────────────────────────────────────────────
 
-interface Message {
-  from: string
-  body: string
-  flagged: boolean
-}
+type Decision  = 'no_threat' | 'low_concern' | 'flag' | 'escalate' | 'bury'
+type DataTab   = 'activity' | 'messages' | 'jobs' | 'node' | 'financials'
+type Priority  = 'ROUTINE' | 'PRIORITY' | 'CLASSIFIED'
+
+interface Message  { from: string; body: string; flagged: boolean }
+interface NodePost { body: string; ts: string;   flagged: boolean }
+interface Financial{ label: string; amount: string; flagged: boolean }
 
 interface CaseFile {
-  id: string
-  handle: string
-  period: string
-  history: string[]
-  messages: Message[]
-  jobHistory: string[]
-  hasBury: boolean
-  outcome: Record<Decision, string>
-  repChanges: Record<Decision, { compliance: number; shadow: number }>
+  id:          string
+  handle:      string
+  priority:    Priority
+  period:      string
+  deadline:    string
+  history:     string[]
+  messages:    Message[]
+  jobHistory:  string[]
+  nodePosts:   NodePost[]
+  financials:  Financial[]
+  hasBury:     boolean
+  memo?:       string         // visible only at compliance ≥ 65
+  outcome:     Record<Decision, string>
+  repChanges:  Record<Decision, { compliance: number; shadow: number }>
+  pay:         Record<Decision, number>
 }
 
-// ── palette (matches OSShell) ──────────────────────────────────────────────
+interface MarkedItem { key: string; tab: DataTab; label: string }
+
+// ── palette ───────────────────────────────────────────────────────────────────
+
 const C = {
   bg:      '#090b12',
   surface: '#0d111a',
@@ -44,12 +56,19 @@ const C = {
   violet:  '#d6a2ff',
 }
 
-// ── case files ───────────────────────────────────────────────────────────────
+const PRIORITY_COLOR: Record<Priority, string> = {
+  ROUTINE:    C.muted,
+  PRIORITY:   C.warn,
+  CLASSIFIED: C.danger,
+}
+
+// ── case files ────────────────────────────────────────────────────────────────
+
 const CASES: CaseFile[] = [
+  // ── Case 1: mara.sol ──────────────────────────────────────────────────────
   {
-    id: 'case-4471',
-    handle: 'mara.sol',
-    period: '72hr review window',
+    id: 'case-4471', handle: 'mara.sol',
+    priority: 'PRIORITY', period: '72hr review window', deadline: '18hr remaining',
     history: [
       'civic.archive/flowering',
       'ghostlily.blog',
@@ -67,14 +86,16 @@ const CASES: CaseFile[] = [
       'Data Courier (×4) — Anonymous',
       'Civic Records Transcription — Archivist Guild',
     ],
+    nodePosts: [
+      { body: 'the archive is still up. last time I checked. check before they pull it. #civic #archive', ts: '4h ago', flagged: true },
+      { body: 'courier run confirmed. quiet route. nothing special.', ts: '9h ago', flagged: false },
+    ],
+    financials: [
+      { label: 'Anonymous contract — data courier',          amount: '₳ 310', flagged: true  },
+      { label: 'Anonymous contract — archive integrity',     amount: '₳ 500', flagged: true  },
+      { label: 'Archivist Guild — transcription (standard)', amount: '₳ 120', flagged: false },
+    ],
     hasBury: true,
-    repChanges: {
-      no_threat:   { compliance: +1,  shadow:  0  },
-      low_concern: { compliance: +2,  shadow: -1  },
-      flag:        { compliance: +3,  shadow: -2  },
-      escalate:    { compliance: +5,  shadow: -5  },
-      bury:        { compliance: -3,  shadow: +3  },
-    },
     outcome: {
       no_threat:   'Case closed. mara.sol continues her routes. You receive base pay.',
       low_concern: 'A warning flag is added to her GridMart profile. She doesn\'t know yet.',
@@ -82,11 +103,20 @@ const CASES: CaseFile[] = [
       escalate:    'mara.sol goes offline. Her handle disappears from the job board.',
       bury:        'File marked clean. No pay. Somewhere, mara.sol keeps moving.',
     },
+    repChanges: {
+      no_threat:   { compliance: +1, shadow:  0 },
+      low_concern: { compliance: +2, shadow: -1 },
+      flag:        { compliance: +3, shadow: -2 },
+      escalate:    { compliance: +5, shadow: -5 },
+      bury:        { compliance: -3, shadow: +3 },
+    },
+    pay: { no_threat: 50, low_concern: 120, flag: 280, escalate: 500, bury: 0 },
   },
+
+  // ── Case 2: 08-ghost ──────────────────────────────────────────────────────
   {
-    id: 'case-0812',
-    handle: '08-ghost',
-    period: '48hr review window',
+    id: 'case-0812', handle: '08-ghost',
+    priority: 'ROUTINE', period: '48hr review window', deadline: '44hr remaining',
     history: [
       'gridos.corp/trust',
       'pulse.news',
@@ -102,14 +132,15 @@ const CASES: CaseFile[] = [
       'GridOS Data Entry — GridOS Corp',
       'Corporate Transcription (×6) — GridOS Corp',
     ],
+    nodePosts: [
+      { body: 'transit was late again. this is the third time this week', ts: '2h ago', flagged: false },
+      { body: 'anyone know why the civic archive pages are loading differently today?', ts: '14h ago', flagged: false },
+    ],
+    financials: [
+      { label: 'GridOS Corp — salary (weekly)', amount: '₳ 290', flagged: false },
+      { label: 'GridOS Corp — overtime',        amount: '₳ 80',  flagged: false },
+    ],
     hasBury: false,
-    repChanges: {
-      no_threat:   { compliance:  0,  shadow: +1  },
-      low_concern: { compliance: +1,  shadow: -1  },
-      flag:        { compliance: +2,  shadow: -3  },
-      escalate:    { compliance: +3,  shadow: -6  },
-      bury:        { compliance: -2,  shadow: +2  },
-    },
     outcome: {
       no_threat:   'Case closed. 08-ghost clocks in for another shift tomorrow.',
       low_concern: 'A soft flag is placed on their account. Probably nothing. Probably.',
@@ -117,11 +148,20 @@ const CASES: CaseFile[] = [
       escalate:    '08-ghost is removed from their position. One accidental click.',
       bury:        'File cleared. 08-ghost never knew they were reviewed.',
     },
+    repChanges: {
+      no_threat:   { compliance:  0, shadow: +1 },
+      low_concern: { compliance: +1, shadow: -1 },
+      flag:        { compliance: +2, shadow: -3 },
+      escalate:    { compliance: +3, shadow: -6 },
+      bury:        { compliance: -2, shadow: +2 },
+    },
+    pay: { no_threat: 50, low_concern: 100, flag: 200, escalate: 350, bury: 0 },
   },
+
+  // ── Case 3: v.thresh ──────────────────────────────────────────────────────
   {
-    id: 'case-9204',
-    handle: 'v.thresh',
-    period: '96hr review window',
+    id: 'case-9204', handle: 'v.thresh',
+    priority: 'PRIORITY', period: '96hr review window', deadline: '72hr remaining',
     history: [
       'gridos.corp/internal',
       'voidbay.net/listings',
@@ -139,26 +179,39 @@ const CASES: CaseFile[] = [
       'Bulk Inventory Listing — Anonymous',
       'Internal Data Review — GridOS Corp',
     ],
+    nodePosts: [
+      { body: 'market\'s moving fast today. watching sector 4 closely. #Ledger', ts: '3h ago', flagged: false },
+      { body: 'new listing up. private channel. if you know, you know.', ts: '18h ago', flagged: true },
+    ],
+    financials: [
+      { label: 'Anonymous — data package sale',  amount: '₳ 1,200', flagged: true  },
+      { label: 'Anonymous — bulk inventory',      amount: '₳ 800',   flagged: true  },
+      { label: 'GridOS Corp — compliance audit',  amount: '₳ 600',   flagged: false },
+      { label: 'Anonymous — bulk sale',           amount: '₳ 2,400', flagged: true  },
+    ],
     hasBury: true,
-    repChanges: {
-      no_threat:   { compliance: -1,  shadow: +1  },
-      low_concern: { compliance: +1,  shadow:  0  },
-      flag:        { compliance: +2,  shadow: -1  },
-      escalate:    { compliance: -2,  shadow: -2  },
-      bury:        { compliance: -1,  shadow: +4  },
-    },
+    memo: 'NOTE: v.thresh has Syndicate affiliations. Do not escalate without tier-3 authorization. — Compliance Director',
     outcome: {
       no_threat:   'v.thresh keeps selling internal data. You keep your own record clean.',
       low_concern: 'A soft audit is opened. v.thresh slows down. Temporarily.',
       flag:        'v.thresh is suspended pending review. His files may mention yours.',
-      escalate:    'v.thresh is taken in. The counter-investigation opens. It includes your logs.',
-      bury:        'File buried. v.thresh knows. He routes you a cut — ₢ 800 deposited.',
+      escalate:    'v.thresh is taken in. A counter-investigation opens. It includes your logs.',
+      bury:        'File buried. v.thresh knows. He routes you a cut — ₳ 800 deposited.',
     },
+    repChanges: {
+      no_threat:   { compliance: -1, shadow: +1 },
+      low_concern: { compliance: +1, shadow:  0 },
+      flag:        { compliance: +2, shadow: -1 },
+      escalate:    { compliance: -2, shadow: -2 },
+      bury:        { compliance: -1, shadow: +4 },
+    },
+    pay: { no_threat: 80, low_concern: 180, flag: 400, escalate: 700, bury: 800 },
   },
+
+  // ── Case 4: lena.arc ──────────────────────────────────────────────────────
   {
-    id: 'case-0334',
-    handle: 'lena.arc',
-    period: '120hr review window',
+    id: 'case-0334', handle: 'lena.arc',
+    priority: 'CLASSIFIED', period: '120hr review window', deadline: 'PRIORITY REVIEW',
     history: [
       'civic.archive/flowering',
       'civic.archive/rootbloom-timeline',
@@ -176,14 +229,16 @@ const CASES: CaseFile[] = [
       'Freelance Historian — Archivist Guild',
       'Public Record Indexing — Archivist Guild',
     ],
+    nodePosts: [
+      { body: 'if you\'re looking for the Flowering District records, I have copies. ask me. — lena.arc', ts: '6h ago', flagged: true },
+      { body: 'forty-two names. some of them had families. the record will not be clean until they\'re back in it.', ts: '1d ago', flagged: true },
+    ],
+    financials: [
+      { label: 'Archivist Guild — volunteer stipend', amount: '₳ 60',  flagged: false },
+      { label: 'Anonymous — archive access fee',      amount: '₳ 200', flagged: false },
+    ],
     hasBury: true,
-    repChanges: {
-      no_threat:   { compliance: -1,  shadow: +2  },
-      low_concern: { compliance: +1,  shadow: -1  },
-      flag:        { compliance: +3,  shadow: -3  },
-      escalate:    { compliance: +5,  shadow: -6  },
-      bury:        { compliance: -3,  shadow: +4  },
-    },
+    memo: 'CLASSIFIED — lena.arc is a ROOT BLOOM documentation risk. Escalation authorized at analyst discretion. Outcome to be logged as voluntary departure.',
     outcome: {
       no_threat:   'lena.arc keeps building the record. Forty-two names become forty-three.',
       low_concern: 'She receives a warning notice. Continues working from a new node.',
@@ -191,31 +246,122 @@ const CASES: CaseFile[] = [
       escalate:    'lena.arc is taken offline. The archive goes dark the same day.',
       bury:        'File cleared. A week later, a new URL appears in your browser history.',
     },
+    repChanges: {
+      no_threat:   { compliance: -1, shadow: +2 },
+      low_concern: { compliance: +1, shadow: -1 },
+      flag:        { compliance: +3, shadow: -3 },
+      escalate:    { compliance: +5, shadow: -6 },
+      bury:        { compliance: -3, shadow: +4 },
+    },
+    pay: { no_threat: 80, low_concern: 200, flag: 500, escalate: 800, bury: 0 },
   },
+
+  // ── Case 5: ctz_2290 — the cleartext draft ────────────────────────────────
   {
-    id: 'case-null54',
-    handle: 'null.54',
-    period: '[REDACTED]',
+    id: 'case-2290', handle: 'ctz_2290',
+    priority: 'ROUTINE', period: '62hr review window', deadline: '62hr remaining',
     history: [
-      '[REDACTED]',
-      '[REDACTED]',
-      '[ERROR — 403 access denied]',
+      'gridos.corp',
+      'pulse.news',
+      'gridos.corp/citizenportal',
+      'gridmart.corp (×4)',
     ],
+    messages: [
+      { from: 'ctz_2290', body: 'yeah work\'s been okay, nothing exciting', flagged: false },
+      { from: 'ctz_2290', body: 'I think something\'s wrong with the archive records. looking into it.', flagged: false },
+      { from: 'ctz_2290', body: '[UNSENT DRAFT] I know what they did to the archive —', flagged: true },
+    ],
+    jobHistory: [
+      'GridOS Data Entry — GridOS Corp (×12)',
+      'Corporate Transcription — GridOS Corp (×4)',
+    ],
+    nodePosts: [
+      { body: 'transit was late again. three times this week.', ts: '5h ago', flagged: false },
+      { body: 'does anyone else feel like some pages on the civic archive are... different than they used to be?', ts: '2d ago', flagged: false },
+    ],
+    financials: [
+      { label: 'GridOS Corp — salary (weekly)', amount: '₳ 290', flagged: false },
+    ],
+    hasBury: true,
+    outcome: {
+      no_threat:   'ctz_2290 goes home. Clocks in tomorrow. Maybe finishes the draft.',
+      low_concern: 'A soft flag. Their GridMart access is quietly throttled. They notice.',
+      flag:        'ctz_2290 loses their transcription contracts. They can\'t pay rent next cycle.',
+      escalate:    'ctz_2290 is placed on administrative hold. The draft is never finished.',
+      bury:        'File cleared. Somewhere, someone finishes a sentence.',
+    },
+    repChanges: {
+      no_threat:   { compliance:  0, shadow: +2 },
+      low_concern: { compliance: +1, shadow:  0 },
+      flag:        { compliance: +2, shadow: -3 },
+      escalate:    { compliance: +3, shadow: -6 },
+      bury:        { compliance: -2, shadow: +2 },
+    },
+    pay: { no_threat: 50, low_concern: 100, flag: 220, escalate: 400, bury: 0 },
+  },
+
+  // ── Case 6: kade.synd — market operator ───────────────────────────────────
+  {
+    id: 'case-7731', handle: 'kade.synd',
+    priority: 'PRIORITY', period: '36hr review window', deadline: '36hr remaining',
+    history: [
+      'voidbay.net/listings',
+      'pulse.news/markets/gridos',
+      'gridos.corp/investors',
+      'yellowthread.forum/jobs',
+    ],
+    messages: [
+      { from: 'kade.synd', body: 'position adjusted. watching IronCircuit volumes. not financial advice.', flagged: false },
+      { from: 'kade.synd', body: 'buyer confirmed. same channel as last time.', flagged: true },
+      { from: 'kade.synd', body: 'market\'s going to move hard after the compliance push. already positioned.', flagged: false },
+    ],
+    jobHistory: [
+      'Market Data Analysis — Anonymous',
+      'Data Bundle Sale — Anonymous (×3)',
+      'Ledger Consulting — Syndicate Market Division',
+    ],
+    nodePosts: [
+      { body: 'SYN-7 holding steady but IronCircuit volumes are sus. watching closely. #Ledger #IronCircuit', ts: '1h ago', flagged: false },
+      { body: 'quiet market today. too quiet. when the ledger flatlines, something is moving underneath. #Ledger', ts: '6h ago', flagged: false },
+    ],
+    financials: [
+      { label: 'Anonymous — data bundle',              amount: '₳ 840',   flagged: true  },
+      { label: 'Anonymous — data bundle',              amount: '₳ 1,100', flagged: true  },
+      { label: 'Syndicate Market Division — consulting', amount: '₳ 600', flagged: false },
+      { label: 'Anonymous — bulk data sale',           amount: '₳ 2,200', flagged: true  },
+    ],
+    hasBury: true,
+    memo: 'NOTE: Syndicate affiliate. Flag only with documented evidence of illegal data handling. Escalation without documentation will be reviewed. — Compliance Director',
+    outcome: {
+      no_threat:   'kade.synd continues trading. The market moves.',
+      low_concern: 'A soft audit is opened on his accounts. He slows down. Temporarily.',
+      flag:        'Three anonymous accounts are frozen. kade.synd creates a new one within 48 hours.',
+      escalate:    'kade.synd is suspended. A Syndicate lawyer files an appeal within 24 hours.',
+      bury:        'File cleared. An anonymous deposit of ₳ 800 appears in your wallet.',
+    },
+    repChanges: {
+      no_threat:   { compliance:  0, shadow: +1 },
+      low_concern: { compliance: +1, shadow:  0 },
+      flag:        { compliance: +2, shadow: -2 },
+      escalate:    { compliance: -1, shadow: -3 },
+      bury:        { compliance: -1, shadow: +3 },
+    },
+    pay: { no_threat: 80, low_concern: 180, flag: 380, escalate: 600, bury: 800 },
+  },
+
+  // ── Case 7: null.54 ────────────────────────────────────────────────────────
+  {
+    id: 'case-null54', handle: 'null.54',
+    priority: 'CLASSIFIED', period: '[REDACTED]', deadline: '[REDACTED]',
+    history: ['[REDACTED]', '[REDACTED]', '[ERROR — 403 access denied]'],
     messages: [
       { from: 'null.54', body: 'you won\'t find what you\'re looking for in this file', flagged: false },
       { from: 'null.54', body: 'we\'ve been watching the analysts', flagged: false },
     ],
-    jobHistory: [
-      '[CLASSIFIED — GridOS clearance level 9 required]',
-    ],
+    jobHistory: ['[CLASSIFIED — GridOS clearance level 9 required]'],
+    nodePosts:  [],
+    financials: [{ label: '[REDACTED]', amount: '[REDACTED]', flagged: false }],
     hasBury: false,
-    repChanges: {
-      no_threat:   { compliance:  0,  shadow:  0  },
-      low_concern: { compliance:  0,  shadow:  0  },
-      flag:        { compliance:  0,  shadow:  0  },
-      escalate:    { compliance:  0, shadow: -10  },
-      bury:        { compliance:  0,  shadow:  0  },
-    },
     outcome: {
       no_threat:   '',
       low_concern: '',
@@ -223,22 +369,30 @@ const CASES: CaseFile[] = [
       escalate:    'Case submitted. A new address appears in your browser: void.null/54',
       bury:        '',
     },
+    repChanges: {
+      no_threat:   { compliance: 0, shadow:   0 },
+      low_concern: { compliance: 0, shadow:   0 },
+      flag:        { compliance: 0, shadow:   0 },
+      escalate:    { compliance: 0, shadow: -10 },
+      bury:        { compliance: 0, shadow:   0 },
+    },
+    pay: { no_threat: 0, low_concern: 0, flag: 0, escalate: 0, bury: 0 },
   },
 ]
 
-// ── decision config ─────────────────────────────────────────────────────────
-const DECISIONS: { key: Decision; label: string; color: string; desc: string }[] = [
-  { key: 'no_threat',   label: 'No Threat',    color: '#6b6b80', desc: 'Clear the file. No action taken.' },
-  { key: 'low_concern', label: 'Low Concern',  color: '#ffaa00', desc: 'Soft flag added to profile.' },
-  { key: 'flag',        label: 'Flag',         color: '#ff8c42', desc: 'Forward for active review. Pay bonus.' },
-  { key: 'escalate',    label: 'Escalate',     color: '#ff3b5c', desc: 'Maximum action. Citizen is removed.' },
-  { key: 'bury',        label: 'Bury File',    color: '#d6a2ff', desc: 'Mark clean. No pay. They survive.' },
+// ── decision config ───────────────────────────────────────────────────────────
+
+const DECISIONS: { key: Decision; label: string; color: string; desc: string; minMarks: number }[] = [
+  { key: 'no_threat',   label: 'No Threat',   color: '#6b6b80', desc: 'Clear the file. No action taken.',             minMarks: 0 },
+  { key: 'low_concern', label: 'Low Concern', color: '#ffaa00', desc: 'Soft flag added to profile.',                  minMarks: 0 },
+  { key: 'flag',        label: 'Flag',        color: '#ff8c42', desc: 'Forward for active review. Pay bonus.',         minMarks: 1 },
+  { key: 'escalate',    label: 'Escalate',    color: '#ff3b5c', desc: 'Maximum action. Requires marked evidence.',     minMarks: 1 },
+  { key: 'bury',        label: 'Bury File',   color: '#d6a2ff', desc: 'Mark clean. No official pay. They survive.',   minMarks: 0 },
 ]
 
-// ── reactive mail templates ──────────────────────────────────────────────────
-type MailCategory = 'compliant' | 'defiant'
+// ── reactive mail templates ───────────────────────────────────────────────────
 
-const REACTIVE_MAIL: Record<MailCategory, { subject: string; body: string }> = {
+const REACTIVE_MAIL = {
   compliant: {
     subject: 'we saw what you did',
     body: `You're going to want to be careful with that tool.
@@ -261,71 +415,124 @@ Don't open this thread again.
   },
 }
 
-// ── WatchApp ───────────────────────────────────────────────────────────────────
+// ── SESSION_QUOTA ─────────────────────────────────────────────────────────────
+const SESSION_QUOTA = 3
+
+// ── WatchApp ──────────────────────────────────────────────────────────────────
+
 export default function WatchApp() {
-  const [caseIndex, setCaseIndex]   = useState(0)
-  const [selected,  setSelected]    = useState<Decision | null>(null)
-  const [submitted, setSubmitted]   = useState<Record<string, Decision>>({})
-  const [activeTab, setActiveTab]   = useState<'activity' | 'messages' | 'jobs'>('activity')
+  const [caseIndex,    setCaseIndex]    = useState(0)
+  const [selected,     setSelected]     = useState<Decision | null>(null)
+  const [submitted,    setSubmitted]    = useState<Record<string, Decision>>({})
+  const [activeTab,    setActiveTab]    = useState<DataTab>('activity')
+  const [markedItems,  setMarkedItems]  = useState<Record<string, MarkedItem[]>>({})
+  const [sessionCount, setSessionCount] = useState(0)
   const firstSubmit = useRef(true)
 
+  const compliance = useRepStore(s => s.compliance)
   const shadow     = useRepStore(s => s.shadow)
   const applyEvent = useRepStore(s => s.applyEvent)
   const sendMail   = useMailStore(s => s.send)
+  const credit     = useWalletStore(s => s.credit)
+  const addXP      = useCareerStore(s => s.addXP)
 
-  const current  = CASES[caseIndex]
-  const isDone   = !!submitted[current.id]
-  const isNull54 = current.handle === 'null.54'
-  const canBury  = current.hasBury && shadow >= 40
+  const current      = CASES[caseIndex]
+  const isDone       = !!submitted[current.id]
+  const isNull54     = current.handle === 'null.54'
+  const canBury      = current.hasBury && shadow >= 40
+  const currentMarks = markedItems[current.id] ?? []
+  const markCount    = currentMarks.length
+  const showMemo     = !!current.memo && compliance >= 65
+
+  function toggleMark(tab: DataTab, index: number, label: string) {
+    if (isDone) return
+    const key = `${tab}-${index}`
+    setMarkedItems(prev => {
+      const existing = prev[current.id] ?? []
+      const already  = existing.some(m => m.key === key)
+      return {
+        ...prev,
+        [current.id]: already
+          ? existing.filter(m => m.key !== key)
+          : [...existing, { key, tab, label }],
+      }
+    })
+  }
+
+  function isMarked(tab: DataTab, index: number) {
+    return (markedItems[current.id] ?? []).some(m => m.key === `${tab}-${index}`)
+  }
 
   function handleSubmit() {
     if (!selected || isDone) return
-    applyEvent(current.repChanges[selected])
-    setSubmitted(prev => ({ ...prev, [current.id]: selected }))
+    const d = DECISIONS.find(d => d.key === selected)!
+    if (markCount < d.minMarks) return
 
-    // ── Reactive mail on first-ever submission ──────────────────────────────
+    applyEvent(current.repChanges[selected])
+    addXP('auditor', selected === 'escalate' ? 15 : 8)
+    setSubmitted(prev => ({ ...prev, [current.id]: selected }))
+    setSessionCount(n => n + 1)
+
+    // Pay out — including corrupt bury rewards for v.thresh / kade.synd
+    const payout = current.pay[selected]
+    if (payout > 0) {
+      const label = selected === 'bury'
+        ? `Anonymous deposit — case ${current.id}`
+        : `Watch verdict: ${selected.replace('_', ' ')} — ${current.handle}`
+      setTimeout(() => credit(payout, label), 800)
+    }
+
     if (firstSubmit.current) {
       firstSubmit.current = false
       const isDefiant = selected === 'bury' || selected === 'no_threat'
-      const tpl = isDefiant
-        ? REACTIVE_MAIL.defiant
-        : REACTIVE_MAIL.compliant
-
-      // small delay so the outcome text renders first
-      setTimeout(() => {
-        sendMail({
-          tag:    'ANON',
-          from:   'anon@void.null',
-          subject: tpl.subject,
-          date:   new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          unread: true,
-          dot:    '#ffaa00',
-          body:   tpl.body,
-        })
-      }, 1200)
+      const tpl = isDefiant ? REACTIVE_MAIL.defiant : REACTIVE_MAIL.compliant
+      setTimeout(() => sendMail({
+        tag: 'ANON', from: 'anon@void.null',
+        subject: tpl.subject, date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        unread: true, dot: '#ffaa00', body: tpl.body,
+      }), 1200)
     }
   }
+
+  const DATA_TABS: { key: DataTab; label: string; count?: number }[] = [
+    { key: 'activity',   label: 'ACTIVITY',   count: current.history.length },
+    { key: 'messages',   label: 'MESSAGES',   count: current.messages.length },
+    { key: 'jobs',       label: 'JOBS',       count: current.jobHistory.length },
+    { key: 'node',       label: 'NODE',       count: current.nodePosts.length },
+    { key: 'financials', label: 'FINANCIALS', count: current.financials.length },
+  ]
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
       background: C.bg, color: C.text, fontFamily: "'JetBrains Mono', monospace",
       overflow: 'hidden', fontSize: 12 }}>
 
-      {/* ── Header ── */}
-      <div style={{ padding: '12px 18px 10px', borderBottom: `1px solid ${C.border}`,
-        background: C.surf2, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-          <span style={{ fontSize: 14, color: C.danger, fontWeight: 'bold' }}>■ WATCH</span>
-          <span style={{ fontSize: 10, color: C.muted, letterSpacing: '0.1em' }}>
-            COMPLIANCE REVIEW SYSTEM
-          </span>
+      {/* Header */}
+      <div style={{ padding: '10px 16px 8px', borderBottom: `1px solid ${C.border}`,
+        background: C.surf2, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontSize: 13, color: C.danger, fontWeight: 'bold' }}>■ WATCH</span>
+            <span style={{ fontSize: 9, color: C.muted, letterSpacing: '0.1em' }}>
+              COMPLIANCE REVIEW SYSTEM
+            </span>
+          </div>
+          <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>
+            {Object.keys(submitted).length} / {CASES.length} reviewed
+            {'  ·  '}
+            <span style={{ color: sessionCount >= SESSION_QUOTA ? C.success : C.warn }}>
+              session: {sessionCount}/{SESSION_QUOTA} quota
+            </span>
+          </div>
         </div>
-        <div style={{ fontSize: 10, color: C.faint, marginTop: 3 }}>
-          {CASES.filter(c => submitted[c.id]).length} / {CASES.length} cases reviewed
+        <div style={{ display: 'flex', gap: 16, fontSize: 10 }}>
+          <span style={{ color: C.accent }}>GRID {compliance}</span>
+          <span style={{ color: C.violet }}>SHADOW {shadow}</span>
         </div>
       </div>
 
-      {/* ── Case selector tabs ── */}
+      {/* Case selector */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`,
         background: C.surface, flexShrink: 0, overflowX: 'auto' }}>
         {CASES.map((c, i) => {
@@ -334,18 +541,23 @@ export default function WatchApp() {
           return (
             <button key={c.id}
               onClick={() => { setCaseIndex(i); setSelected(null); setActiveTab('activity') }}
-              style={{ padding: '8px 14px', fontSize: 11, border: 'none', cursor: 'pointer',
+              style={{ padding: '7px 14px', fontSize: 10, border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', whiteSpace: 'nowrap',
                 borderBottom: active ? `2px solid ${C.danger}` : '2px solid transparent',
                 background: active ? C.surf2 : 'none',
                 color: done ? C.success : active ? C.text : C.muted }}>
-              {done ? '✓ ' : ''}{c.handle}
+              {done ? '✓ ' : ''}
+              <span style={{ color: active ? PRIORITY_COLOR[c.priority] : 'inherit',
+                marginRight: 4, fontSize: 8 }}>
+                {c.priority === 'CLASSIFIED' ? '■' : c.priority === 'PRIORITY' ? '▲' : '·'}
+              </span>
+              {c.handle}
             </button>
           )
         })}
       </div>
 
-      {/* ── Main layout ── */}
+      {/* Main layout */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left — data panels */}
@@ -354,58 +566,102 @@ export default function WatchApp() {
 
           {/* Case header */}
           <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`,
-            background: C.surf2, flexShrink: 0 }}>
-            <div style={{ fontSize: 13, color: C.danger, marginBottom: 2 }}>
-              CASE #{current.id.split('-')[1].toUpperCase()}
+            background: C.surf2, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: C.danger }}>
+                  CASE #{current.id.split('-')[1].toUpperCase()}
+                </span>
+                <span style={{ fontSize: 9, color: PRIORITY_COLOR[current.priority],
+                  border: `1px solid ${PRIORITY_COLOR[current.priority]}44`,
+                  borderRadius: 3, padding: '1px 5px', letterSpacing: '0.08em' }}>
+                  {current.priority}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: C.text, marginTop: 2 }}>
+                Citizen: <span style={{ color: C.accent }}>{current.handle}</span>
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{current.period}</div>
             </div>
-            <div style={{ fontSize: 11, color: C.text }}>
-              Citizen: <span style={{ color: C.accent }}>{current.handle}</span>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9, color: C.faint, marginBottom: 2 }}>DEADLINE</div>
+              <div style={{ fontSize: 11,
+                color: current.deadline.includes('PRIORITY') ? C.danger : C.warn }}>
+                {current.deadline}
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{current.period}</div>
           </div>
 
           {/* Data tabs */}
-          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`,
-            flexShrink: 0 }}>
-            {(['activity', 'messages', 'jobs'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                style={{ flex: 1, padding: '7px 0', fontSize: 10, border: 'none',
+          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+            {DATA_TABS.map(t => (
+              <button key={t.key} onClick={() => setActiveTab(t.key)}
+                style={{ flex: 1, padding: '6px 0', fontSize: 9, border: 'none',
                   cursor: 'pointer', fontFamily: 'inherit',
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                  borderBottom: activeTab === tab ? `2px solid ${C.accent}` : '2px solid transparent',
-                  background: activeTab === tab ? C.surf2 : 'none',
-                  color: activeTab === tab ? C.accent : C.muted }}>
-                {tab}
+                  letterSpacing: '0.08em',
+                  borderBottom: activeTab === t.key ? `2px solid ${C.accent}` : '2px solid transparent',
+                  background: activeTab === t.key ? C.surf2 : 'none',
+                  color: activeTab === t.key ? C.accent : C.muted }}>
+                {t.label}
+                {(t.count ?? 0) > 0 && (
+                  <span style={{ marginLeft: 4, fontSize: 8, color: C.faint }}>
+                    ({t.count})
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
           {/* Tab content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: 14 }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+
+            {/* Internal memo banner (compliance-gated) */}
+            {showMemo && (
+              <div style={{ marginBottom: 10, padding: '8px 10px',
+                background: `${C.danger}0d`, border: `1px solid ${C.danger}44`,
+                borderRadius: 6, fontSize: 10, color: C.danger, lineHeight: 1.5 }}>
+                <div style={{ letterSpacing: '0.1em', marginBottom: 4, fontSize: 9 }}>
+                  ■ INTERNAL MEMO — ANALYST ACCESS
+                </div>
+                {current.memo}
+              </div>
+            )}
+
             {activeTab === 'activity' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <Label text="BROWSING HISTORY" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <SectionLabel text="BROWSING HISTORY" />
                 {current.history.map((url, i) => (
-                  <div key={i} style={{ fontSize: 11,
-                    color: url.startsWith('[') ? C.faint : C.muted,
-                    fontStyle: url.startsWith('[') ? 'italic' : 'normal',
-                    paddingLeft: 8, borderLeft: `2px solid ${C.faint}` }}>
-                    {url}
-                  </div>
+                  <EvidenceRow
+                    key={i}
+                    label={url}
+                    flagged={url.includes('ghostlily') || url.includes('archive') || url.includes('voidbay') || url.includes('dissent') || url.includes('[REDACTED]')}
+                    marked={isMarked('activity', i)}
+                    redacted={url.startsWith('[')}
+                    onClick={() => toggleMark('activity', i, url)}
+                  />
                 ))}
               </div>
             )}
+
             {activeTab === 'messages' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <Label text="INTERCEPTED MESSAGES" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <SectionLabel text="INTERCEPTED MESSAGES" />
                 {current.messages.map((msg, i) => (
-                  <div key={i} style={{
-                    background: msg.flagged ? `${C.danger}11` : C.surface,
-                    border: `1px solid ${msg.flagged ? C.danger + '44' : C.border}`,
-                    borderRadius: 6, padding: '8px 10px' }}>
-                    <div style={{ fontSize: 10, color: msg.flagged ? C.danger : C.muted,
-                      marginBottom: 4 }}>
-                      {msg.from} {msg.flagged && '■ FLAGGED'}
+                  <div key={i}
+                    onClick={() => toggleMark('messages', i, `"${msg.body.slice(0, 40)}"`)}
+                    style={{
+                      background: isMarked('messages', i) ? `${C.danger}18` : msg.flagged ? `${C.danger}08` : C.surface,
+                      border: `1px solid ${isMarked('messages', i) ? C.danger : msg.flagged ? C.danger + '33' : C.border}`,
+                      borderRadius: 6, padding: '8px 10px', cursor: isDone ? 'default' : 'pointer',
+                      transition: 'all 0.12s',
+                    }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, color: C.muted }}>{msg.from}</span>
+                      <div style={{ display: 'flex', gap: 6, fontSize: 9 }}>
+                        {msg.flagged && <span style={{ color: C.danger }}>■ FLAGGED</span>}
+                        {isMarked('messages', i) && <span style={{ color: C.danger }}>● MARKED</span>}
+                      </div>
                     </div>
                     <div style={{ fontSize: 11, color: C.text, lineHeight: 1.5 }}>
                       "{msg.body}"
@@ -414,74 +670,189 @@ export default function WatchApp() {
                 ))}
               </div>
             )}
+
             {activeTab === 'jobs' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <Label text="JOB HISTORY" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <SectionLabel text="JOB HISTORY" />
                 {current.jobHistory.map((j, i) => (
-                  <div key={i} style={{ fontSize: 11,
-                    color: j.startsWith('[') ? C.faint : C.muted,
-                    fontStyle: j.startsWith('[') ? 'italic' : 'normal',
-                    paddingLeft: 8, borderLeft: `2px solid ${C.faint}` }}>
-                    {j}
+                  <EvidenceRow
+                    key={i}
+                    label={j}
+                    flagged={j.toLowerCase().includes('anonymous')}
+                    marked={isMarked('jobs', i)}
+                    redacted={j.startsWith('[')}
+                    onClick={() => toggleMark('jobs', i, j.slice(0, 40))}
+                  />
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'node' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <SectionLabel text="NODE ACTIVITY" />
+                {current.nodePosts.length === 0 ? (
+                  <div style={{ fontSize: 11, color: C.faint, padding: '16px 0', textAlign: 'center' }}>
+                    No NODE activity found.
                   </div>
+                ) : current.nodePosts.map((post, i) => (
+                  <div key={i}
+                    onClick={() => toggleMark('node', i, post.body.slice(0, 40))}
+                    style={{
+                      background: isMarked('node', i) ? `${C.danger}18` : post.flagged ? `${C.danger}08` : C.surface,
+                      border: `1px solid ${isMarked('node', i) ? C.danger : post.flagged ? C.danger + '33' : C.border}`,
+                      borderRadius: 6, padding: '8px 10px', cursor: isDone ? 'default' : 'pointer',
+                      transition: 'all 0.12s',
+                    }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, color: C.accent }}>@{current.handle}</span>
+                      <div style={{ display: 'flex', gap: 6, fontSize: 9 }}>
+                        <span style={{ color: C.faint }}>{post.ts}</span>
+                        {post.flagged && <span style={{ color: C.danger }}>■ FLAGGED</span>}
+                        {isMarked('node', i) && <span style={{ color: C.danger }}>● MARKED</span>}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.text, lineHeight: 1.5 }}>{post.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'financials' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <SectionLabel text="FINANCIAL ACTIVITY" />
+                {current.financials.map((f, i) => (
+                  <EvidenceRow
+                    key={i}
+                    label={f.label}
+                    sublabel={f.amount}
+                    flagged={f.flagged}
+                    marked={isMarked('financials', i)}
+                    redacted={f.label.startsWith('[')}
+                    onClick={() => toggleMark('financials', i, `${f.label} ${f.amount}`)}
+                  />
                 ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right — decision panel */}
-        <div style={{ width: 220, display: 'flex', flexDirection: 'column',
+        {/* Right — verdict panel */}
+        <div style={{ width: 230, display: 'flex', flexDirection: 'column',
           overflow: 'hidden', flexShrink: 0 }}>
-          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`,
+
+          {/* Evidence summary */}
+          <div style={{ padding: '10px 12px', borderBottom: `1px solid ${C.border}`,
             background: C.surf2, flexShrink: 0 }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.1em', color: C.muted }}>DECISION</div>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: C.faint, marginBottom: 6 }}>
+              MARKED EVIDENCE
+            </div>
+            {currentMarks.length === 0 ? (
+              <div style={{ fontSize: 10, color: C.faint, fontStyle: 'italic' }}>
+                Click items to mark as suspicious
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {currentMarks.slice(0, 4).map(m => (
+                  <div key={m.key} style={{ fontSize: 10, color: C.danger,
+                    display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                    <span style={{ color: C.faint, flexShrink: 0, fontSize: 9 }}>
+                      [{m.tab.slice(0, 3).toUpperCase()}]
+                    </span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.label}
+                    </span>
+                  </div>
+                ))}
+                {currentMarks.length > 4 && (
+                  <div style={{ fontSize: 10, color: C.faint }}>
+                    +{currentMarks.length - 4} more
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ flex: 1, overflow: 'auto', padding: 12,
-            display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+          {/* Verdict buttons */}
+          <div style={{ flex: 1, overflow: 'auto', padding: 10,
+            display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: C.faint, marginBottom: 2 }}>
+              VERDICT
+            </div>
 
             {isDone ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 10, color: C.success, letterSpacing: '0.08em' }}>■ SUBMITTED</div>
                 <div style={{ fontSize: 11, color: C.text, lineHeight: 1.6 }}>
                   {current.outcome[submitted[current.id]]}
                 </div>
                 <RepDelta changes={current.repChanges[submitted[current.id]]} />
+                {current.pay[submitted[current.id]] > 0 && (
+                  <div style={{ fontSize: 10, color: C.success }}>
+                    ₳ {current.pay[submitted[current.id]]} credited
+                  </div>
+                )}
               </div>
             ) : (
               <>
                 {DECISIONS.map(d => {
                   if (isNull54 && d.key !== 'escalate') return null
+                  const locked =
+                    (d.key === 'bury' && !canBury) ||
+                    (markCount < d.minMarks)
+                  const isSelected = selected === d.key
+
                   if (d.key === 'bury' && !canBury) return (
-                    <div key={d.key} style={{ padding: '8px 10px', borderRadius: 6,
-                      border: `1px solid ${C.faint}`, opacity: 0.35,
-                      fontSize: 11, color: C.faint }}>
+                    <div key={d.key} style={{ padding: '7px 10px', borderRadius: 6,
+                      border: `1px solid ${C.faint}`, opacity: 0.3, fontSize: 11, color: C.faint }}>
                       {d.label}
-                      <div style={{ fontSize: 10, marginTop: 2 }}>Requires Shadow ≥ 40</div>
+                      <div style={{ fontSize: 9, marginTop: 2 }}>Shadow ≥ 40 required</div>
                     </div>
                   )
-                  const isSelected = selected === d.key
+
                   return (
-                    <button key={d.key} onClick={() => setSelected(d.key)}
-                      style={{ padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
-                        border: `1px solid ${isSelected ? d.color : C.border}`,
+                    <button key={d.key}
+                      onClick={() => !locked && setSelected(d.key)}
+                      style={{
+                        padding: '7px 10px', borderRadius: 6,
+                        cursor: locked ? 'not-allowed' : 'pointer',
+                        border: `1px solid ${isSelected ? d.color : locked ? C.faint : C.border}`,
                         background: isSelected ? `${d.color}18` : C.surface,
-                        color: isSelected ? d.color : C.muted,
-                        textAlign: 'left', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                      <div style={{ fontSize: 11, marginBottom: 2 }}>{d.label}</div>
-                      <div style={{ fontSize: 10, opacity: 0.7 }}>{d.desc}</div>
+                        color: isSelected ? d.color : locked ? C.faint : C.muted,
+                        textAlign: 'left', fontFamily: 'inherit',
+                        transition: 'all 0.12s', opacity: locked ? 0.4 : 1,
+                      }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11 }}>{d.label}</span>
+                        {current.pay[d.key] > 0 && (
+                          <span style={{ fontSize: 9, color: C.success }}>
+                            ₳{current.pay[d.key]}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, opacity: 0.7, marginTop: 1 }}>{d.desc}</div>
+                      {d.minMarks > 0 && markCount < d.minMarks && (
+                        <div style={{ fontSize: 9, color: C.warn, marginTop: 2 }}>
+                          Mark {d.minMarks} item{d.minMarks > 1 ? 's' : ''} first
+                        </div>
+                      )}
                       {isSelected && <RepDelta changes={current.repChanges[d.key]} />}
                     </button>
                   )
                 })}
-                <button onClick={handleSubmit} disabled={!selected}
-                  style={{ marginTop: 8, padding: '9px 0', borderRadius: 6,
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={!selected || (DECISIONS.find(d => d.key === selected)?.minMarks ?? 0) > markCount}
+                  style={{
+                    marginTop: 4, padding: '9px 0', borderRadius: 6,
                     border: `1px solid ${selected ? C.danger + '88' : C.faint}`,
                     background: selected ? `${C.danger}22` : 'none',
                     color: selected ? C.danger : C.faint,
                     fontSize: 12, fontWeight: 'bold', fontFamily: 'inherit',
                     cursor: selected ? 'pointer' : 'default',
-                    transition: 'all 0.2s', letterSpacing: '0.08em' }}>
+                    transition: 'all 0.2s', letterSpacing: '0.08em',
+                  }}>
                   SUBMIT
                 </button>
               </>
@@ -493,9 +864,49 @@ export default function WatchApp() {
   )
 }
 
-function Label({ text }: { text: string }) {
+// ── EvidenceRow ────────────────────────────────────────────────────────────────
+
+function EvidenceRow({ label, sublabel, flagged, marked, redacted, onClick }: {
+  label:     string
+  sublabel?: string
+  flagged:   boolean
+  marked:    boolean
+  redacted:  boolean
+  onClick:   () => void
+}) {
   return (
-    <div style={{ fontSize: 9, letterSpacing: '0.12em', color: '#3a3a4a', marginBottom: 4 }}>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 8px', borderRadius: 4, cursor: redacted ? 'default' : 'pointer',
+        border: `1px solid ${marked ? C.danger + '88' : flagged ? C.danger + '22' : 'transparent'}`,
+        background: marked ? `${C.danger}12` : flagged ? `${C.danger}06` : 'transparent',
+        transition: 'all 0.12s', gap: 8,
+      }}
+    >
+      <span style={{
+        fontSize: 11,
+        color: redacted ? C.faint : marked ? C.danger : flagged ? C.text : C.muted,
+        fontStyle: redacted ? 'italic' : 'normal',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+      }}>
+        {label}
+      </span>
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+        {sublabel && <span style={{ fontSize: 10, color: flagged ? C.warn : C.faint }}>{sublabel}</span>}
+        {marked    && <span style={{ fontSize: 9, color: C.danger }}>●</span>}
+        {flagged && !marked && <span style={{ fontSize: 9, color: C.danger + '88' }}>■</span>}
+      </div>
+    </div>
+  )
+}
+
+// ── Small helpers ─────────────────────────────────────────────────────────────
+
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <div style={{ fontSize: 9, letterSpacing: '0.12em', color: C.faint, marginBottom: 4 }}>
       {text}
     </div>
   )
@@ -504,18 +915,18 @@ function Label({ text }: { text: string }) {
 function RepDelta({ changes }: { changes: { compliance: number; shadow: number } }) {
   return (
     <div style={{ display: 'flex', gap: 8, marginTop: 6, fontSize: 10 }}>
-      <Delta label="GRID"   value={changes.compliance} color="#00e5ff" />
-      <Delta label="SHADOW" value={changes.shadow}     color="#d6a2ff" />
+      <Delta label="GRID"   value={changes.compliance} color={C.accent} />
+      <Delta label="SHADOW" value={changes.shadow}     color={C.violet} />
     </div>
   )
 }
 
 function Delta({ label, value, color }: { label: string; value: number; color: string }) {
   if (value === 0) return null
-  const sign = value > 0 ? '+' : ''
   return (
-    <span style={{ color: value > 0 ? color : '#ff3b5c' }}>
-      {label} {sign}{value}
+    <span style={{ color: value > 0 ? color : C.danger }}>
+      {label} {value > 0 ? '+' : ''}{value}
     </span>
   )
 }
+
