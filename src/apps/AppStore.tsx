@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { useRepStore }    from '@/store/reputationStore'
 import { useUnlockStore } from '@/store/unlockStore'
+import { useWalletStore } from '@/store/walletStore'
 
 const C = {
   bg:      '#0a0a0f',
@@ -45,7 +46,7 @@ const APPS: AppEntry[] = [
   { id: 'pulse-reader', name: 'Pulse Reader',   publisher: 'Pulse News Network',   tier: 'CORPORATE',   desc: 'Live feed of the Pulse Network. Sanitised edition.',                                                                                          price: 0 },
   { id: 'gridmart',     name: 'GridMart',       publisher: 'GridOS Commerce',      tier: 'CORPORATE',   desc: 'Official marketplace. All transactions logged.',                                                                                              price: 0 },
   // ─ FREELANCE ─
-  { id: 'courier-kit',  name: 'Courier Kit',    publisher: 'Anonymous',            tier: 'FREELANCE',   desc: 'Route management and package tracking for anonymous courier contracts. No logs.',                                                             price: 300 },
+  { id: 'courier-kit',  name: 'Courier Kit',    publisher: 'Anonymous',            tier: 'FREELANCE',   desc: 'Route management and package tracking for anonymous courier contracts. No logs.',                                                             price: 300, unlockId: 'courier' },
   { id: 'databroker',   name: 'Data Broker',    publisher: 'VoidSyndicate',        tier: 'FREELANCE',   desc: 'Offworld-style data market. Acquire exfil\'d files, observer reports, and checkpoint records — then time your sell. Corporate buyers pay more but log the transaction. VoidBay pays less, no trace. ROOT BLOOM cycles overwrite the source nodes. Timing is the skill.', price: 0, unlockId: 'databroker' },
   { id: 'voidbay',      name: 'VoidBay',        publisher: 'VoidSyndicate',        tier: 'FREELANCE',   desc: 'Decentralised listing board for off-ledger goods and services.',                                                                              price: 500 },
   // ─ RESTRICTED ─
@@ -76,6 +77,8 @@ export default function AppStore() {
   const shadow          = useRepStore(s => s.shadow)
   const installed       = useUnlockStore(s => s.installed)
   const install         = useUnlockStore(s => s.install)
+  const balance         = useWalletStore(s => s.balance)
+  const debit           = useWalletStore(s => s.debit)
 
   const [activeFilter,  setActiveFilter]  = useState<'ALL' | Tier>('ALL')
   const [selectedId,    setSelectedId]    = useState<string>(APPS[0].id)
@@ -98,16 +101,20 @@ export default function AppStore() {
     return codeInput.trim().toUpperCase() === app.codeKey.toUpperCase()
   }
   function canInstall(app: AppEntry) {
-    if (isInstalled)            return false
-    if (!meetsRep(app))         return false
-    if (app.price > 0)          return false
-    if (app.codeKey && !codeValid(app)) return false
+    if (isInstalled)                        return false
+    if (!meetsRep(app))                     return false
+    if (app.price > 0 && balance < app.price) return false
+    if (app.codeKey && !codeValid(app))     return false
     return true
   }
   function handleInstall() {
     if (!canInstall(selected)) {
       if (selected.codeKey && !codeValid(selected)) setCodeError('Invalid access code.')
       return
+    }
+    if (selected.price > 0) {
+      const ok = debit(selected.price, `App Store: ${selected.name}`)
+      if (!ok) return
     }
     install(selected.id)
     if (selected.unlockId) install(selected.unlockId)
@@ -117,8 +124,8 @@ export default function AppStore() {
   }
   function lockReason(app: AppEntry) {
     if (isInstalled) return ''
-    if (app.price > 0) return `Price \u20a2 ${app.price} (payment coming soon)`
     const parts: string[] = []
+    if (app.price > 0 && balance < app.price) parts.push(`Need \u20b3${app.price} (have \u20b3${balance})`)
     if ((app.minCompliance ?? 0) > compliance) parts.push(`GRID \u2265 ${app.minCompliance} (yours: ${compliance})`)
     if ((app.minShadow    ?? 0) > shadow)      parts.push(`SHADOW \u2265 ${app.minShadow} (yours: ${shadow})`)
     if (app.codeKey) parts.push('Access code required')
@@ -214,7 +221,7 @@ export default function AppStore() {
           <div>
             <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.12em', marginBottom: 8 }}>REQUIREMENTS</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <Req label="Price"      value={selected.price > 0 ? `\u20a2 ${selected.price}` : 'Free'} ok={selected.price === 0} />
+              <Req label="Price"      value={selected.price > 0 ? `\u20b3${selected.price}` : 'Free'} ok={selected.price === 0 || balance >= selected.price} current={selected.price > 0 ? balance : undefined} priceMode={selected.price > 0} />
               {(selected.minCompliance ?? 0) > 0 && (
                 <Req label="GRID rep"   value={`\u2265 ${selected.minCompliance}`} ok={compliance >= (selected.minCompliance ?? 0)} current={compliance} />
               )}
@@ -269,14 +276,17 @@ export default function AppStore() {
   )
 }
 
-function Req({ label, value, ok, current }:
-  { label: string; value: string; ok: boolean; current?: number }) {
+function Req({ label, value, ok, current, priceMode }:
+  { label: string; value: string; ok: boolean; current?: number; priceMode?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.muted }}>
       <span>{label}</span>
       <span style={{ color: ok ? C.success : C.danger }}>
         {ok ? '\u2713 ' : '\u2717 '}{value}
-        {current !== undefined && !ok && ` (you: ${current})`}
+        {priceMode && current !== undefined && (
+          <span style={{ color: C.faint }}> (have \u20b3{current})</span>
+        )}
+        {!priceMode && current !== undefined && !ok && ` (you: ${current})`}
       </span>
     </div>
   )
