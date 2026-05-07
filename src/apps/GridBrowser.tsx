@@ -473,77 +473,74 @@ const PAGES: Record<string, PageData> = {
 }
 
 // ── theme config ──────────────────────────────────────────────────────────
-// Each theme has colour tokens PLUS a distinct visual identity for the header chrome.
 type ThemeConfig = {
   bg: string
   text: string
   accent: string
+  muted: string
   border: string
   tag: string
-  // header bar styling
   headerBg: string
   headerBorder: string
-  // site banner — the colored strip that gives each site its identity
-  bannerBg: string
-  bannerText: string
-  bannerLabel: string   // short all-caps identifier shown in the banner
-  // divider between sections
   divider: string
+  // layout variant — drives which skeleton is rendered
+  layout: 'corp' | 'news' | 'blog' | 'archive' | 'void' | 'forum'
 }
 
 const THEME_STYLES: Record<SiteTheme, ThemeConfig> = {
   corp: {
-    bg: 'bg-slate-950', text: 'text-slate-100', accent: 'text-blue-400',
+    bg: 'bg-slate-950', text: 'text-slate-200', accent: 'text-blue-400', muted: 'text-slate-500',
     border: 'border-blue-900/40', tag: 'bg-blue-950 text-blue-300',
     headerBg: 'bg-slate-900', headerBorder: 'border-blue-900/50',
-    bannerBg: 'bg-blue-950', bannerText: 'text-blue-200', bannerLabel: 'GRIDOS CORP',
-    divider: 'border-blue-900/30',
+    divider: 'border-blue-900/25',
+    layout: 'corp',
   },
   news: {
-    bg: 'bg-zinc-950', text: 'text-zinc-100', accent: 'text-amber-400',
+    bg: 'bg-zinc-950', text: 'text-zinc-100', accent: 'text-amber-400', muted: 'text-zinc-500',
     border: 'border-amber-900/40', tag: 'bg-amber-950 text-amber-300',
     headerBg: 'bg-zinc-900', headerBorder: 'border-amber-900/50',
-    bannerBg: 'bg-amber-950', bannerText: 'text-amber-200', bannerLabel: 'NEWS FEED',
     divider: 'border-amber-900/30',
+    layout: 'news',
   },
   forum: {
-    bg: 'bg-neutral-950', text: 'text-neutral-100', accent: 'text-yellow-400',
+    bg: 'bg-neutral-950', text: 'text-neutral-100', accent: 'text-yellow-400', muted: 'text-neutral-500',
     border: 'border-yellow-900/30', tag: 'bg-yellow-950 text-yellow-300',
     headerBg: 'bg-neutral-900', headerBorder: 'border-yellow-900/40',
-    bannerBg: 'bg-yellow-950', bannerText: 'text-yellow-200', bannerLabel: 'FORUM',
     divider: 'border-yellow-900/25',
+    layout: 'forum',
   },
   blog: {
-    bg: 'bg-stone-950', text: 'text-stone-100', accent: 'text-emerald-400',
+    bg: 'bg-stone-950', text: 'text-stone-200', accent: 'text-emerald-400', muted: 'text-stone-500',
     border: 'border-emerald-900/30', tag: 'bg-emerald-950 text-emerald-300',
-    headerBg: 'bg-stone-900', headerBorder: 'border-emerald-900/40',
-    bannerBg: 'bg-emerald-950/60', bannerText: 'text-emerald-300', bannerLabel: 'BLOG',
-    divider: 'border-emerald-900/25',
+    headerBg: 'bg-stone-950', headerBorder: 'border-emerald-900/30',
+    divider: 'border-stone-800',
+    layout: 'blog',
   },
   hidden: {
-    bg: 'bg-zinc-950', text: 'text-zinc-300', accent: 'text-cyan-400',
+    bg: 'bg-zinc-950', text: 'text-zinc-300', accent: 'text-cyan-400', muted: 'text-zinc-600',
     border: 'border-cyan-900/30', tag: 'bg-cyan-950 text-cyan-300',
     headerBg: 'bg-zinc-900', headerBorder: 'border-cyan-900/40',
-    bannerBg: 'bg-cyan-950/50', bannerText: 'text-cyan-400', bannerLabel: 'ARCHIVE MIRROR',
-    divider: 'border-cyan-900/25',
+    divider: 'border-cyan-900/20',
+    layout: 'archive',
   },
   void: {
-    bg: 'bg-black', text: 'text-red-200', accent: 'text-red-400',
+    bg: 'bg-black', text: 'text-red-200', accent: 'text-red-400', muted: 'text-red-900',
     border: 'border-red-900/40', tag: 'bg-red-950 text-red-300',
     headerBg: 'bg-zinc-950', headerBorder: 'border-red-900/50',
-    bannerBg: 'bg-red-950/70', bannerText: 'text-red-300', bannerLabel: 'VOID',
     divider: 'border-red-900/30',
+    layout: 'void',
   },
   personal: {
-    bg: 'bg-slate-950', text: 'text-slate-200', accent: 'text-violet-400',
+    bg: 'bg-slate-950', text: 'text-slate-200', accent: 'text-violet-400', muted: 'text-slate-500',
     border: 'border-violet-900/30', tag: 'bg-violet-950 text-violet-300',
     headerBg: 'bg-slate-900', headerBorder: 'border-violet-900/40',
-    bannerBg: 'bg-violet-950/50', bannerText: 'text-violet-300', bannerLabel: 'PERSONAL',
     divider: 'border-violet-900/25',
+    layout: 'blog',
   },
 }
 
-// ── forum post renderer ───────────────────────────────────────────────────
+// ── shared sub-components ─────────────────────────────────────────────────
+
 function ForumPost({ row, t }: { row: SiteContentRow; t: ThemeConfig }) {
   if (row.post_removed) {
     return (
@@ -565,9 +562,495 @@ function ForumPost({ row, t }: { row: SiteContentRow; t: ThemeConfig }) {
   )
 }
 
-// ── section divider ───────────────────────────────────────────────────────
-function Divider({ t }: { t: ThemeConfig }) {
-  return <div className={`border-t ${t.divider} my-1`} />
+function GateDenied({ page, t }: { page: PageData; t: ThemeConfig }) {
+  return (
+    <div className={`border ${t.border} rounded px-3 py-3 space-y-1`}>
+      <p className="text-xs text-red-400">⛔ ACCESS DENIED</p>
+      <p className="text-xs opacity-60">{page.gateHint ?? 'You do not have the required access level for this node.'}</p>
+    </div>
+  )
+}
+
+function ContractCard({ job, url, t }: { job: JobOffer; url: string; t: ThemeConfig }) {
+  return (
+    <div className={`border ${t.border} rounded px-3 py-2 space-y-1`}>
+      <div className="text-xs opacity-40 uppercase tracking-wider">available contract</div>
+      <div className={`text-xs font-semibold ${t.accent}`}>{job.title}</div>
+      <div className="text-xs opacity-60">{job.corp} · {job.pay}</div>
+      <button
+        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay })}
+        className={`mt-1 text-xs px-2 py-0.5 rounded border ${t.border} hover:bg-white/5 transition-colors`}
+      >
+        Accept contract
+      </button>
+    </div>
+  )
+}
+
+// ── LAYOUT: CORP ──────────────────────────────────────────────────────────
+// Cold, official, institutional. Full-width hero bar, two-column nav footer,
+// bold section labels that look like internal document headers.
+function LayoutCorp({
+  page, t, url, navigate, gateBlocked, isLive, forumPosts,
+}: LayoutProps) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Hero band — full-width blue gradient with corp seal feel */}
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-slate-950 border-b border-blue-900/40 px-5 py-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1 flex-1">
+            {isLive && (
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="text-xs text-blue-400/50 uppercase tracking-widest">live node</span>
+              </div>
+            )}
+            <h1 className="text-sm font-bold text-blue-200 leading-tight tracking-wide">{page.title}</h1>
+            {page.subtitle && <p className="text-xs text-slate-400 italic">{page.subtitle}</p>}
+          </div>
+          {/* Corp seal — right-aligned badge */}
+          <div className="shrink-0 text-right">
+            <div className="text-xs text-blue-500/60 uppercase tracking-widest leading-tight">GridOS</div>
+            <div className="text-xs text-blue-700/50 uppercase tracking-widest">Corp.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notice strip — compliance disclaimer style */}
+      <div className="border-b border-blue-900/20 px-5 py-1.5 bg-slate-950">
+        <p className="text-xs text-slate-600 uppercase tracking-widest">
+          OFFICIAL GRID NODE · AUTHENTICATED · ALL ACTIVITY LOGGED
+        </p>
+      </div>
+
+      <div className="px-5 py-4 space-y-5">
+        {gateBlocked ? (
+          <GateDenied page={page} t={t} />
+        ) : (
+          <>
+            {/* Body — displayed as numbered official statements */}
+            {page.body.length > 0 && (
+              <div className="space-y-0">
+                <div className="text-xs text-blue-700/60 uppercase tracking-widest mb-2">STATEMENT</div>
+                {page.body.map((line, i) => (
+                  <div key={i} className="flex gap-3 py-2 border-b border-blue-900/15 last:border-0">
+                    <span className="text-xs text-blue-900 tabular-nums shrink-0 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+                    <p className="text-xs text-slate-300 leading-relaxed">{line}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+
+            {/* Nav links — corp footer style: two columns */}
+            {page.links.length > 0 && (
+              <div className="pt-1">
+                <div className="text-xs text-blue-700/60 uppercase tracking-widest mb-2">NAVIGATION</div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  {page.links.map((lnk, i) => (
+                    <button
+                      key={i}
+                      onClick={() => navigate(lnk.url)}
+                      className="text-left text-xs text-blue-400 hover:text-blue-200 transition-colors truncate"
+                    >
+                      › {lnk.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer bar */}
+      <div className="px-5 py-2 border-t border-blue-900/20 bg-slate-950 mt-auto">
+        <p className="text-xs text-slate-700 uppercase tracking-widest">
+          © GridOS Corp. · Unified Access Compact · All rights reserved.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ── LAYOUT: NEWS ──────────────────────────────────────────────────────────
+// Newspaper/wire service feel. Masthead with live timestamp, body paragraphs
+// rendered as article cards with a category tag prefix.
+function LayoutNews({
+  page, t, url, navigate, gateBlocked, isLive, forumPosts,
+}: LayoutProps) {
+  // Fake timestamp for immersion
+  const ts = '07.05.26 // UPDATED LIVE'
+  // Map body lines → article cards: first word(s) become a tag if they look like a category
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Masthead */}
+      <div className="bg-amber-950/30 border-b-2 border-amber-600/50 px-4 py-3">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="text-xs text-amber-500/60 uppercase tracking-widest font-bold">{page.site}</span>
+          {isLive && (
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-xs text-red-400 uppercase tracking-widest">LIVE</span>
+            </div>
+          )}
+        </div>
+        <h1 className="text-sm font-bold text-zinc-100 leading-snug">{page.title}</h1>
+        {page.subtitle && (
+          <p className="text-xs text-zinc-400 mt-0.5">{page.subtitle}</p>
+        )}
+        <div className="text-xs text-amber-700/70 mt-1.5 uppercase tracking-wide">{ts}</div>
+      </div>
+
+      <div className="px-4 py-3 space-y-4">
+        {gateBlocked ? (
+          <GateDenied page={page} t={t} />
+        ) : (
+          <>
+            {/* Body as article cards */}
+            {page.body.length > 0 && (
+              <div className="space-y-2">
+                {page.body.map((line, i) => (
+                  <div key={i} className="border-l-2 border-amber-700/40 pl-3 py-0.5">
+                    <p className="text-xs text-zinc-300 leading-relaxed">{line}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+
+            {/* Related articles */}
+            {page.links.length > 0 && (
+              <div>
+                <div className="text-xs text-amber-700/60 uppercase tracking-widest border-t border-amber-900/30 pt-3 mb-2">
+                  RELATED ARTICLES
+                </div>
+                <div className="space-y-1">
+                  {page.links.map((lnk, i) => (
+                    <button
+                      key={i}
+                      onClick={() => navigate(lnk.url)}
+                      className="block w-full text-left group"
+                    >
+                      <span className="text-xs text-amber-500/50 mr-1.5">■</span>
+                      <span className="text-xs text-amber-300 group-hover:text-amber-100 underline-offset-2 hover:underline transition-colors">
+                        {lnk.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── LAYOUT: BLOG ──────────────────────────────────────────────────────────
+// Personal, narrow, journal-like. No official chrome. Body reads like prose.
+// Author sigil in header. Links look hand-written.
+function LayoutBlog({
+  page, t, url, navigate, gateBlocked, isLive, forumPosts,
+}: LayoutProps) {
+  // Extract "author" from site name (e.g. "ghostlily.blog" → "ghostlily")
+  const author = page.site.replace(/\.blog$/, '').replace(/\.dev$/, '')
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Personal header — no corp chrome, just name + post title */}
+      <div className="px-5 pt-5 pb-3 border-b border-stone-800/60">
+        <div className="flex items-center gap-2 mb-3">
+          {/* Author sigil: a small hand-crafted circle glyph */}
+          <div className="w-5 h-5 rounded-full border border-emerald-700/50 flex items-center justify-center shrink-0">
+            <span className="text-emerald-500 text-xs leading-none">{author[0]?.toUpperCase()}</span>
+          </div>
+          <span className="text-xs text-stone-500">{page.site}</span>
+          {isLive && (
+            <div className="flex items-center gap-1 ml-auto">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs text-emerald-600/60">live</span>
+            </div>
+          )}
+        </div>
+        <h1 className="text-sm font-bold text-emerald-400 leading-snug">{page.title}</h1>
+        {page.subtitle && (
+          <p className="text-xs text-stone-500 italic mt-0.5">{page.subtitle}</p>
+        )}
+      </div>
+
+      {/* Narrow prose column — blog-width reading */}
+      <div className="px-5 py-4 space-y-5 max-w-sm">
+        {gateBlocked ? (
+          <GateDenied page={page} t={t} />
+        ) : (
+          <>
+            {/* Body as continuous prose — no numbering, no tags */}
+            {page.body.length > 0 && (
+              <div className="space-y-3">
+                {page.body.map((line, i) => (
+                  <p key={i} className="text-xs text-stone-300 leading-loose">{line}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Contract — looks jarring on purpose, dropped in from outside */}
+            {page.job && (
+              <div className="border border-dashed border-stone-700 rounded px-3 py-2 space-y-1 bg-stone-900/40">
+                <div className="text-xs text-stone-600 uppercase tracking-wider">// contract dropped here</div>
+                <div className={`text-xs font-semibold ${t.accent}`}>{page.job.title}</div>
+                <div className="text-xs text-stone-500">{page.job.corp} · {page.job.pay}</div>
+                <button
+                  onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                  className="mt-1 text-xs px-2 py-0.5 rounded border border-stone-700 text-stone-400 hover:bg-stone-800 transition-colors"
+                >
+                  accept
+                </button>
+              </div>
+            )}
+
+            {/* Links — look like hand-written footnotes */}
+            {page.links.length > 0 && (
+              <div className="pt-2 border-t border-stone-800 space-y-1">
+                <div className="text-xs text-stone-600 mb-1">— links</div>
+                {page.links.map((lnk, i) => (
+                  <button
+                    key={i}
+                    onClick={() => navigate(lnk.url)}
+                    className="block text-left text-xs text-emerald-500/70 hover:text-emerald-300 transition-colors"
+                  >
+                    ↳ {lnk.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── LAYOUT: ARCHIVE ───────────────────────────────────────────────────────
+// Government archive / civic records feel. Bureaucratic, tabular, stamp marks,
+// dashed borders, faded classification headers.
+function LayoutArchive({
+  page, t, url, navigate, gateBlocked, isLive, forumPosts,
+}: LayoutProps) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Archive stamp header */}
+      <div className="px-4 pt-4 pb-3 border-b border-dashed border-cyan-900/40">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="text-xs text-cyan-700/60 uppercase tracking-widest">
+              CIVIC ARCHIVE SYSTEM · MIRROR NODE
+            </div>
+            <h1 className="text-sm font-bold text-cyan-300 leading-snug">{page.title}</h1>
+            {page.subtitle && (
+              <p className="text-xs text-zinc-500 italic">{page.subtitle}</p>
+            )}
+          </div>
+          {/* Integrity stamp */}
+          <div className="shrink-0 border border-dashed border-cyan-900/40 rounded px-2 py-1 text-right">
+            <div className="text-xs text-cyan-800/70 uppercase">STATUS</div>
+            <div className={`text-xs ${isLive ? 'text-cyan-500' : 'text-zinc-600'}`}>
+              {isLive ? 'MIRROR LIVE' : 'CACHED'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-3 space-y-4">
+        {gateBlocked ? (
+          <GateDenied page={page} t={t} />
+        ) : (
+          <>
+            {/* Body as record entries — looks like a document with field rows */}
+            {page.body.length > 0 && (
+              <div className="border border-dashed border-cyan-900/30 rounded divide-y divide-cyan-900/20">
+                {page.body.map((line, i) => (
+                  <div key={i} className="px-3 py-2 flex gap-3 items-start">
+                    <span className="text-xs text-cyan-800/50 uppercase tracking-widest shrink-0 mt-0.5">
+                      REC-{String(i + 1).padStart(3, '0')}
+                    </span>
+                    <p className="text-xs text-zinc-300 leading-relaxed">{line}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+
+            {/* Links as cross-reference table */}
+            {page.links.length > 0 && (
+              <div>
+                <div className="text-xs text-cyan-800/60 uppercase tracking-widest mb-2">
+                  CROSS-REFERENCES
+                </div>
+                <div className="border border-dashed border-cyan-900/30 rounded divide-y divide-cyan-900/20">
+                  {page.links.map((lnk, i) => (
+                    <button
+                      key={i}
+                      onClick={() => navigate(lnk.url)}
+                      className="w-full text-left flex items-center gap-3 px-3 py-1.5 hover:bg-cyan-950/30 transition-colors"
+                    >
+                      <span className="text-xs text-cyan-900 tabular-nums shrink-0">[{String(i + 1).padStart(2, '0')}]</span>
+                      <span className="text-xs text-cyan-400 hover:text-cyan-200 transition-colors">{lnk.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── LAYOUT: VOID ──────────────────────────────────────────────────────────
+// Dark market. No logos, no polish. Hostile, sparse, red-on-black.
+// Listings look like raw console output. Trust nothing.
+function LayoutVoid({
+  page, t, url, navigate, gateBlocked, isLive, forumPosts,
+}: LayoutProps) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Minimal hostile header — no branding, just a warning */}
+      <div className="px-4 pt-3 pb-2 border-b border-red-900/30">
+        <div className="text-xs text-red-900/70 uppercase tracking-widest mb-1">
+          !! UNREGISTERED NODE !! GRID ROUTING DISABLED !!
+        </div>
+        <h1 className="text-sm font-bold text-red-300 leading-snug">{page.title}</h1>
+        {page.subtitle && (
+          <p className="text-xs text-red-900/60 mt-0.5">{page.subtitle}</p>
+        )}
+      </div>
+
+      <div className="px-4 py-3 space-y-4">
+        {gateBlocked ? (
+          <GateDenied page={page} t={t} />
+        ) : (
+          <>
+            {/* Body as raw console dump */}
+            {page.body.length > 0 && (
+              <div className="bg-red-950/10 border border-red-900/20 rounded px-3 py-2 space-y-1.5">
+                {page.body.map((line, i) => (
+                  <p key={i} className="text-xs text-red-200/70 leading-relaxed font-mono">
+                    <span className="text-red-900/60 mr-1.5">&gt;</span>{line}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+
+            {/* Links — no labels, just raw paths */}
+            {page.links.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs text-red-900/50 uppercase tracking-widest">-- NAV --</div>
+                {page.links.map((lnk, i) => (
+                  <button
+                    key={i}
+                    onClick={() => navigate(lnk.url)}
+                    className="block text-left text-xs text-red-500/70 hover:text-red-300 transition-colors"
+                  >
+                    [{i}] {lnk.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── LAYOUT: FORUM ─────────────────────────────────────────────────────────
+// Thread board. Header shows board name and post count. Body entries look like replies.
+function LayoutForum({
+  page, t, url, navigate, gateBlocked, isLive, forumPosts,
+}: LayoutProps) {
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Board header */}
+      <div className="px-4 py-3 border-b border-yellow-900/30 bg-yellow-950/20">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-yellow-600/70 uppercase tracking-widest">{page.site}</span>
+          {isLive && (
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+              <span className="text-xs text-yellow-600/60">live</span>
+            </div>
+          )}
+        </div>
+        <h1 className="text-sm font-bold text-yellow-300 leading-snug">{page.title}</h1>
+        {page.subtitle && (
+          <p className="text-xs text-neutral-500 italic mt-0.5">{page.subtitle}</p>
+        )}
+      </div>
+
+      <div className="px-4 py-3 space-y-3">
+        {gateBlocked ? (
+          <GateDenied page={page} t={t} />
+        ) : (
+          <>
+            {/* Body paragraphs as OP post */}
+            {page.body.length > 0 && (
+              <div className="border border-yellow-900/25 rounded px-3 py-2 space-y-2">
+                <div className="text-xs text-yellow-700/60 uppercase tracking-wider">OP</div>
+                {page.body.map((line, i) => (
+                  <p key={i} className="text-xs text-neutral-300 leading-relaxed">{line}</p>
+                ))}
+              </div>
+            )}
+
+            {/* Forum posts */}
+            {forumPosts.length > 0 && (
+              <div className="space-y-2">
+                {forumPosts.map(p => (
+                  <ForumPost key={p.id} row={p} t={t} />
+                ))}
+              </div>
+            )}
+
+            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+
+            {page.links.length > 0 && (
+              <div className="pt-1 border-t border-yellow-900/20 space-y-1">
+                <div className="text-xs text-yellow-800/50 uppercase tracking-widest mb-1">RELATED THREADS</div>
+                {page.links.map((lnk, i) => (
+                  <button
+                    key={i}
+                    onClick={() => navigate(lnk.url)}
+                    className="block text-left text-xs text-yellow-400/80 hover:text-yellow-200 transition-colors"
+                  >
+                    ▸ {lnk.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── layout props type ─────────────────────────────────────────────────────
+type LayoutProps = {
+  page: PageData
+  t: ThemeConfig
+  url: string
+  navigate: (target: string) => void
+  gateBlocked: boolean
+  isLive: boolean
+  forumPosts: SiteContentRow[]
 }
 
 // ── main component ────────────────────────────────────────────────────────
@@ -577,10 +1060,8 @@ export default function GridBrowser() {
   const { compliance, shadow, adjust } = useRepStore()
   const { unlocks } = useRepStore() as any
 
-  // ── Supabase lookup ──────────────────────────────────────────────────────
   const supaResult = useSite(url)
 
-  // ── Resolve page data ────────────────────────────────────────────────────
   const page = useMemo<PageData | null>(() => {
     if (supaResult.status === 'ok') return siteRowToPageData(supaResult.site)
     return PAGES[url] ?? null
@@ -589,7 +1070,6 @@ export default function GridBrowser() {
   const isLoadingFromDB = supaResult.status === 'loading' && !PAGES[url]
   const t = THEME_STYLES[page?.theme ?? 'corp']
 
-  // ── Access gate check ────────────────────────────────────────────────────
   const gateBlocked = useMemo(() => {
     if (!page?.gate) return false
     const g = page.gate
@@ -599,9 +1079,7 @@ export default function GridBrowser() {
     return false
   }, [page, compliance, shadow, unlocks])
 
-  // ── Rep effect — applied AFTER render via useEffect (fixes setState-in-render) ──
   const [lastApplied, setLastApplied] = useState('')
-
   useEffect(() => {
     if (!page || gateBlocked) return
     if (url === lastApplied) return
@@ -610,14 +1088,19 @@ export default function GridBrowser() {
     if (page.repEffect?.shadow)     adjust('shadow',     page.repEffect.shadow)
   }, [url, page, gateBlocked]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Navigate ─────────────────────────────────────────────────────────────
   function navigate(target: string) {
     const clean = target.trim().toLowerCase().replace(/^https?:\/\//, '')
     setUrl(clean)
     setInput(clean)
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  const isLive = supaResult.status === 'ok'
+  const forumPosts = supaResult.status === 'ok'
+    ? (supaResult.site.content ?? []).filter(c => c.kind === 'forum_post').sort((a, b) => a.sort_order - b.sort_order)
+    : []
+
+  const layoutProps: LayoutProps = { page: page!, t, url, navigate, gateBlocked, isLive, forumPosts }
+
   return (
     <div className={`flex flex-col h-full ${t.bg} ${t.text} font-mono text-sm`}>
 
@@ -639,133 +1122,31 @@ export default function GridBrowser() {
         </button>
       </div>
 
-      {/* ── page body ── */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── status strips ── */}
+      {isLoadingFromDB && (
+        <div className="px-4 py-2 opacity-40 text-xs animate-pulse">connecting to grid node…</div>
+      )}
+      {supaResult.status === 'error' && (
+        <div className="px-4 py-1.5 text-xs opacity-30 italic border-b border-current/10">
+          ⚠ remote sync degraded — serving cached data
+        </div>
+      )}
 
-        {/* loading */}
-        {isLoadingFromDB && (
-          <div className="px-4 py-3 opacity-40 text-xs animate-pulse">connecting to grid node…</div>
-        )}
+      {/* ── 404 ── */}
+      {!page && !isLoadingFromDB && (
+        <div className="px-4 py-4 space-y-1 flex-1">
+          <p className="text-red-400">404 — node not found</p>
+          <p className="opacity-40 text-xs">{url} is not responding or does not exist.</p>
+        </div>
+      )}
 
-        {/* degraded sync notice */}
-        {supaResult.status === 'error' && (
-          <div className="px-4 py-2 text-xs opacity-30 italic">⚠ remote sync degraded — serving cached data</div>
-        )}
-
-        {/* 404 */}
-        {!page && !isLoadingFromDB && (
-          <div className="px-4 py-4 space-y-1">
-            <p className="text-red-400">404 — node not found</p>
-            <p className="opacity-40 text-xs">{url} is not responding or does not exist.</p>
-          </div>
-        )}
-
-        {page && (
-          <>
-            {/* ── site identity banner ── */}
-            <div className={`${t.bannerBg} px-4 py-2 flex items-center justify-between border-b ${t.border}`}>
-              <span className={`text-xs tracking-widest uppercase opacity-60 ${t.bannerText}`}>
-                {t.bannerLabel}
-              </span>
-              <span className="text-xs opacity-30">{page.site}</span>
-            </div>
-
-            <div className="px-4 py-4 space-y-4">
-
-              {/* live pulse */}
-              {supaResult.status === 'ok' && (
-                <div className="flex items-center gap-1.5">
-                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${t.accent.replace('text-', 'bg-')} animate-pulse`} />
-                  <span className="text-xs opacity-30">live</span>
-                </div>
-              )}
-
-              {/* page title */}
-              <div className="space-y-1">
-                <h1 className={`text-base font-bold ${t.accent}`}>{page.title}</h1>
-                {page.subtitle && <p className="text-xs opacity-50 italic">{page.subtitle}</p>}
-              </div>
-
-              <Divider t={t} />
-
-              {/* gate */}
-              {gateBlocked ? (
-                <div className={`border ${t.border} rounded px-3 py-3 space-y-1`}>
-                  <p className="text-xs text-red-400">⛔ ACCESS DENIED</p>
-                  <p className="text-xs opacity-60">{page.gateHint ?? 'You do not have the required access level for this node.'}</p>
-                </div>
-              ) : (
-                <>
-                  {/* body paragraphs */}
-                  {page.body.length > 0 && (
-                    <div className="space-y-2">
-                      {page.body.map((line, i) => (
-                        <p key={i} className="text-xs leading-relaxed opacity-80">{line}</p>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* forum posts */}
-                  {supaResult.status === 'ok' && (() => {
-                    const posts = (supaResult.site.content ?? [])
-                      .filter(c => c.kind === 'forum_post')
-                      .sort((a, b) => a.sort_order - b.sort_order)
-                    if (posts.length === 0) return null
-                    return (
-                      <>
-                        <Divider t={t} />
-                        <div className="space-y-2">
-                          <div className="text-xs opacity-30 uppercase tracking-widest">threads</div>
-                          {posts.map(p => (
-                            <ForumPost key={p.id} row={p} t={t} />
-                          ))}
-                        </div>
-                      </>
-                    )
-                  })()}
-
-                  {/* available contract */}
-                  {page.job && (
-                    <>
-                      <Divider t={t} />
-                      <div className={`border ${t.border} rounded px-3 py-2 space-y-1`}>
-                        <div className="text-xs opacity-40 uppercase tracking-wider">available contract</div>
-                        <div className={`text-xs font-semibold ${t.accent}`}>{page.job.title}</div>
-                        <div className="text-xs opacity-60">{page.job.corp} · {page.job.pay}</div>
-                        <button
-                          onClick={() => { addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay }) }}
-                          className={`mt-1 text-xs px-2 py-0.5 rounded border ${t.border} hover:bg-white/5 transition-colors`}
-                        >
-                          Accept contract
-                        </button>
-                      </div>
-                    </>
-                  )}
-
-                  {/* nav links */}
-                  {page.links.length > 0 && (
-                    <>
-                      <Divider t={t} />
-                      <div className="space-y-1">
-                        <div className="text-xs opacity-30 uppercase tracking-widest">links</div>
-                        {page.links.map((lnk, i) => (
-                          <button
-                            key={i}
-                            onClick={() => navigate(lnk.url)}
-                            className={`block text-left text-xs ${t.accent} hover:underline opacity-80 hover:opacity-100 transition-opacity`}
-                          >
-                            → {lnk.label}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      {/* ── routed layout ── */}
+      {page && t.layout === 'corp'    && <LayoutCorp    {...layoutProps} />}
+      {page && t.layout === 'news'    && <LayoutNews    {...layoutProps} />}
+      {page && t.layout === 'blog'    && <LayoutBlog    {...layoutProps} />}
+      {page && t.layout === 'archive' && <LayoutArchive {...layoutProps} />}
+      {page && t.layout === 'void'    && <LayoutVoid    {...layoutProps} />}
+      {page && t.layout === 'forum'   && <LayoutForum   {...layoutProps} />}
     </div>
   )
 }
