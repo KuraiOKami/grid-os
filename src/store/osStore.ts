@@ -45,6 +45,7 @@ const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number;
   map:        { title: 'City Map',    icon: '[M]',  width: 820, height: 540 },
   checkpoint: { title: 'Checkpoint',  icon: '[C]',  width: 900, height: 580 },
   databroker: { title: 'Data Broker', icon: '[$]',  width: 820, height: 540 },
+  courier:    { title: 'Courier',     icon: '[>>]', width: 860, height: 560 },
 }
 
 function getDesktopSize(desktopRef: HTMLElement | null) {
