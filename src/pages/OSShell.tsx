@@ -18,6 +18,14 @@ import { useMailStore }   from '@/store/mailStore'
 import { useUnlockStore } from '@/store/unlockStore'
 import { useOSStore, type WindowState } from '@/store/osStore'
 
+const MIN_W = 280
+const MIN_H = 180
+type ResizeDir = 'n'|'s'|'e'|'w'|'ne'|'nw'|'se'|'sw'
+const RESIZE_CURSORS: Record<ResizeDir, string> = {
+  n: 'n-resize', s: 's-resize', e: 'e-resize', w: 'w-resize',
+  ne: 'ne-resize', nw: 'nw-resize', se: 'se-resize', sw: 'sw-resize',
+}
+
 const C = {
   bg:      '#0a0a0f',
   surface: '#111118',
@@ -57,6 +65,7 @@ export default function OSShell() {
   const closeWindow   = useOSStore(s => s.closeWindow)
   const focusWindow   = useOSStore(s => s.focusWindow)
   const updatePos     = useOSStore(s => s.updateWindowPos)
+  const updateSize    = useOSStore(s => s.updateWindowSize)
   const toggleMax     = useOSStore(s => s.toggleMaximize)
   const minimizeWin   = useOSStore(s => s.minimizeWindow)
   const restoreWin    = useOSStore(s => s.restoreWindow)
@@ -124,6 +133,7 @@ export default function OSShell() {
               onClose={() => closeWindow(win.id)}
               onFocus={() => focusWindow(win.id)}
               onMove={(x, y) => updatePos(win.id, x, y)}
+              onResize={(x, y, w, h) => { updatePos(win.id, x, y); updateSize(win.id, w, h) }}
               onToggleMax={() => toggleMax(win.id)}
               onMinimize={() => minimizeWin(win.id)}
             />
@@ -237,15 +247,21 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
 }
 
 // ── OsWindow ───────────────────────────────────────────────────────────
-function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
+function OsWindow({ win, onClose, onFocus, onMove, onResize, onToggleMax, onMinimize }: {
   win: WindowState
   onClose:     () => void
   onFocus:     () => void
   onMove:      (x: number, y: number) => void
+  onResize:    (x: number, y: number, width: number, height: number) => void
   onToggleMax: () => void
   onMinimize:  () => void
 }) {
-  const dragRef = useRef<{ ox: number; oy: number } | null>(null)
+  const dragRef   = useRef<{ ox: number; oy: number } | null>(null)
+  const resizeRef = useRef<{
+    dir: ResizeDir
+    startX: number; startY: number
+    startRect: { x: number; y: number; width: number; height: number }
+  } | null>(null)
   const isWatch = win.title === 'Watch'
 
   if (win.minimized) return null
@@ -267,6 +283,65 @@ function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
+
+  const startResize = (e: React.MouseEvent, dir: ResizeDir) => {
+    if (win.maximized) return
+    e.preventDefault()
+    e.stopPropagation()
+    onFocus()
+    resizeRef.current = {
+      dir,
+      startX: e.clientX, startY: e.clientY,
+      startRect: { x: win.x, y: win.y, width: win.width, height: win.height },
+    }
+    const move = (ev: MouseEvent) => {
+      const s = resizeRef.current
+      if (!s) return
+      const dx = ev.clientX - s.startX
+      const dy = ev.clientY - s.startY
+      let { x, y, width, height } = s.startRect
+      if (s.dir.includes('e')) width  = Math.max(MIN_W, width  + dx)
+      if (s.dir.includes('s')) height = Math.max(MIN_H, height + dy)
+      if (s.dir.includes('w')) {
+        const nw = Math.max(MIN_W, width - dx)
+        x = x + (width - nw)
+        width = nw
+      }
+      if (s.dir.includes('n')) {
+        const nh = Math.max(MIN_H, height - dy)
+        y = Math.max(0, y + (height - nh))
+        height = nh
+      }
+      onResize(x, y, width, height)
+    }
+    const up = () => {
+      resizeRef.current = null
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
+  const resizeHandle = (dir: ResizeDir) => (
+    <div
+      key={dir}
+      onMouseDown={e => startResize(e, dir)}
+      style={{
+        position: 'absolute',
+        cursor: RESIZE_CURSORS[dir],
+        zIndex: 10,
+        ...(dir === 'n'  ? { top: -4,    left: 8,    right: 8,   height: 8  } : {}),
+        ...(dir === 's'  ? { bottom: -4, left: 8,    right: 8,   height: 8  } : {}),
+        ...(dir === 'w'  ? { left: -4,   top: 8,     bottom: 8,  width: 8   } : {}),
+        ...(dir === 'e'  ? { right: -4,  top: 8,     bottom: 8,  width: 8   } : {}),
+        ...(dir === 'nw' ? { top: -4,    left: -4,   width: 14,  height: 14 } : {}),
+        ...(dir === 'ne' ? { top: -4,    right: -4,  width: 14,  height: 14 } : {}),
+        ...(dir === 'sw' ? { bottom: -4, left: -4,   width: 14,  height: 14 } : {}),
+        ...(dir === 'se' ? { bottom: -4, right: -4,  width: 14,  height: 14 } : {}),
+      }}
+    />
+  )
 
   function renderBody() {
     if (win.content)              return win.content
@@ -308,6 +383,9 @@ function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
         transition: 'box-shadow 0.15s',
       }}
     >
+      {/* Resize handles — hidden when maximized */}
+      {!win.maximized && (['n','s','e','w','ne','nw','se','sw'] as ResizeDir[]).map(resizeHandle)}
+
       {/* Title bar */}
       <div
         onMouseDown={startDrag}
@@ -324,16 +402,19 @@ function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
       >
         <div style={{ display: 'flex', gap: 6 }}>
           <button
+            onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onClose() }}
             title="Close"
             style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#ff3b5cbb' }}
           />
           <button
+            onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onMinimize() }}
             title="Minimize"
             style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#ffaa00bb' }}
           />
           <button
+            onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onToggleMax() }}
             title="Maximize"
             style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#00cc88bb' }}
