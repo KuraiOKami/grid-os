@@ -23,6 +23,7 @@ interface OSStore {
   desktopRef: HTMLElement | null
   setDesktopRef: (el: HTMLElement | null) => void
   openApp: (appId: string) => void
+  openSystemPanel: (panelId: 'settings' | 'connections' | 'citizen-id') => void
   closeWindow: (id: string) => void
   focusWindow: (id: string) => void
   updateWindowPos: (id: string, x: number, y: number) => void
@@ -33,14 +34,18 @@ interface OSStore {
 }
 
 const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number; height: number }> = {
-  browser:  { title: 'GridBrowser', icon: 'WWW', width: 820, height: 540 },
-  terminal: { title: 'Terminal',    icon: '>_',  width: 620, height: 420 },
-  files:    { title: 'File System', icon: '/fs', width: 660, height: 460 },
-  jobs:     { title: 'Job Board',   icon: '\u25a0\u25a0', width: 700, height: 480 },
+  browser:      { title: 'GridBrowser', icon: 'WWW', width: 820, height: 540 },
+  terminal:     { title: 'Terminal',    icon: '>_',  width: 620, height: 420 },
+  files:        { title: 'File System', icon: '/fs', width: 660, height: 460 },
+  jobs:         { title: 'Job Board',   icon: '\u25a0\u25a0', width: 700, height: 480 },
 }
 
-// Read actual desktop/taskbar dimensions at call time.
-// Falls back to window dimensions minus a 40px taskbar if desktopRef is unset.
+const PANEL_DEFAULTS: Record<string, { title: string; icon: string; width: number; height: number }> = {
+  'settings':    { title: 'Settings',    icon: '[=]', width: 480, height: 520 },
+  'connections': { title: 'Connections', icon: '[~]', width: 540, height: 500 },
+  'citizen-id':  { title: 'Citizen ID',  icon: '[i]', width: 400, height: 560 },
+}
+
 function getDesktopSize(desktopRef: HTMLElement | null) {
   if (desktopRef) {
     return { dw: desktopRef.clientWidth, dh: desktopRef.clientHeight }
@@ -80,6 +85,63 @@ export const useOSStore = create<OSStore>((set, get) => ({
     })
   },
 
+  // System panels are singletons — if already open, just focus them
+  openSystemPanel: (panelId) => {
+    const { windows, topZ } = get()
+    const existing = windows.find(w => w.id === `sys-${panelId}`)
+    if (existing) {
+      const newZ = topZ + 1
+      set(state => ({
+        topZ: newZ,
+        windows: state.windows.map(w =>
+          w.id === existing.id
+            ? { ...w, focused: true, minimized: false, zIndex: newZ }
+            : { ...w, focused: false }
+        ),
+      }))
+      return
+    }
+
+    // Lazy-load content to avoid circular deps at module level
+    let content: ReactNode = null
+    if (panelId === 'settings') {
+      const SettingsApp = require('./settingsContent').default
+      content = <SettingsApp />
+    }
+    if (panelId === 'connections') {
+      const ConnectionsApp = require('./connectionsContent').default
+      content = <ConnectionsApp />
+    }
+    if (panelId === 'citizen-id') {
+      const CitizenIDApp = require('./citizenIdContent').default
+      content = <CitizenIDApp />
+    }
+
+    const newZ = topZ + 1
+    const cfg  = PANEL_DEFAULTS[panelId]
+    const { dw, dh } = getDesktopSize(get().desktopRef)
+    const x = Math.round((dw - cfg.width)  / 2)
+    const y = Math.round((dh - cfg.height) / 2)
+    const rect = { x, y, width: cfg.width, height: cfg.height }
+
+    const win: WindowState = {
+      id:    `sys-${panelId}`,
+      title: cfg.title,
+      icon:  cfg.icon,
+      content,
+      ...rect,
+      zIndex:      newZ,
+      focused:     true,
+      minimized:   false,
+      maximized:   false,
+      restoreRect: rect,
+    }
+    set({
+      topZ: newZ,
+      windows: [...windows.map(w => ({ ...w, focused: false })), win],
+    })
+  },
+
   closeWindow: (id) =>
     set(state => ({ windows: state.windows.filter(w => w.id !== id) })),
 
@@ -95,7 +157,6 @@ export const useOSStore = create<OSStore>((set, get) => ({
     }))
   },
 
-  // Only update restoreRect when NOT maximized, so maximize/restore stays intact
   updateWindowPos: (id, x, y) =>
     set(state => ({
       windows: state.windows.map(w =>
@@ -140,7 +201,6 @@ export const useOSStore = create<OSStore>((set, get) => ({
       windows: state.windows.map(w => {
         if (w.id !== id) return w
         if (w.maximized) {
-          // Restore to saved rect
           return {
             ...w,
             maximized: false,
@@ -150,7 +210,6 @@ export const useOSStore = create<OSStore>((set, get) => ({
             height: w.restoreRect.height,
           }
         } else {
-          // Save current rect before maximizing
           return {
             ...w,
             maximized: true,

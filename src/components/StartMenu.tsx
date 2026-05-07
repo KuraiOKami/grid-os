@@ -7,6 +7,10 @@ import { useEffect, useRef } from 'react'
 import { useRepStore }    from '@/store/reputationStore'
 import { useMailStore }   from '@/store/mailStore'
 import { useUnlockStore } from '@/store/unlockStore'
+import { useOSStore }     from '@/store/osStore'
+import SettingsApp    from '@/apps/SettingsApp'
+import ConnectionsApp from '@/apps/ConnectionsApp'
+import CitizenIDApp   from '@/apps/CitizenIDApp'
 
 const C = {
   bg:      '#0a0a0f',
@@ -40,8 +44,14 @@ const QUICK_ACTIONS = [
   { label: 'Shutdown', icon: '⏻', action: 'shutdown' },
 ]
 
+const SYSTEM_ITEMS = [
+  { id: 'settings'    as const, label: 'Settings',   icon: '[=]' },
+  { id: 'connections' as const, label: 'Connections', icon: '[~]' },
+  { id: 'citizen-id'  as const, label: 'Citizen ID',  icon: '[i]' },
+]
+
 interface Props {
-  onClose:  () => void
+  onClose:   () => void
   onOpenApp: (id: string) => void
 }
 
@@ -50,6 +60,7 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
   const shadow      = useRepStore(s => s.shadow)
   const mails       = useMailStore(s => s.mails)
   const installed   = useUnlockStore(s => s.installed)
+  const openPanel   = useOSStore(s => s.openSystemPanel)
   const panelRef    = useRef<HTMLDivElement>(null)
 
   const unread      = mails.filter(m => m.unread).length
@@ -62,7 +73,6 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
         onClose()
       }
     }
-    // slight delay so the opening click doesn’t immediately close
     const t = setTimeout(() => document.addEventListener('mousedown', handle), 80)
     return () => { clearTimeout(t); document.removeEventListener('mousedown', handle) }
   }, [onClose])
@@ -79,28 +89,81 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
     onClose()
   }
 
+  function handleSysClick(panelId: 'settings' | 'connections' | 'citizen-id') {
+    // Inline content map — avoids dynamic require & keeps TS happy
+    const CONTENT_MAP = {
+      'settings':    <SettingsApp />,
+      'connections': <ConnectionsApp />,
+      'citizen-id':  <CitizenIDApp />,
+    }
+    const PANEL_DEFAULTS = {
+      'settings':    { title: 'Settings',    icon: '[=]', width: 480, height: 520 },
+      'connections': { title: 'Connections', icon: '[~]', width: 540, height: 500 },
+      'citizen-id':  { title: 'Citizen ID',  icon: '[i]', width: 400, height: 560 },
+    }
+    const { windows, topZ, desktopRef, closeWindow } = useOSStore.getState()
+    const existing = windows.find(w => w.id === `sys-${panelId}`)
+    const newZ = topZ + 1
+
+    if (existing) {
+      useOSStore.setState(state => ({
+        topZ: newZ,
+        windows: state.windows.map(w =>
+          w.id === existing.id
+            ? { ...w, focused: true, minimized: false, zIndex: newZ }
+            : { ...w, focused: false }
+        ),
+      }))
+    } else {
+      const cfg  = PANEL_DEFAULTS[panelId]
+      const dw   = desktopRef ? desktopRef.clientWidth  : window.innerWidth
+      const dh   = desktopRef ? desktopRef.clientHeight : window.innerHeight - 40
+      const x    = Math.round((dw - cfg.width)  / 2)
+      const y    = Math.round((dh - cfg.height) / 2)
+      const rect = { x, y, width: cfg.width, height: cfg.height }
+
+      useOSStore.setState(state => ({
+        topZ: newZ,
+        windows: [
+          ...state.windows.map(w => ({ ...w, focused: false })),
+          {
+            id:          `sys-${panelId}`,
+            title:       cfg.title,
+            icon:        cfg.icon,
+            content:     CONTENT_MAP[panelId],
+            ...rect,
+            zIndex:      newZ,
+            focused:     true,
+            minimized:   false,
+            maximized:   false,
+            restoreRect: rect,
+          },
+        ],
+      }))
+    }
+
+    onClose()
+  }
+
   // compliance tier label
   function tier(c: number) {
-    if (c >= 80) return { label: 'SENIOR ANALYST',  color: C.accent  }
-    if (c >= 50) return { label: 'ANALYST',         color: C.accent  }
-    if (c >= 20) return { label: 'CITIZEN — STANDARD', color: C.muted }
-    if (c < 0)   return { label: 'FLAGGED',         color: C.danger  }
-    return              { label: 'UNASSIGNED',       color: C.faint   }
+    if (c >= 80) return { label: 'SENIOR ANALYST',     color: C.accent  }
+    if (c >= 55) return { label: 'ANALYST',            color: C.accent  }
+    if (c >= 30) return { label: 'CITIZEN — STANDARD', color: C.muted   }
+    if (c < 0)   return { label: 'FLAGGED',            color: C.danger  }
+    return              { label: 'UNASSIGNED',          color: C.faint   }
   }
   const t = tier(compliance)
 
   return (
-    // Backdrop
     <div style={{
       position: 'fixed', inset: 0, zIndex: 8000,
-      // transparent backdrop — click outside handled by mousedown listener
     }}>
-      {/* Panel */}
       <div
         ref={panelRef}
         style={{
           position: 'absolute',
-          bottom: 44,   // sits just above the taskbar
+          bottom: 44,
           left: 0,
           width: 320,
           maxHeight: 'calc(100vh - 60px)',
@@ -115,7 +178,6 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
           color: C.text,
           overflow: 'hidden',
           boxShadow: '4px -4px 40px #00000099',
-          // slide-up animation via CSS
           animation: 'startMenuIn 0.18s cubic-bezier(0.16,1,0.3,1) both',
         }}
       >
@@ -134,7 +196,6 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Avatar */}
             <div style={{
               width: 40, height: 40, borderRadius: 6,
               border: `1px solid ${C.accent}44`,
@@ -145,12 +206,8 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
               [U]
             </div>
             <div>
-              <div style={{ fontSize: 13, color: C.text, fontWeight: 'bold' }}>
-                CITIZEN #4471
-              </div>
-              <div style={{ fontSize: 10, color: t.color, marginTop: 2 }}>
-                {t.label}
-              </div>
+              <div style={{ fontSize: 13, color: C.text, fontWeight: 'bold' }}>CITIZEN #4471</div>
+              <div style={{ fontSize: 10, color: t.color, marginTop: 2 }}>{t.label}</div>
             </div>
             {unread > 0 && (
               <div style={{
@@ -163,20 +220,15 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
               </div>
             )}
           </div>
-
-          {/* Rep bars */}
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <RepBar label="GRID"   value={compliance} color={C.accent}  max={100} />
-            <RepBar label="SHADOW" value={shadow}     color={C.violet}  max={100} />
+            <RepBar label="GRID"   value={compliance} color={C.accent} max={100} />
+            <RepBar label="SHADOW" value={shadow}     color={C.violet} max={100} />
           </div>
         </div>
 
-        {/* ── Installed apps ── */}
+        {/* ── Apps ── */}
         <div style={{ flex: 1, overflow: 'auto' }}>
-          <div style={{
-            padding: '8px 12px 4px',
-            fontSize: 9, color: C.faint, letterSpacing: '0.12em',
-          }}>
+          <div style={{ padding: '8px 12px 4px', fontSize: 9, color: C.faint, letterSpacing: '0.12em' }}>
             APPLICATIONS
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -190,24 +242,25 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
             ))}
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: C.border, margin: '4px 0' }} />
 
           {/* ── System section ── */}
-          <div style={{
-            padding: '4px 12px 4px',
-            fontSize: 9, color: C.faint, letterSpacing: '0.12em',
-          }}>
+          <div style={{ padding: '4px 12px 4px', fontSize: 9, color: C.faint, letterSpacing: '0.12em' }}>
             SYSTEM
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <SysRow label="Settings"    icon="[=]" onClick={onClose} />
-            <SysRow label="Connections"  icon="[~]" onClick={onClose} />
-            <SysRow label="Citizen ID"   icon="[i]" onClick={onClose} />
+            {SYSTEM_ITEMS.map(item => (
+              <SysRow
+                key={item.id}
+                label={item.label}
+                icon={item.icon}
+                onClick={() => handleSysClick(item.id)}
+              />
+            ))}
           </div>
         </div>
 
-        {/* ── Quick actions (sleep / restart / shutdown) ── */}
+        {/* ── Quick actions ── */}
         <div style={{
           borderTop: `1px solid ${C.border}`,
           background: C.surf2,
@@ -229,29 +282,22 @@ export default function StartMenu({ onClose, onOpenApp }: Props) {
 }
 
 // ── sub-components ────────────────────────────────────────────────────────────
-function RepBar({ label, value, color, max }: {
-  label: string; value: number; color: string; max: number
-}) {
+function RepBar({ label, value, color, max }: { label: string; value: number; color: string; max: number }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100))
   const negative = value < 0
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between',
-        fontSize: 9, marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginBottom: 4 }}>
         <span style={{ color: '#6b6b80', letterSpacing: '0.1em' }}>{label}</span>
         <span style={{ color: negative ? '#ff3b5c' : color }}>
           {value > 0 ? '+' : ''}{value}
         </span>
       </div>
-      <div style={{
-        height: 3, background: '#2a2a3a', borderRadius: 2, overflow: 'hidden',
-      }}>
+      <div style={{ height: 3, background: '#2a2a3a', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{
-          height: '100%',
-          width: `${Math.abs(pct)}%`,
+          height: '100%', width: `${Math.abs(pct)}%`,
           background: negative ? '#ff3b5c' : color,
-          borderRadius: 2,
-          transition: 'width 0.4s ease',
+          borderRadius: 2, transition: 'width 0.4s ease',
         }} />
       </div>
     </div>
@@ -259,9 +305,7 @@ function RepBar({ label, value, color, max }: {
 }
 
 function AppRow({ app, badge, onClick }: {
-  app: { id: string; title: string; icon: string; accent: string }
-  badge: number
-  onClick: () => void
+  app: { id: string; title: string; icon: string; accent: string }; badge: number; onClick: () => void
 }) {
   return (
     <button
@@ -270,8 +314,7 @@ function AppRow({ app, badge, onClick }: {
         width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
         background: 'none', fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '7px 16px',
-        transition: 'background 0.1s',
+        padding: '7px 16px', transition: 'background 0.1s',
       }}
       onMouseEnter={e => (e.currentTarget.style.background = '#16161f')}
       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -289,8 +332,7 @@ function AppRow({ app, badge, onClick }: {
         <span style={{
           background: '#ff3b5c', color: '#fff',
           fontSize: 9, fontWeight: 'bold',
-          borderRadius: 10, padding: '1px 6px', minWidth: 18,
-          textAlign: 'center',
+          borderRadius: 10, padding: '1px 6px', minWidth: 18, textAlign: 'center',
         }}>
           {badge > 9 ? '9+' : badge}
         </span>
@@ -299,9 +341,7 @@ function AppRow({ app, badge, onClick }: {
   )
 }
 
-function SysRow({ label, icon, onClick }: {
-  label: string; icon: string; onClick: () => void
-}) {
+function SysRow({ label, icon, onClick }: { label: string; icon: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -309,8 +349,7 @@ function SysRow({ label, icon, onClick }: {
         width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
         background: 'none', fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '7px 16px',
-        transition: 'background 0.1s',
+        padding: '7px 16px', transition: 'background 0.1s',
       }}
       onMouseEnter={e => (e.currentTarget.style.background = '#16161f')}
       onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -323,17 +362,12 @@ function SysRow({ label, icon, onClick }: {
       }}>
         {icon}
       </span>
-      <span style={{ fontSize: 11, color: '#6b6b80' }}>{label}</span>
-      <span style={{ marginLeft: 'auto', fontSize: 9, color: '#3a3a4a' }}>
-        // soon
-      </span>
+      <span style={{ fontSize: 11, color: '#c8c8d8' }}>{label}</span>
     </button>
   )
 }
 
-function QuickAction({ label, icon, onClick }: {
-  label: string; icon: string; onClick: () => void
-}) {
+function QuickAction({ label, icon, onClick }: { label: string; icon: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
