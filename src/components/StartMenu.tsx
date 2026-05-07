@@ -1,4 +1,4 @@
-// ── StartMenu.tsx ────────────────────────────────────────────────────────────
+// ── StartMenu.tsx ───────────────────────────────────────────────────────────
 import { useEffect, useRef } from 'react'
 import { useRepStore }    from '@/store/reputationStore'
 import { useMailStore }   from '@/store/mailStore'
@@ -22,16 +22,18 @@ const C = {
   warn:    '#ffaa00',
   success: '#00cc88',
   violet:  '#d6a2ff',
+  amber:   '#e8a020',
 }
 
 const ALL_APPS = [
-  { id: 'browser',  title: 'GridBrowser', icon: 'WWW', accent: C.accent  },
-  { id: 'mail',     title: 'Mail',        icon: '@',   accent: C.accent  },
-  { id: 'jobs',     title: 'Job Board',   icon: '[ ]', accent: C.success },
-  { id: 'appstore', title: 'App Store',   icon: '[+]', accent: C.violet  },
-  { id: 'watch',    title: 'Watch',       icon: '[W]', accent: C.danger  },
-  { id: 'terminal', title: 'Terminal',    icon: '>_',  accent: C.accent  },
-  { id: 'files',    title: 'File System', icon: '/fs', accent: C.accent  },
+  { id: 'browser',    title: 'GridBrowser',  icon: 'WWW',  accent: C.accent  },
+  { id: 'mail',       title: 'Mail',         icon: '@',    accent: C.accent  },
+  { id: 'jobs',       title: 'Job Board',    icon: '[ ]',  accent: C.success },
+  { id: 'appstore',   title: 'App Store',    icon: '[+]',  accent: C.violet  },
+  { id: 'watch',      title: 'Watch',        icon: '[W]',  accent: C.danger  },
+  { id: 'terminal',   title: 'Terminal',     icon: '>_',   accent: C.accent  },
+  { id: 'files',      title: 'File System',  icon: '/fs',  accent: C.accent  },
+  { id: 'databroker', title: 'Data Broker',  icon: '[$]',  accent: C.amber   },
 ]
 
 const QUICK_ACTIONS = [

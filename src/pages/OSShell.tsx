@@ -1,18 +1,19 @@
-// ── OSShell.tsx ────────────────────────────────────────────────────────────
+// ── OSShell.tsx ───────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react'
-import GridBrowser   from '@/apps/GridBrowser'
-import JobBoard      from '@/apps/JobBoard'
-import WatchApp      from '@/apps/WatchApp'
-import MailApp       from '@/apps/MailApp'
-import AppStore      from '@/apps/AppStore'
-import NodeApp       from '@/apps/NodeApp'
-import Terminal      from '@/apps/Terminal'
-import FileSystem    from '@/apps/FileSystem'
-import MapApp        from '@/apps/MapApp'
-import CheckpointApp from '@/apps/CheckpointApp'
-import RepHUD        from '@/components/RepHUD'
-import BootScreen    from '@/components/BootScreen'
-import StartMenu     from '@/components/StartMenu'
+import GridBrowser    from '@/apps/GridBrowser'
+import JobBoard       from '@/apps/JobBoard'
+import WatchApp       from '@/apps/WatchApp'
+import MailApp        from '@/apps/MailApp'
+import AppStore       from '@/apps/AppStore'
+import NodeApp        from '@/apps/NodeApp'
+import Terminal       from '@/apps/Terminal'
+import FileSystem     from '@/apps/FileSystem'
+import MapApp         from '@/apps/MapApp'
+import CheckpointApp  from '@/apps/CheckpointApp'
+import DataBrokerApp  from '@/apps/DataBrokerApp'
+import RepHUD         from '@/components/RepHUD'
+import BootScreen     from '@/components/BootScreen'
+import StartMenu      from '@/components/StartMenu'
 import { useMailStore }   from '@/store/mailStore'
 import { useUnlockStore } from '@/store/unlockStore'
 import { useOSStore, type WindowState } from '@/store/osStore'
@@ -31,16 +32,17 @@ const C = {
 }
 
 const ALL_APPS = [
-  { id: 'browser',    title: 'GridBrowser', icon: 'WWW',  w: 820, h: 540, accent: '#00e5ff' },
-  { id: 'mail',       title: 'Mail',        icon: '@',    w: 720, h: 500, accent: '#00e5ff' },
-  { id: 'jobs',       title: 'Job Board',   icon: '[ ]',  w: 700, h: 500, accent: '#00cc88' },
-  { id: 'appstore',   title: 'App Store',   icon: '[+]',  w: 760, h: 520, accent: '#d6a2ff' },
-  { id: 'watch',      title: 'Watch',       icon: '[W]',  w: 780, h: 520, accent: '#ff3b5c' },
-  { id: 'node',       title: 'NODE',        icon: '[~]',  w: 780, h: 560, accent: '#00e5ff' },
-  { id: 'terminal',   title: 'Terminal',    icon: '>_',   w: 680, h: 440, accent: '#00cc88' },
-  { id: 'files',      title: 'File System', icon: '/fs',  w: 720, h: 500, accent: '#ffaa00' },
-  { id: 'map',        title: 'City Map',    icon: '[M]',  w: 820, h: 540, accent: '#00cc88' },
-  { id: 'checkpoint', title: 'Checkpoint',  icon: '[C]',  w: 900, h: 580, accent: '#ffaa00' },
+  { id: 'browser',    title: 'GridBrowser',  icon: 'WWW',  w: 820, h: 540, accent: '#00e5ff' },
+  { id: 'mail',       title: 'Mail',         icon: '@',    w: 720, h: 500, accent: '#00e5ff' },
+  { id: 'jobs',       title: 'Job Board',    icon: '[ ]',  w: 700, h: 500, accent: '#00cc88' },
+  { id: 'appstore',   title: 'App Store',    icon: '[+]',  w: 760, h: 520, accent: '#d6a2ff' },
+  { id: 'watch',      title: 'Watch',        icon: '[W]',  w: 780, h: 520, accent: '#ff3b5c' },
+  { id: 'node',       title: 'NODE',         icon: '[~]',  w: 780, h: 560, accent: '#00e5ff' },
+  { id: 'terminal',   title: 'Terminal',     icon: '>_',   w: 680, h: 440, accent: '#00cc88' },
+  { id: 'files',      title: 'File System',  icon: '/fs',  w: 720, h: 500, accent: '#ffaa00' },
+  { id: 'map',        title: 'City Map',     icon: '[M]',  w: 820, h: 540, accent: '#00cc88' },
+  { id: 'checkpoint', title: 'Checkpoint',   icon: '[C]',  w: 900, h: 580, accent: '#ffaa00' },
+  { id: 'databroker', title: 'Data Broker',  icon: '[$]',  w: 820, h: 540, accent: '#e8a020' },
 ]
 
 export default function OSShell() {
@@ -64,7 +66,6 @@ export default function OSShell() {
   const installed   = useUnlockStore(s => s.installed)
   const visibleApps = ALL_APPS.filter(a => installed.includes(a.id))
 
-  // Register desktop element so openWindow can center panels
   useEffect(() => {
     setDesktopRef(desktopRef.current)
     return () => setDesktopRef(null)
@@ -115,7 +116,7 @@ export default function OSShell() {
             ))}
           </div>
 
-          {/* All windows — both app windows and system panels */}
+          {/* All windows */}
           {windows.map(win => (
             <OsWindow
               key={win.id}
@@ -151,7 +152,6 @@ export default function OSShell() {
 
           <div style={{ width: 1, height: 20, background: C.border }} />
 
-          {/* Taskbar buttons for open windows */}
           <div style={{ flex: 1, display: 'flex', gap: 4 }}>
             {windows.map(w => (
               <button
@@ -186,7 +186,7 @@ export default function OSShell() {
   )
 }
 
-// ── Desktop Icon ───────────────────────────────────────────────────────────
+// ── DesktopIcon ───────────────────────────────────────────────────────────
 function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
   icon: string; label: string; accent?: string; badge?: number; onClick: () => void
 }) {
@@ -236,7 +236,7 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
   )
 }
 
-// ── OS Window ───────────────────────────────────────────────────────────
+// ── OsWindow ───────────────────────────────────────────────────────────
 function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
   win: WindowState
   onClose:     () => void
@@ -268,20 +268,19 @@ function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
     window.addEventListener('mouseup', up)
   }
 
-  // If the window was opened via openWindow (system panels), it carries its own content.
-  // If opened via openApp, render by title.
   function renderBody() {
-    if (win.content) return win.content
-    if (win.title === 'GridBrowser') return <GridBrowser />
-    if (win.title === 'Job Board')   return <JobBoard />
-    if (win.title === 'Watch')       return <WatchApp />
-    if (win.title === 'Mail')        return <MailApp />
-    if (win.title === 'App Store')   return <AppStore />
-    if (win.title === 'NODE')        return <NodeApp />
-    if (win.title === 'Terminal')    return <Terminal />
-    if (win.title === 'File System') return <FileSystem />
-    if (win.title === 'City Map')    return <MapApp />
-    if (win.title === 'Checkpoint')  return <CheckpointApp />
+    if (win.content)              return win.content
+    if (win.title === 'GridBrowser')  return <GridBrowser />
+    if (win.title === 'Job Board')    return <JobBoard />
+    if (win.title === 'Watch')        return <WatchApp />
+    if (win.title === 'Mail')         return <MailApp />
+    if (win.title === 'App Store')    return <AppStore />
+    if (win.title === 'NODE')         return <NodeApp />
+    if (win.title === 'Terminal')     return <Terminal />
+    if (win.title === 'File System')  return <FileSystem />
+    if (win.title === 'City Map')     return <MapApp />
+    if (win.title === 'Checkpoint')   return <CheckpointApp />
+    if (win.title === 'Data Broker')  return <DataBrokerApp />
     return (
       <div style={{
         width: '100%', height: '100%',

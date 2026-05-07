@@ -5,7 +5,7 @@ export interface WindowState {
   id:          string
   title:       string
   icon:        string
-  content:     ReactNode   // null for app windows (rendered by title), set for system panels
+  content:     ReactNode
   x:           number
   y:           number
   width:       number
@@ -22,9 +22,7 @@ interface OSStore {
   topZ:           number
   desktopRef:     HTMLElement | null
   setDesktopRef:  (el: HTMLElement | null) => void
-  /** Open a built-in app by id (content rendered by title in OsWindow). */
   openApp:        (appId: string) => void
-  /** Open any window with explicit JSX content. Used by system panels from StartMenu. */
   openWindow:     (cfg: { id: string; title: string; icon: string; content: ReactNode; width: number; height: number }) => void
   closeWindow:    (id: string) => void
   focusWindow:    (id: string) => void
@@ -46,6 +44,7 @@ const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number;
   files:      { title: 'File System', icon: '/fs',  width: 720, height: 500 },
   map:        { title: 'City Map',    icon: '[M]',  width: 820, height: 540 },
   checkpoint: { title: 'Checkpoint',  icon: '[C]',  width: 900, height: 580 },
+  databroker: { title: 'Data Broker', icon: '[$]',  width: 820, height: 540 },
 }
 
 function getDesktopSize(desktopRef: HTMLElement | null) {

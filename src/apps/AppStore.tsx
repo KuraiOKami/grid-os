@@ -1,4 +1,4 @@
-// ── AppStore.tsx ────────────────────────────────────────────────────────────
+// ── AppStore.tsx ───────────────────────────────────────────────────────────
 // GridOS App Store. Apps are gated by tier, rep scores, and access codes.
 
 import { useState } from 'react'
@@ -46,10 +46,11 @@ const APPS: AppEntry[] = [
   { id: 'gridmart',     name: 'GridMart',       publisher: 'GridOS Commerce',      tier: 'CORPORATE',   desc: 'Official marketplace. All transactions logged.',                                                                                              price: 0 },
   // ─ FREELANCE ─
   { id: 'courier-kit',  name: 'Courier Kit',    publisher: 'Anonymous',            tier: 'FREELANCE',   desc: 'Route management and package tracking for anonymous courier contracts. No logs.',                                                             price: 300 },
+  { id: 'databroker',   name: 'Data Broker',    publisher: 'VoidSyndicate',        tier: 'FREELANCE',   desc: 'Offworld-style data market. Acquire exfil\'d files, observer reports, and checkpoint records — then time your sell. Corporate buyers pay more but log the transaction. VoidBay pays less, no trace. ROOT BLOOM cycles overwrite the source nodes. Timing is the skill.', price: 0, unlockId: 'databroker' },
   { id: 'voidbay',      name: 'VoidBay',        publisher: 'VoidSyndicate',        tier: 'FREELANCE',   desc: 'Decentralised listing board for off-ledger goods and services.',                                                                              price: 500 },
   // ─ RESTRICTED ─
   { id: 'checkpoint',   name: 'Checkpoint',     publisher: 'Nexus Authority',       tier: 'RESTRICTED',  desc: 'Border control and identity verification system. Review citizen documents, cross-reference live databases, stamp approvals and denials. Quota-based. Access code required.',  price: 0, codeKey: 'CHK-NEXUS-14', minCompliance: 0, unlockId: 'checkpoint' },
-  { id: 'watch',        name: 'Watch',          publisher: 'GridOS Security',      tier: 'RESTRICTED',  desc: 'Compliance review and citizen surveillance system. Cleared analysts only.',                                price: 0, codeKey: 'WATCH-GRID-01', minCompliance: 0,  unlockId: 'watch' },
+  { id: 'watch',        name: 'Watch',          publisher: 'GridOS Security',      tier: 'RESTRICTED',  desc: 'Compliance review and citizen surveillance system. Cleared analysts only.',                                                price: 0, codeKey: 'WATCH-GRID-01', minCompliance: 0,  unlockId: 'watch' },
   { id: 'archivist',    name: 'Archivist',      publisher: 'Archivist Guild',      tier: 'RESTRICTED',  desc: 'Full access to the civic archive. Includes redacted document browser.',                                    price: 0, codeKey: 'ARC-GUILD-07', minCompliance: 20 },
   // ─ UNDERGROUND ─
   { id: 'shadownet',    name: 'ShadowNet',      publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Encrypted peer-to-peer communications. No metadata. No trace.',                                            price: 0, codeKey: 'SHD-??-??',    minShadow: 60 },
