@@ -39,6 +39,15 @@ const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number;
   jobs:     { title: 'Job Board',   icon: '\u25a0\u25a0', width: 700, height: 480 },
 }
 
+// Read actual desktop/taskbar dimensions at call time.
+// Falls back to window dimensions minus a 40px taskbar if desktopRef is unset.
+function getDesktopSize(desktopRef: HTMLElement | null) {
+  if (desktopRef) {
+    return { dw: desktopRef.clientWidth, dh: desktopRef.clientHeight }
+  }
+  return { dw: window.innerWidth, dh: window.innerHeight - 40 }
+}
+
 export const useOSStore = create<OSStore>((set, get) => ({
   windows: [],
   topZ: 10,
@@ -126,29 +135,28 @@ export const useOSStore = create<OSStore>((set, get) => ({
 
   toggleMaximize: (id) => {
     const { desktopRef } = get()
-    const dw = desktopRef ? desktopRef.clientWidth  : window.innerWidth
-    const dh = desktopRef ? desktopRef.clientHeight : window.innerHeight - 40
+    const { dw, dh } = getDesktopSize(desktopRef)
     set(state => ({
       windows: state.windows.map(w => {
         if (w.id !== id) return w
         if (w.maximized) {
+          // Restore to saved rect
           return {
             ...w,
             maximized: false,
-            x: w.restoreRect.x,
-            y: w.restoreRect.y,
-            width: w.restoreRect.width,
+            x:      w.restoreRect.x,
+            y:      w.restoreRect.y,
+            width:  w.restoreRect.width,
             height: w.restoreRect.height,
           }
         } else {
+          // Save current rect before maximizing
           return {
             ...w,
             maximized: true,
             restoreRect: { x: w.x, y: w.y, width: w.width, height: w.height },
-            x: 0,
-            y: 0,
-            width: dw,
-            height: dh,
+            x: 0, y: 0,
+            width: dw, height: dh,
           }
         }
       }),
