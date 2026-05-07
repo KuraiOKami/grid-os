@@ -511,7 +511,7 @@ function ForumPost({ row, t }: { row: SiteContentRow; t: typeof THEME_STYLES[Sit
 export default function GridBrowser() {
   const [url, setUrl]       = useState('gridos.corp')
   const [input, setInput]   = useState('gridos.corp')
-  const { compliance, shadow, adjustRep } = useRepStore()
+  const { compliance, shadow, adjust } = useRepStore()
   const { unlocks }         = useRepStore() as any
 
   // ── Supabase lookup ─────────────────────────────────────────────────────
@@ -555,8 +555,8 @@ export default function GridBrowser() {
   const lastRepUrl = useMemo(() => ({ current: '' }), [])
   if (page && !gateBlocked && url !== lastRepUrl.current) {
     lastRepUrl.current = url
-    if (page.repEffect?.compliance) adjustRep('compliance', page.repEffect.compliance)
-    if (page.repEffect?.shadow)     adjustRep('shadow',     page.repEffect.shadow)
+    if (page.repEffect?.compliance) adjust('compliance', page.repEffect.compliance)
+    if (page.repEffect?.shadow)     adjust('shadow',     page.repEffect.shadow)
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
