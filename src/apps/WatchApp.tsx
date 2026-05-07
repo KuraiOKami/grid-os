@@ -3,7 +3,7 @@
 // Read evidence across 5 data tabs, mark suspicious items, then submit a verdict.
 // Escalate is gated behind marked evidence. Decisions pay ₳ and shift rep.
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRepStore }    from '@/store/reputationStore'
 import { useMailStore }   from '@/store/mailStore'
 import { useWalletStore } from '@/store/walletStore'
@@ -60,6 +60,160 @@ const PRIORITY_COLOR: Record<Priority, string> = {
   ROUTINE:    C.muted,
   PRIORITY:   C.warn,
   CLASSIFIED: C.danger,
+}
+
+// ── URL intelligence database ─────────────────────────────────────────────────
+
+interface UrlIntel { category: string; summary: string; riskTag: string; riskLevel: 0|1|2|3 }
+
+const URL_INTEL: Record<string, UrlIntel> = {
+  'civic.archive/flowering': {
+    category: 'ARCHIVED / RESTRICTED',
+    summary: 'Partially recovered municipal archive — Flowering District. Pre-GridOS era civic records. Infrastructure ownership field overwritten in current public version. Access is a strong indicator of ROOT BLOOM research activity.',
+    riskTag: 'ROOT BLOOM ADJACENT', riskLevel: 2,
+  },
+  'civic.archive/rootbloom-timeline': {
+    category: 'RESTRICTED — PRIORITY',
+    summary: 'Recovered distributed mirror — ROOT BLOOM incident timeline. One of six remaining copies. Access alone is sufficient for priority escalation per Compliance Director directive.',
+    riskTag: 'PRIORITY FLAG', riskLevel: 3,
+  },
+  'ghostlily.blog': {
+    category: 'DISSIDENT PLATFORM',
+    summary: 'Personal blog — author "ghostlily." Anti-GridOS sentiment. Author identity score recalculated cycle 8, no updates since. Access is a soft indicator of dissident network interest.',
+    riskTag: 'FLAGGED DOMAIN', riskLevel: 2,
+  },
+  'ghostlily.blog/root-bloom': {
+    category: 'DISSIDENT PLATFORM',
+    summary: 'Entry detailing ROOT BLOOM as deliberate policy, not infrastructure failure. Describes mechanism of retroactive record alteration. Widely circulated before domain suppression.',
+    riskTag: 'FLAGGED — DISSENT CONTENT', riskLevel: 3,
+  },
+  'yellowthread.net/r/ROOT': {
+    category: 'FORUM — ACTIVE MONITORING',
+    summary: 'YellowThread ROOT BLOOM thread. 6 replies removed. 1 account suspended. Thread remains live — active monitoring in place. Users posting here may be cross-referencing dissident material.',
+    riskTag: 'ACTIVE MONITORING', riskLevel: 2,
+  },
+  'yellowthread.net': {
+    category: 'FORUM — UNMODERATED',
+    summary: 'YellowThread public index. Minimal moderation. High noise. Frequently used for coordination by freelance and underground communities.',
+    riskTag: 'MODERATE RISK', riskLevel: 1,
+  },
+  'yellowthread.forum/jobs': {
+    category: 'FORUM — UNMODERATED',
+    summary: 'YellowThread freelance board. Anonymous contracts. No loyalty scoring. Access indicates interest in off-ledger work or underground contracts.',
+    riskTag: 'MODERATE RISK', riskLevel: 1,
+  },
+  'voidbay.net/listings': {
+    category: 'DARK MARKET',
+    summary: 'Off-ledger exchange. Not on GridOS routing tables since 2029. Access indicates underground network involvement. Transaction logs unavailable — end-to-end encrypted.',
+    riskTag: 'HIGH RISK — DARK MARKET', riskLevel: 3,
+  },
+  'voidbay.net/anon-drops': {
+    category: 'DARK MARKET — CRITICAL',
+    summary: 'One-time dead drop service. Messages self-delete on read. No content recovery possible. Access alone is sufficient for flag classification.',
+    riskTag: 'CRITICAL — DEAD DROP', riskLevel: 3,
+  },
+  'pulse.news/dissent': {
+    category: 'ARCHIVED MEDIA',
+    summary: 'Dissent Report column. No longer updated — author identity score recalculated. Three linked sources now 404. Final entry: "the network has become its own state."',
+    riskTag: 'ARCHIVED — LOW PRIORITY', riskLevel: 1,
+  },
+  'gridos.corp/internal': {
+    category: 'CORPORATE — INTERNAL',
+    summary: 'GridOS internal systems portal. Employee-only. Unauthorized access is a compliance violation. Analyst access logs retained 180 days.',
+    riskTag: 'AUTHORIZED ACCESS REQUIRED', riskLevel: 1,
+  },
+  'gridos.corp/compliance': {
+    category: 'CORPORATE',
+    summary: 'Compliance audit queue. Analyst-facing. Access indicates GridOS contractor or employee status.',
+    riskTag: 'LOW RISK', riskLevel: 0,
+  },
+  'gridos.corp/trust':        { category: 'CORPORATE', summary: 'GridOS Trust & Safety page. Public-facing. Routine.', riskTag: 'ROUTINE', riskLevel: 0 },
+  'gridos.corp/citizenportal':{ category: 'CORPORATE', summary: 'Standard citizen self-service portal. Routine access. No flag value.', riskTag: 'ROUTINE', riskLevel: 0 },
+  'gridos.corp/investors':    { category: 'CORPORATE', summary: 'Investor relations. Public-facing. May indicate market research or corporate intelligence interest.', riskTag: 'LOW INTEREST', riskLevel: 0 },
+  'gridos.corp':              { category: 'CORPORATE', summary: 'GridOS corporate homepage. Public-facing. No flag value.', riskTag: 'ROUTINE', riskLevel: 0 },
+  'pulse.news':               { category: 'MEDIA', summary: 'Pulse News Network main feed. Corporate-aligned. Routine access.', riskTag: 'ROUTINE', riskLevel: 0 },
+  'gridmart.corp':            { category: 'COMMERCIAL', summary: 'GridOS official marketplace. All transactions logged. Routine.', riskTag: 'ROUTINE', riskLevel: 0 },
+  'civic.archive':            { category: 'ARCHIVED', summary: 'Civic archive root. Partial access — many records missing or overwritten. Access volume may indicate research interest.', riskTag: 'MONITOR', riskLevel: 1 },
+}
+
+const RISK_TAG_COLOR = ['#6b6b80', '#ffaa00', '#ff8c42', '#ff3b5c']
+
+// ── live monitor event pool ────────────────────────────────────────────────────
+
+interface MonitorEvent {
+  id:      string
+  ts:      string
+  citizen: string
+  action:  string
+  type:    'browse' | 'message' | 'job' | 'financial' | 'node' | 'system'
+  flagged: boolean
+}
+
+const MONITOR_POOL: Omit<MonitorEvent, 'id' | 'ts'>[] = [
+  { citizen: 'mara.sol',    action: 'accessed ghostlily.blog/root-bloom',             type: 'browse',    flagged: true  },
+  { citizen: 'mara.sol',    action: 'sent encrypted message — ghost_net_55',           type: 'message',   flagged: true  },
+  { citizen: 'lena.arc',    action: 'accessed civic.archive/rootbloom-timeline',       type: 'browse',    flagged: true  },
+  { citizen: 'lena.arc',    action: 'uploaded document to distributed mirror',         type: 'job',       flagged: true  },
+  { citizen: '08-ghost',    action: 'checked pulse.news (routine)',                    type: 'browse',    flagged: false },
+  { citizen: '08-ghost',    action: 'clocked in — GridOS shift 0930',                 type: 'job',       flagged: false },
+  { citizen: 'v.thresh',    action: 'posted new listing — voidbay.net/listings',       type: 'browse',    flagged: true  },
+  { citizen: 'v.thresh',    action: 'received anonymous transfer — ₳ 1,400',           type: 'financial', flagged: true  },
+  { citizen: 'ctz_2290',    action: 'draft document opened — civic archive query',     type: 'message',   flagged: true  },
+  { citizen: 'ctz_2290',    action: 'checked gridos.corp (routine)',                   type: 'browse',    flagged: false },
+  { citizen: 'kade.synd',   action: 'accessed voidbay.net/listings',                  type: 'browse',    flagged: true  },
+  { citizen: 'kade.synd',   action: 'posted market signal on NODE — #Ledger',         type: 'node',      flagged: false },
+  { citizen: 'kade.synd',   action: 'received anonymous transfer — ₳ 2,200',          type: 'financial', flagged: true  },
+  { citizen: 'unknown_441', action: 'accessed relay-node.net/drop/4471',               type: 'browse',    flagged: true  },
+  { citizen: 'unknown_441', action: 'connected to ghost_net_55 — session active',      type: 'browse',    flagged: true  },
+  { citizen: 'anon_runner', action: 'accepted anonymous courier contract — sector 4',  type: 'job',       flagged: true  },
+  { citizen: 'anon_runner', action: 'location ping — Sector 4 relay hub',              type: 'browse',    flagged: false },
+  { citizen: 'null.54',     action: '[CLASSIFIED — clearance level 9 required]',       type: 'system',    flagged: true  },
+  { citizen: 'SYSTEM',      action: 'civic.archive mirror [3/6] — connection lost',    type: 'system',    flagged: true  },
+  { citizen: 'SYSTEM',      action: 'ROOT BLOOM flag threshold: 71% — monitoring',     type: 'system',    flagged: true  },
+]
+
+let _monitorId = 0
+function makeEvent(pool: typeof MONITOR_POOL): MonitorEvent {
+  const e   = pool[Math.floor(Math.random() * pool.length)]
+  const now = new Date()
+  const ts  = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return { ...e, id: `evt-${_monitorId++}`, ts }
+}
+
+// ── threat score & associates ──────────────────────────────────────────────────
+
+function calcThreatScore(c: CaseFile): number {
+  let score = 0
+  score += c.history.filter(h =>
+    h.includes('ghostlily') || h.includes('archive') || h.includes('voidbay') ||
+    h.includes('dissent')   || h.includes('ROOT')    || h.includes('yellowthread')
+  ).length * 15
+  score += c.messages.filter(m => m.flagged).length * 18
+  score += c.jobHistory.filter(j => j.toLowerCase().includes('anonymous')).length * 10
+  score += c.financials.filter(f => f.flagged).length * 12
+  score += c.nodePosts.filter(p => p.flagged).length * 14
+  return Math.min(100, score)
+}
+
+function threatLabel(score: number): { label: string; color: string } {
+  if (score >= 76) return { label: 'CRITICAL', color: '#ff3b5c' }
+  if (score >= 51) return { label: 'HIGH',     color: '#ff8c42' }
+  if (score >= 26) return { label: 'MODERATE', color: '#ffaa00' }
+  return                   { label: 'LOW',      color: '#00cc88' }
+}
+
+function findAssociates(current: CaseFile, all: CaseFile[]): { handle: string; shared: string[] }[] {
+  const mine = current.history.filter(h =>
+    h.includes('ghostlily') || h.includes('archive') || h.includes('voidbay') ||
+    h.includes('dissent')   || h.includes('ROOT')    || h.includes('yellowthread')
+  )
+  return all
+    .filter(c => c.id !== current.id)
+    .map(c => ({
+      handle: c.handle,
+      shared: mine.filter(url => c.history.some(h => h.startsWith(url.split('/')[0]))),
+    }))
+    .filter(a => a.shared.length > 0)
 }
 
 // ── case files ────────────────────────────────────────────────────────────────
@@ -421,12 +575,17 @@ const SESSION_QUOTA = 3
 // ── WatchApp ──────────────────────────────────────────────────────────────────
 
 export default function WatchApp() {
+  const [viewMode,     setViewMode]     = useState<'cases' | 'monitor'>('cases')
   const [caseIndex,    setCaseIndex]    = useState(0)
   const [selected,     setSelected]     = useState<Decision | null>(null)
   const [submitted,    setSubmitted]    = useState<Record<string, Decision>>({})
   const [activeTab,    setActiveTab]    = useState<DataTab>('activity')
   const [markedItems,  setMarkedItems]  = useState<Record<string, MarkedItem[]>>({})
   const [sessionCount, setSessionCount] = useState(0)
+  const [monitorLog,   setMonitorLog]   = useState<MonitorEvent[]>(() =>
+    Array.from({ length: 6 }, () => makeEvent(MONITOR_POOL))
+  )
+  const [expandedUrl,  setExpandedUrl]  = useState<string | null>(null)
   const firstSubmit = useRef(true)
 
   const compliance = useRepStore(s => s.compliance)
@@ -436,6 +595,19 @@ export default function WatchApp() {
   const credit     = useWalletStore(s => s.credit)
   const addXP      = useCareerStore(s => s.addXP)
 
+  // Live monitor ticker — fires a new event every 4-7 seconds
+  useEffect(() => {
+    const fire = () => {
+      setMonitorLog(prev => [makeEvent(MONITOR_POOL), ...prev].slice(0, 60))
+    }
+    const schedule = () => {
+      const delay = 4000 + Math.random() * 3000
+      return setTimeout(() => { fire(); timerId = schedule() }, delay)
+    }
+    let timerId = schedule()
+    return () => clearTimeout(timerId)
+  }, [])
+
   const current      = CASES[caseIndex]
   const isDone       = !!submitted[current.id]
   const isNull54     = current.handle === 'null.54'
@@ -443,6 +615,9 @@ export default function WatchApp() {
   const currentMarks = markedItems[current.id] ?? []
   const markCount    = currentMarks.length
   const showMemo     = !!current.memo && compliance >= 65
+  const threatScore  = calcThreatScore(current)
+  const threat       = threatLabel(threatScore)
+  const associates   = findAssociates(current, CASES)
 
   function toggleMark(tab: DataTab, index: number, label: string) {
     if (isDone) return
@@ -515,50 +690,136 @@ export default function WatchApp() {
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <span style={{ fontSize: 13, color: C.danger, fontWeight: 'bold' }}>■ WATCH</span>
             <span style={{ fontSize: 9, color: C.muted, letterSpacing: '0.1em' }}>
-              COMPLIANCE REVIEW SYSTEM
+              NEXUS COMPLIANCE INTELLIGENCE SYSTEM
             </span>
           </div>
           <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>
-            {Object.keys(submitted).length} / {CASES.length} reviewed
-            {'  ·  '}
+            {Object.keys(submitted).length}/{CASES.length} reviewed ·{' '}
             <span style={{ color: sessionCount >= SESSION_QUOTA ? C.success : C.warn }}>
-              session: {sessionCount}/{SESSION_QUOTA} quota
+              quota {sessionCount}/{SESSION_QUOTA}
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 16, fontSize: 10 }}>
+        <div style={{ display: 'flex', gap: 14, fontSize: 10, alignItems: 'center' }}>
           <span style={{ color: C.accent }}>GRID {compliance}</span>
           <span style={{ color: C.violet }}>SHADOW {shadow}</span>
+          {/* View toggle */}
+          <div style={{ display: 'flex', border: `1px solid ${C.border}`, borderRadius: 4, overflow: 'hidden' }}>
+            {(['cases', 'monitor'] as const).map(v => (
+              <button key={v} onClick={() => setViewMode(v)} style={{
+                padding: '3px 10px', fontSize: 9, letterSpacing: '0.08em',
+                border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                background: viewMode === v ? (v === 'monitor' ? `${C.danger}33` : `${C.accent}22`) : 'none',
+                color: viewMode === v ? (v === 'monitor' ? C.danger : C.accent) : C.faint,
+              }}>
+                {v === 'monitor' ? '● LIVE' : 'CASES'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Case selector */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`,
-        background: C.surface, flexShrink: 0, overflowX: 'auto' }}>
-        {CASES.map((c, i) => {
-          const done   = !!submitted[c.id]
-          const active = i === caseIndex
-          return (
-            <button key={c.id}
-              onClick={() => { setCaseIndex(i); setSelected(null); setActiveTab('activity') }}
-              style={{ padding: '7px 14px', fontSize: 10, border: 'none', cursor: 'pointer',
-                fontFamily: 'inherit', whiteSpace: 'nowrap',
-                borderBottom: active ? `2px solid ${C.danger}` : '2px solid transparent',
-                background: active ? C.surf2 : 'none',
-                color: done ? C.success : active ? C.text : C.muted }}>
-              {done ? '✓ ' : ''}
-              <span style={{ color: active ? PRIORITY_COLOR[c.priority] : 'inherit',
-                marginRight: 4, fontSize: 8 }}>
-                {c.priority === 'CLASSIFIED' ? '■' : c.priority === 'PRIORITY' ? '▲' : '·'}
-              </span>
-              {c.handle}
-            </button>
-          )
-        })}
-      </div>
+      {/* Case selector — only in cases view */}
+      {viewMode === 'cases' && (
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`,
+          background: C.surface, flexShrink: 0, overflowX: 'auto' }}>
+          {CASES.map((c, i) => {
+            const done   = !!submitted[c.id]
+            const active = i === caseIndex
+            return (
+              <button key={c.id}
+                onClick={() => { setCaseIndex(i); setSelected(null); setActiveTab('activity'); setExpandedUrl(null) }}
+                style={{ padding: '7px 14px', fontSize: 10, border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  borderBottom: active ? `2px solid ${C.danger}` : '2px solid transparent',
+                  background: active ? C.surf2 : 'none',
+                  color: done ? C.success : active ? C.text : C.muted }}>
+                {done ? '✓ ' : ''}
+                <span style={{ color: active ? PRIORITY_COLOR[c.priority] : 'inherit',
+                  marginRight: 4, fontSize: 8 }}>
+                  {c.priority === 'CLASSIFIED' ? '■' : c.priority === 'PRIORITY' ? '▲' : '·'}
+                </span>
+                {c.handle}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-      {/* Main layout */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      {/* Monitor view */}
+      {viewMode === 'monitor' && (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`,
+            background: C.surf2, flexShrink: 0,
+            display: 'flex', alignItems: 'center', gap: 10, fontSize: 10 }}>
+            <span style={{ color: C.danger }}>● LIVE</span>
+            <span style={{ color: C.faint }}>CITIZEN ACTIVITY FEED — ALL MONITORED HANDLES</span>
+            <span style={{ marginLeft: 'auto', color: C.faint }}>{monitorLog.length} events</span>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
+            {monitorLog.map(evt => {
+              const caseMatch = CASES.findIndex(c => c.handle === evt.citizen)
+              const typeColor: Record<string, string> = {
+                browse: C.accent, message: C.violet, financial: C.success,
+                job: C.warn, node: C.accent, system: C.danger,
+              }
+              return (
+                <div
+                  key={evt.id}
+                  onClick={() => {
+                    if (caseMatch !== -1) {
+                      setViewMode('cases')
+                      setCaseIndex(caseMatch)
+                      setSelected(null)
+                      setActiveTab('activity')
+                    }
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    padding: '8px 14px', borderBottom: `1px solid ${C.border}`,
+                    background: evt.flagged ? `${C.danger}06` : 'transparent',
+                    cursor: caseMatch !== -1 ? 'pointer' : 'default',
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => { if (caseMatch !== -1) (e.currentTarget as HTMLDivElement).style.background = `${C.accent}08` }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = evt.flagged ? `${C.danger}06` : 'transparent' }}
+                >
+                  <span style={{ fontSize: 10, color: C.faint, flexShrink: 0, minWidth: 70 }}>{evt.ts}</span>
+                  <span style={{
+                    fontSize: 9, flexShrink: 0, minWidth: 56, letterSpacing: '0.06em',
+                    color: typeColor[evt.type] ?? C.muted,
+                    border: `1px solid ${typeColor[evt.type] ?? C.muted}44`,
+                    borderRadius: 3, padding: '1px 4px', textAlign: 'center',
+                  }}>
+                    {evt.type.toUpperCase()}
+                  </span>
+                  <span style={{
+                    fontSize: 10, color: caseMatch !== -1 ? C.accent : C.muted,
+                    flexShrink: 0, minWidth: 80,
+                  }}>
+                    {evt.citizen}
+                  </span>
+                  <span style={{ fontSize: 10, color: evt.flagged ? C.text : C.muted, flex: 1 }}>
+                    {evt.action}
+                  </span>
+                  {evt.flagged && (
+                    <span style={{ fontSize: 9, color: C.danger, flexShrink: 0,
+                      border: `1px solid ${C.danger}44`, borderRadius: 3, padding: '1px 5px' }}>
+                      FLAGGED
+                    </span>
+                  )}
+                  {caseMatch !== -1 && (
+                    <span style={{ fontSize: 9, color: C.faint, flexShrink: 0 }}>→ case</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Cases view */}
+      {viewMode === 'cases' && <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left — data panels */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
@@ -566,31 +827,72 @@ export default function WatchApp() {
 
           {/* Case header */}
           <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`,
-            background: C.surf2, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: C.danger }}>
-                  CASE #{current.id.split('-')[1].toUpperCase()}
-                </span>
-                <span style={{ fontSize: 9, color: PRIORITY_COLOR[current.priority],
-                  border: `1px solid ${PRIORITY_COLOR[current.priority]}44`,
-                  borderRadius: 3, padding: '1px 5px', letterSpacing: '0.08em' }}>
-                  {current.priority}
-                </span>
+            background: C.surf2, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: C.danger }}>
+                    CASE #{current.id.split('-')[1].toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: 9, color: PRIORITY_COLOR[current.priority],
+                    border: `1px solid ${PRIORITY_COLOR[current.priority]}44`,
+                    borderRadius: 3, padding: '1px 5px', letterSpacing: '0.08em' }}>
+                    {current.priority}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: C.text }}>
+                  Citizen: <span style={{ color: C.accent }}>{current.handle}</span>
+                </div>
+                <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{current.period}</div>
               </div>
-              <div style={{ fontSize: 11, color: C.text, marginTop: 2 }}>
-                Citizen: <span style={{ color: C.accent }}>{current.handle}</span>
+              <div style={{ textAlign: 'right' }}>
+                {/* Threat score */}
+                <div style={{ marginBottom: 4 }}>
+                  <div style={{ fontSize: 9, color: C.faint, marginBottom: 2 }}>THREAT ASSESSMENT</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                    <div style={{ width: 60, height: 4, background: C.faint, borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${threatScore}%`, background: threat.color, borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: threat.color, minWidth: 28 }}>{threatScore}</span>
+                    <span style={{ fontSize: 9, color: threat.color,
+                      border: `1px solid ${threat.color}44`, borderRadius: 3, padding: '1px 4px' }}>
+                      {threat.label}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 9, color: current.deadline.includes('PRIORITY') ? C.danger : C.warn }}>
+                  ⏱ {current.deadline}
+                </div>
               </div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{current.period}</div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9, color: C.faint, marginBottom: 2 }}>DEADLINE</div>
-              <div style={{ fontSize: 11,
-                color: current.deadline.includes('PRIORITY') ? C.danger : C.warn }}>
-                {current.deadline}
+            {/* Known associates */}
+            {associates.length > 0 && (
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 9, color: C.faint, letterSpacing: '0.1em', marginBottom: 4 }}>
+                  KNOWN ASSOCIATES
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {associates.map(a => (
+                    <button
+                      key={a.handle}
+                      onClick={() => {
+                        const idx = CASES.findIndex(c => c.handle === a.handle)
+                        if (idx !== -1) { setCaseIndex(idx); setSelected(null); setActiveTab('activity'); setExpandedUrl(null) }
+                      }}
+                      style={{
+                        fontSize: 9, color: C.warn, cursor: 'pointer',
+                        border: `1px solid ${C.warn}44`, borderRadius: 3,
+                        padding: '2px 6px', background: `${C.warn}0a`,
+                        fontFamily: 'inherit',
+                      }}
+                      title={`Shared: ${a.shared.join(', ')}`}
+                    >
+                      {a.handle} ↔ {a.shared.length} shared
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Data tabs */}
@@ -630,17 +932,67 @@ export default function WatchApp() {
 
             {activeTab === 'activity' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <SectionLabel text="BROWSING HISTORY" />
-                {current.history.map((url, i) => (
-                  <EvidenceRow
-                    key={i}
-                    label={url}
-                    flagged={url.includes('ghostlily') || url.includes('archive') || url.includes('voidbay') || url.includes('dissent') || url.includes('[REDACTED]')}
-                    marked={isMarked('activity', i)}
-                    redacted={url.startsWith('[')}
-                    onClick={() => toggleMark('activity', i, url)}
-                  />
-                ))}
+                <SectionLabel text="BROWSING HISTORY — click URL for intel" />
+                {current.history.map((url, i) => {
+                  const intel     = URL_INTEL[url] ?? URL_INTEL[url.split(' ')[0]]
+                  const isExpanded = expandedUrl === `${current.id}-${i}`
+                  const isFlagged  = url.includes('ghostlily') || url.includes('archive') ||
+                                     url.includes('voidbay')   || url.includes('dissent') ||
+                                     url.includes('ROOT')      || url.includes('[REDACTED]')
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                          <EvidenceRow
+                            label={url}
+                            flagged={isFlagged}
+                            marked={isMarked('activity', i)}
+                            redacted={url.startsWith('[')}
+                            onClick={() => toggleMark('activity', i, url)}
+                          />
+                        </div>
+                        {intel && !url.startsWith('[') && (
+                          <button
+                            onClick={() => setExpandedUrl(isExpanded ? null : `${current.id}-${i}`)}
+                            style={{
+                              fontSize: 9, color: isExpanded ? C.accent : C.faint,
+                              background: 'none', border: `1px solid ${isExpanded ? C.accent + '44' : C.faint}`,
+                              borderRadius: 3, padding: '2px 6px', cursor: 'pointer',
+                              fontFamily: 'inherit', flexShrink: 0,
+                            }}
+                          >
+                            {isExpanded ? 'close' : 'intel'}
+                          </button>
+                        )}
+                      </div>
+                      {isExpanded && intel && (
+                        <div style={{
+                          margin: '4px 0 4px 8px', padding: '8px 10px',
+                          background: C.surface,
+                          border: `1px solid ${RISK_TAG_COLOR[intel.riskLevel]}44`,
+                          borderLeft: `3px solid ${RISK_TAG_COLOR[intel.riskLevel]}`,
+                          borderRadius: 4,
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <span style={{ fontSize: 9, color: C.faint, letterSpacing: '0.08em' }}>
+                              {intel.category}
+                            </span>
+                            <span style={{
+                              fontSize: 9, color: RISK_TAG_COLOR[intel.riskLevel],
+                              border: `1px solid ${RISK_TAG_COLOR[intel.riskLevel]}44`,
+                              borderRadius: 3, padding: '1px 5px', letterSpacing: '0.06em',
+                            }}>
+                              {intel.riskTag}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+                            {intel.summary}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
 
@@ -737,6 +1089,7 @@ export default function WatchApp() {
         </div>
 
         {/* Right — verdict panel */}
+
         <div style={{ width: 230, display: 'flex', flexDirection: 'column',
           overflow: 'hidden', flexShrink: 0 }}>
 
@@ -859,7 +1212,7 @@ export default function WatchApp() {
             )}
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
