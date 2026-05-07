@@ -575,6 +575,32 @@ export default function GridBrowser() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// INLINE URL RENDERER — detects URL-shaped strings in body text and makes them
+// clickable. Only matches known TLDs to avoid false positives.
+// ─────────────────────────────────────────────────────────────────────────────
+function renderInline(text: string, onNavigate: (u: string) => void): React.ReactNode[] {
+  const urlRe = /\b([a-z0-9][-a-z0-9]*\.(?:corp|net|blog|news|forum|archive|null)(?:\/[-a-z0-9/_.]*)?)\b/g
+  const parts: React.ReactNode[] = []
+  let last = 0
+  let m: RegExpExecArray | null
+  urlRe.lastIndex = 0
+  while ((m = urlRe.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    const url = m[1]
+    parts.push(
+      <span key={m.index} onClick={() => onNavigate(url)} style={{
+        color: '#00d4ff', cursor: 'pointer',
+        borderBottom: '1px solid #00d4ff44',
+        transition: 'border-color 0.15s',
+      }}>{url}</span>
+    )
+    last = m.index + m[0].length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PAGE VIEW — routes to the correct layout by theme
 // ─────────────────────────────────────────────────────────────────────────────
 function PageView({ page, onNavigate }:
@@ -655,17 +681,15 @@ function CorpLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
         {/* Rep pill */}
         {page.repEffect && <RepBadge effect={page.repEffect} />}
 
-        {/* Paragraphs as content cards */}
-        <div style={{ display:'grid', gap:2, marginBottom:36 }}>
+        {/* Body as editorial prose */}
+        <div style={{ marginBottom:36, maxWidth:660 }}>
           {page.body.map((para, i) => (
-            <div key={i} style={{
-              padding:'18px 22px',
-              background: i === 0 ? '#0e1520' : '#0b1018',
-              borderLeft:`3px solid ${i === 0 ? accent : '#1e2a38'}`,
-              borderRadius: i === 0 ? '8px 8px 0 0' : i === page.body.length-1 ? '0 0 8px 8px' : '0',
-              fontSize:14, color:'#b8c8d8', lineHeight:1.7 }}>
-              {para}
-            </div>
+            <p key={i} style={{
+              fontSize:15, color: i === 0 ? '#c8d8e8' : '#8a9aaa',
+              lineHeight:1.85, margin:'0 0 22px',
+              fontFamily:'Inter, system-ui, sans-serif' }}>
+              {renderInline(para, onNavigate)}
+            </p>
           ))}
         </div>
 
@@ -709,7 +733,6 @@ function CorpLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
 // ─────────────────────────────────────────────────────────────────────────────
 function NewsLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)=>void }) {
   const accent  = '#ffd166'
-  const isHome  = !page.title.includes('//')
   // fake timestamp
   const times   = ['2 hrs ago','4 hrs ago','Yesterday','6 hrs ago','1 day ago']
 
@@ -787,7 +810,7 @@ function NewsLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
                   {para[0]}
                 </span>
               )}
-              {i === 0 ? para.slice(1) : para}
+              {i === 0 ? renderInline(para.slice(1), onNavigate) : renderInline(para, onNavigate)}
             </p>
           ))}
         </div>
@@ -912,7 +935,7 @@ function ForumLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string
                   fontFamily:"'JetBrains Mono',monospace",
                   marginBottom:6 }}>#{i+1} · just now</div>
                 <div style={{ fontSize:13, color:'#b0c0b0',
-                  lineHeight:1.65 }}>{para}</div>
+                  lineHeight:1.65 }}>{renderInline(para, onNavigate)}</div>
               </div>
             </div>
           ))}
@@ -1008,7 +1031,7 @@ function BlogLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
               borderLeft: i===0 ? `2px solid ${accent}66` : 'none',
               paddingLeft: i===0 ? 16 : 0,
               margin:0 }}>
-              {para}
+              {renderInline(para, onNavigate)}
             </p>
           ))}
         </div>
@@ -1109,7 +1132,7 @@ function ArchiveLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:stri
               <span style={{ color:'#4a3828', marginRight:10 }}>
                 [{String(i).padStart(2,'0')}]
               </span>
-              {para}
+              {renderInline(para, onNavigate)}
             </div>
           ))}
         </div>
@@ -1171,7 +1194,7 @@ function VoidLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
             lineHeight:1.4, fontWeight:400 }}>{page.title}</h1>
           {page.body.map((para, i) => (
             <p key={i} style={{ fontSize:13, color: i===page.body.length-1
-              ? '#3a2a4a' : '#7a5a9a', lineHeight:2, marginBottom:16 }}>{para}</p>
+              ? '#3a2a4a' : '#7a5a9a', lineHeight:2, marginBottom:16 }}>{renderInline(para, onNavigate)}</p>
           ))}
           <div style={{ marginTop:48 }}>
             {page.links.map(l => (
