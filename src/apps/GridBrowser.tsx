@@ -15,7 +15,7 @@ type PageData = {
   site: string
   title: string
   subtitle?: string
-  theme?: 'corp' | 'news' | 'forum' | 'blog' | 'hidden' | 'void'
+  theme?: 'corp' | 'news' | 'forum' | 'blog' | 'hidden' | 'void' | 'personal'
   body: string[]
   links: LinkItem[]
   job?: JobOffer
@@ -422,6 +422,605 @@ const PAGES: Record<string, PageData> = {
     ],
     repEffect: { shadow: +2, compliance: -3 },
   },
+  // ── GridNet News ────────────────────────────────────────────────────────────
+  'gridnetnews.com': {
+    site: 'GridNet News', title: 'GridNet News // Daily Record',
+    subtitle: 'The official record of the Grid.',
+    theme: 'news',
+    body: [
+      'GridOS compliance index reaches 94.2 — highest quarterly reading on record.',
+      'Sector 7 maintenance window extended for a third consecutive week, citing subsystem dependencies.',
+      'Former Gridcorp compliance employee reported missing. Federal case assigned.',
+    ],
+    links: [
+      { label: 'Sector 7 maintenance extended',      url: 'gridnetnews.com/sector7-maintenance' },
+      { label: 'GridMart expands same-day delivery',  url: 'gridnetnews.com/gridmart-expansion' },
+      { label: 'Commune suspect arrested',            url: 'gridnetnews.com/commune-arrest' },
+      { label: 'Record Q1 profits',                  url: 'gridnetnews.com/q1-profits' },
+      { label: 'Archivist employee reported missing', url: 'gridnetnews.com/archivist-missing' },
+      { label: 'GridSocial: 500 million accounts',   url: 'gridnetnews.com/gridsocial-500m' },
+      { label: 'Splice forum taken offline',         url: 'gridnetnews.com/splice-dmca' },
+      { label: 'Northern campus power irregularities',url: 'gridnetnews.com/northern-campus-power' },
+      { label: 'GridOS 9.4 update rolls out',        url: 'gridnetnews.com/gridos-update-9-4' },
+    ],
+    repEffect: { compliance: +1 },
+  },
+  'gridnetnews.com/sector7-maintenance': {
+    site: 'GridNet News', title: 'Sector 7 Maintenance Window Extended — Third Week Running',
+    subtitle: 'March 22, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'Gridcorp\'s infrastructure operations team has confirmed that scheduled maintenance on Sector 7 nodes will extend for a third consecutive week, citing "complex subsystem dependencies requiring additional remediation time."',
+      'Users may experience intermittent latency on accounts routed through Sector 7 processing clusters. A Gridcorp spokesperson declined to provide a specific completion date.',
+      'The affected cluster handles approximately 12% of active GridOS account traffic. No further details were provided.',
+    ],
+    links: [
+      { label: 'Back to GridNet News', url: 'gridnetnews.com' },
+      { label: 'Local outages — Pulse News', url: 'pulse.news/outages' },
+    ],
+  },
+  'gridnetnews.com/gridmart-expansion': {
+    site: 'GridNet News', title: 'GridMart Expands Same-Day Delivery to 40 New Markets',
+    subtitle: 'April 3, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'GridMart, Gridcorp\'s integrated commerce platform, announced an expansion of its same-day delivery network to forty additional metropolitan areas, bringing total coverage to 280 markets globally.',
+      'The expansion is supported by a new fleet of autonomous courier units operating through the GridMart Logistics API. CEO Priya Dantus called the rollout "a milestone in frictionless commerce."',
+      'GridMart currently accounts for 18% of Gridcorp\'s total revenue.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }],
+  },
+  'gridnetnews.com/commune-arrest': {
+    site: 'GridNet News', title: 'Commune Suspect Arrested in Connection With Freenode Data Breach',
+    subtitle: 'April 17, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'Gridcorp\'s internal security division has confirmed the arrest of an individual linked to the unauthorized publication of internal Gridcorp communications on the Commune\'s freenode.press platform.',
+      'The suspect allegedly accessed restricted document repositories using credentials obtained through social engineering. A Gridcorp spokesperson described the arrest as "a clear message that the Grid\'s integrity will be defended."',
+      'The Commune has not responded publicly.',
+    ],
+    links: [
+      { label: 'Back to GridNet News', url: 'gridnetnews.com' },
+      { label: 'YellowThread discussion', url: 'yellowthread.forum' },
+    ],
+    repEffect: { compliance: +1 },
+  },
+  'gridnetnews.com/q1-profits': {
+    site: 'GridNet News', title: 'Gridcorp Reports Record Q1 Profits — Shares Up 14%',
+    subtitle: 'April 30, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'Gridcorp posted first-quarter earnings of 84.2 billion credits, a 14% increase year-over-year, driven by strong growth in enterprise licensing and behavioral compliance analytics.',
+      'Analyst consensus had predicted 79 billion. CFO Tomás Reyes cited "operational efficiency gains and sustained user growth" as key drivers.',
+      'The company announced a 2-credit-per-share dividend. Shares closed up 14.3% on the GRID exchange.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }, { label: 'Market coverage', url: 'pulse.news/markets/gridos' }],
+  },
+  'gridnetnews.com/archivist-missing': {
+    site: 'GridNet News', title: 'Former Gridcorp Archivist Reported Missing — Family Files Report',
+    subtitle: 'May 9, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'The family of a former Gridcorp compliance department employee has filed a missing persons report after the individual failed to make contact for over three weeks.',
+      'The employee, who left Gridcorp in early 2058 after eight years of service, had reportedly been "stressed about work matters" in the weeks before their disappearance.',
+      'Gridcorp declined to comment on the employment history of former staff. The case has been assigned to federal authorities.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }],
+  },
+  'gridnetnews.com/gridsocial-500m': {
+    site: 'GridNet News', title: 'GridSocial Reaches 500 Million Active Accounts',
+    subtitle: 'May 14, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'Gridcorp\'s social platform GridSocial has crossed 500 million monthly active accounts. Engagement metrics show an average session length of 47 minutes, up from 39 minutes the prior year.',
+      'VP of Social Products Elena Holt called the milestone "a testament to the connections our users build every day."',
+      'The algorithmic feed update in Q4 drove a 22% increase in content interactions.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }, { label: 'Visit GridSocial', url: 'gridsocial.net' }],
+  },
+  'gridnetnews.com/splice-dmca': {
+    site: 'GridNet News', title: 'Splice-Linked Forum Goes Dark After Gridcorp DMCA Filing',
+    subtitle: 'May 28, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'A forum believed to be associated with the underground collective known as The Splice was taken offline following a DMCA filing by Gridcorp\'s legal team, citing unauthorized distribution of proprietary GridOS interface documentation.',
+      'The forum had been active for approximately two years on the .onion routing layer. Splice-linked accounts on GridSocial have posted cryptic messages suggesting the community has "relocated."',
+      'Gridcorp declined to comment.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }],
+    repEffect: { shadow: +1 },
+  },
+  'gridnetnews.com/northern-campus-power': {
+    site: 'GridNet News', title: 'Power Irregularities Reported Near Gridcorp\'s Northern Campus',
+    subtitle: 'June 11, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'Residents near Gridcorp\'s Northern Campus have reported unusual power draw patterns over the past six weeks, with several citing flickering lights and brownouts in the surrounding district.',
+      'A Gridcorp spokesperson said the company\'s facilities operate on an independent power grid and denied any connection to local infrastructure irregularities.',
+      'An energy regulator spokesperson said the patterns were "consistent with a large-scale compute operation running at unusual hours." No further investigation has been announced.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }],
+  },
+  'gridnetnews.com/gridos-update-9-4': {
+    site: 'GridNet News', title: 'GridOS 9.4 Update Rolls Out — New Themes and Performance Fixes',
+    subtitle: 'June 19, 2058 · GridNet Editorial Staff',
+    theme: 'news',
+    body: [
+      'Gridcorp has released GridOS version 9.4, featuring twelve new desktop themes including Midnight Coral, Arctic White, and Terminal Green, along with improved window rendering performance.',
+      'The update also includes "minor security patches" which Gridcorp has not detailed further, per standard policy. Users will receive the update automatically on next login.',
+      'A persistent clock display bug affecting users in southern hemisphere time zones has been resolved.',
+    ],
+    links: [{ label: 'Back to GridNet News', url: 'gridnetnews.com' }],
+  },
+
+  // ── GridSocial ───────────────────────────────────────────────────────────────
+  'gridsocial.net': {
+    site: 'GridSocial', title: 'GridSocial // What\'s on the Grid',
+    subtitle: '500 million connections. All activity reviewed for AUP compliance.',
+    theme: 'corp',
+    body: [
+      'Your feed is personalised by the GridSocial algorithm. Post, share, and connect with verified accounts across the network.',
+      'Notable accounts: @nexus_authority, @gridcorp_official, @pulse_news, @agent44_gc.',
+      'Trending today: #Sector7, #ROOT_BLOOM, #GridOS94, #ComplianceIndex.',
+    ],
+    links: [
+      { label: 'Profile: Elias Vorne (memorial)', url: 'gridsocial.net/profile/elias-vorne' },
+      { label: 'Profile: Agent 44',               url: 'gridsocial.net/profile/agent44' },
+      { label: 'Profile: Petra Kwan',             url: 'gridsocial.net/profile/petra-kwan' },
+      { label: 'Profile: user_3g44x',             url: 'gridsocial.net/profile/mysterious-user' },
+    ],
+    repEffect: { compliance: +1 },
+  },
+  'gridsocial.net/profile/elias-vorne': {
+    site: 'GridSocial', title: 'Elias Vorne — Memorial Profile',
+    subtitle: '2003–2051 · Founder, Gridcorp · This account is preserved by Gridcorp.',
+    theme: 'corp',
+    body: [
+      '"The network is not a tool. It is the foundation of civilization. Treat it accordingly." — Final public post, 2051.',
+      'Posts: 1,204 · Followers: 22.1M · Following: 7',
+      'Comments on this profile have been disabled per family request. The thread counter reads 44.',
+    ],
+    links: [{ label: 'Back to GridSocial', url: 'gridsocial.net' }, { label: 'gridos.corp', url: 'gridos.corp' }],
+    repEffect: { compliance: +1 },
+  },
+  'gridsocial.net/profile/agent44': {
+    site: 'GridSocial', title: 'Agent 44 — Gridcorp Internal Security',
+    subtitle: '@agent44_gc · Verified · Public compliance communications.',
+    theme: 'corp',
+    body: [
+      'Recent post: "Behavioral irregularities were logged in 14 accounts today. Monitoring is ongoing. This is routine."',
+      'Recent post: "Accounts engaging with unregistered relay content are reminded of AUP Section 7.4."',
+      'Recent post: "If you received a direct message from this account, please do not respond publicly."',
+    ],
+    links: [{ label: 'Back to GridSocial', url: 'gridsocial.net' }, { label: 'gridos.corp/trust', url: 'gridos.corp/trust' }],
+    repEffect: { compliance: +1, shadow: -1 },
+  },
+  'gridsocial.net/profile/petra-kwan': {
+    site: 'GridSocial', title: 'Petra Kwan — HR Director, Gridcorp',
+    subtitle: '@petra_kwan_gc · Verified · Posts are my own.',
+    theme: 'corp',
+    body: [
+      'Recent post: "So proud of the You Matter to Us rollout. Real investment in our people. 🌱"',
+      'Recent post: "Reminder: this month\'s AI wellness check-in closes Friday. Strong participation builds strong teams."',
+      'Recent post: "Took two weeks for personal reasons in March. Back and energised. Grateful for the support."',
+    ],
+    links: [{ label: 'Back to GridSocial', url: 'gridsocial.net' }],
+  },
+  'gridsocial.net/profile/mysterious-user': {
+    site: 'GridSocial', title: 'user_3g44x',
+    subtitle: 'Last active: 14 months ago · 3 posts · No bio.',
+    theme: 'corp',
+    body: [
+      'Post 1: "Transit delay on line 7 again. Third time this week."',
+      'Post 2: "The ramen at sector7ramen.net is genuinely good. Worth the walk."',
+      'Post 3: "Weather\'s wrong today."',
+    ],
+    links: [{ label: 'Back to GridSocial', url: 'gridsocial.net' }],
+  },
+
+  // ── noodlehut ────────────────────────────────────────────────────────────────
+  'noodlehut.blog': {
+    site: 'noodlehut', title: 'noodlehut // notes on noodles',
+    subtitle: 'seven posts. all noodles.',
+    theme: 'blog',
+    body: [
+      'Writing about noodles because it\'s the one thing that stays the same wherever I go.',
+      'Most recent: "The relay hub location closed. Their shoyu was the best in Sector 4. This is a loss."',
+      'I am not affiliated with any grid provider. This blog is mine.',
+    ],
+    links: [
+      { label: 'About this blog', url: 'noodlehut.blog/about' },
+      { label: 'The cipher post', url: 'noodlehut.blog/cipher' },
+    ],
+  },
+  'noodlehut.blog/about': {
+    site: 'noodlehut', title: 'About',
+    theme: 'blog',
+    body: [
+      'My name is Ren. I move around a lot for work. I write about noodles because wherever I end up, there\'s usually a bowl worth documenting.',
+      'This site has no GridOS login. Contact form doesn\'t require an account. I like it that way.',
+      'If you\'re here from the forum, yes, I\'m the one who recommended sector7ramen.net.',
+    ],
+    links: [{ label: 'Back to noodlehut', url: 'noodlehut.blog' }],
+  },
+  'noodlehut.blog/cipher': {
+    site: 'noodlehut', title: 'A little puzzle for the regular readers',
+    theme: 'blog',
+    body: [
+      'I hid something in the last few posts. If you can decode the pattern, you\'ll find it.',
+      'Hint: it\'s not about the Grid. It\'s not about any of that. I promise.',
+      'The answer, when you find it: GOOD SOUP.',
+    ],
+    links: [{ label: 'Back to noodlehut', url: 'noodlehut.blog' }],
+  },
+
+  // ── mtell.dev ────────────────────────────────────────────────────────────────
+  'mtell.dev': {
+    site: 'Marcus Tell', title: 'Marcus Tell // IT',
+    subtitle: 'Eleven years at Gridcorp. I keep things running.',
+    theme: 'blog',
+    body: [
+      'Projects: GridOS helpdesk ticketing integration (2054), node sanitation automation scripts (2056), internal patch scheduler (2057).',
+      'I\'m not looking for new opportunities. This site is mostly for my own record-keeping.',
+      'Last updated: 2056.',
+    ],
+    links: [{ label: 'Gridcorp Careers', url: 'gridos.corp/careers' }],
+  },
+
+  // ── gridmart ─────────────────────────────────────────────────────────────────
+  'gridmart.shop': {
+    site: 'GridMart', title: 'GridMart // Frictionless Commerce',
+    subtitle: 'All transactions logged. All deliveries tracked.',
+    theme: 'corp',
+    body: [
+      'Categories: Home, Nutrition, Personal Tech, Infrastructure Supplements, Approved Media.',
+      'Same-day delivery now available in 280 markets. Autonomous courier fleet active.',
+      'All purchases require a GridOS account and are attributed to your identity profile.',
+    ],
+    links: [
+      { label: 'Your cart',    url: 'gridmart.shop/cart' },
+      { label: 'Order history', url: 'gridmart.shop/orders' },
+    ],
+    repEffect: { compliance: +1 },
+  },
+  'gridmart.shop/cart': {
+    site: 'GridMart', title: 'Your Cart',
+    subtitle: '1 item — from email promotion.',
+    theme: 'corp',
+    body: [
+      '[ 1x ] Nutrition Pack — GridMart Essentials Bundle ₳ 45.00',
+      'Coupon code field available at checkout.',
+      'Note: coupon codes can also be redeemed under Account > Redeem. Not all codes are checkout codes.',
+    ],
+    links: [{ label: 'GridMart Home', url: 'gridmart.shop' }],
+  },
+
+  // ── ClearPath ────────────────────────────────────────────────────────────────
+  'clearpath.gridcorp.net': {
+    site: 'ClearPath HR', title: 'ClearPath // Employee Portal',
+    subtitle: 'Restricted. Gridcorp employees and authorised contractors.',
+    theme: 'corp',
+    gate: { type: 'compliance', min: 30 },
+    gateHint: 'ClearPath access requires a minimum GRID compliance score. Establish yourself first.',
+    body: [
+      'Submit elevated access requests, view compliance training modules, and manage benefits.',
+      'All form submissions are logged and attributed. Flagged keyword submissions are escalated automatically.',
+      'Credit Processor role: approve and deny financial applications using the queue system.',
+    ],
+    links: [
+      { label: 'Gridcorp Careers',  url: 'gridos.corp/careers' },
+      { label: 'Internal Portal',   url: 'gridos.corp/internal' },
+    ],
+    job: { title: 'Credit Processor', corp: 'ClearPath / Gridcorp', pay: '₳ 280 / session' },
+    repEffect: { compliance: +2 },
+  },
+
+  // ── freenode.press ───────────────────────────────────────────────────────────
+  'freenode.press': {
+    site: 'freenode.press', title: 'freenode.press // The Commune',
+    subtitle: 'We did not choose to live inside a corporation.',
+    theme: 'blog',
+    gate: { type: 'shadow', min: 30 },
+    gateHint: 'This site is not reachable on standard GridOS routing. You need underground contacts first.',
+    body: [
+      'This site was previously at a different address. Gridcorp filed a DMCA claim. We moved. We always move.',
+      'Publication hub for The Commune — transparency, portability, accountability.',
+      'Contact via anonymous form. No GridOS login required or accepted.',
+    ],
+    links: [
+      { label: 'Read the Manifesto',    url: 'freenode.press/manifesto' },
+      { label: 'Active Operations',     url: 'freenode.press/operations' },
+    ],
+    repEffect: { shadow: +2, compliance: -2 },
+  },
+  'freenode.press/manifesto': {
+    site: 'freenode.press', title: 'The Grid Manifesto',
+    subtitle: 'Version 1.0 — Ratified by founding members of The Commune.',
+    theme: 'blog',
+    gate: { type: 'shadow', min: 30 },
+    gateHint: 'This content is not reachable on standard GridOS routing.',
+    body: [
+      'We did not choose to live inside a corporation. We woke up one morning and the internet was gone — replaced by a product.',
+      'Gridcorp did not save the internet after the Cascade Outages. They engineered the Cascade Outages. The documents exist. They are hidden inside Gridcorp\'s own systems. We are looking.',
+      'We ask for three things: Transparency. Portability. Accountability. Until these demands are met, we will not comply. The Grid belongs to everyone who lives on it. Take it back. — Silas Okafor, founding member · Mira Vos, founding member · [seven additional signatures redacted]',
+    ],
+    links: [
+      { label: 'Back to freenode.press',    url: 'freenode.press' },
+      { label: 'civic.archive/rootbloom-timeline', url: 'civic.archive/rootbloom-timeline' },
+    ],
+    repEffect: { shadow: +3, compliance: -3 },
+  },
+  'freenode.press/operations': {
+    site: 'freenode.press', title: 'Active Operations',
+    subtitle: 'Current Commune ops. Details visible after mission acceptance.',
+    theme: 'blog',
+    gate: { type: 'shadow', min: 40 },
+    gateHint: 'Operations board requires deeper underground standing.',
+    body: [
+      '[ OP: MIRROR-7 ] Verify civic archive integrity across three known mirrors before next GridOS sweep.',
+      '[ OP: RELAY-7G ] Ongoing investigation into Route 7G telemetry gap. The Commune has leads. Status: ACTIVE.',
+      '[ OP: DEEP COVER ] Corporate mole placement — Gridcorp compliance division. High risk. High reward.',
+    ],
+    links: [{ label: 'Back to freenode.press', url: 'freenode.press' }],
+    job: { title: 'Corporate Mole — Gridcorp Compliance', corp: 'The Commune', pay: '₳ 3,500' },
+    repEffect: { shadow: +2, compliance: -3 },
+  },
+
+  // ── splice.onion ─────────────────────────────────────────────────────────────
+  'splice.onion': {
+    site: 'The Splice', title: 'splice // relocated',
+    subtitle: 'new location. same rules.',
+    theme: 'forum',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'This address is not reachable by standard routing. You need the relay path — find it offline.',
+    body: [
+      'Welcome to the new location. Old address got DMCA\'d. Read pinned post before posting.',
+      'Rules: no real names, no locations, no direct action planning in public threads. Vouched members only.',
+      'null is online. locket posted to the job board. fray has something in verification.',
+    ],
+    links: [
+      { label: 'Welcome thread',          url: 'splice.onion/welcome' },
+      { label: 'Job board',               url: 'splice.onion/jobs' },
+      { label: 'Thread: Sector 7',        url: 'splice.onion/thread/sector7' },
+      { label: 'Thread: The Archivist',   url: 'splice.onion/thread/archivist' },
+    ],
+    repEffect: { shadow: +3, compliance: -4 },
+  },
+  'splice.onion/welcome': {
+    site: 'The Splice', title: 'welcome to the new location. read before posting.',
+    subtitle: '14 replies · pinned by null',
+    theme: 'forum',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'Relay access required.',
+    body: [
+      'null: Old location got DMCA\'d. This one won\'t. Don\'t post anything that links back to the old URL — they\'re watching referral traffic.',
+      'null: New members: you were vouched in by someone. Don\'t make them regret it.',
+      'null: Questions go in the help channel. Welcome.',
+    ],
+    links: [{ label: 'Back to splice.onion', url: 'splice.onion' }],
+    repEffect: { shadow: +1 },
+  },
+  'splice.onion/jobs': {
+    site: 'The Splice', title: 'job board — active listings',
+    subtitle: 'updated weekly by locket · contact poster directly',
+    theme: 'forum',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'Relay access required.',
+    body: [
+      'locket: DATA RETRIEVAL — ₳ 400. Gridcorp careers portal login. Employee file needed. [CLAIMED]',
+      'locket: SOCIAL ENGINEERING — ₳ 800. Target: ClearPath HR supervisor. Need account access. [OPEN]',
+      'locket: DEEP SCAN — ₳ 1,200. Full system audit on a target device. Skills required. [OPEN]',
+    ],
+    links: [{ label: 'Back to splice.onion', url: 'splice.onion' }],
+    job: { title: 'Deep Scan — Target Device', corp: 'The Splice / Locket', pay: '₳ 1,200' },
+    repEffect: { shadow: +2, compliance: -2 },
+  },
+  'splice.onion/thread/sector7': {
+    site: 'The Splice', title: 'has anyone actually verified the sector 7 thing',
+    subtitle: '31 replies · lowkey_freq',
+    theme: 'forum',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'Relay access required.',
+    body: [
+      'lowkey_freq: I keep seeing people say sector 7 was something big but nobody\'s posted actual receipts. Fray said she had something but that was three weeks ago and nothing.',
+      'fray: it\'s being verified. stop asking.',
+      'null: when it\'s ready it\'ll be ready.',
+    ],
+    links: [{ label: 'Back to splice.onion', url: 'splice.onion' }],
+    repEffect: { shadow: +1 },
+  },
+  'splice.onion/thread/archivist': {
+    site: 'The Splice', title: 'the archivist — does anyone know what happened to them',
+    subtitle: '61 replies · phosphor_veil',
+    theme: 'forum',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'Relay access required.',
+    body: [
+      'phosphor_veil: Heard the archivist went dark about six weeks ago. Last message was a half-finished post that got deleted. Gridnet news ran a missing persons story that matches the timeline.',
+      'locket: I knew them. They were careful. If they went dark it was their choice.',
+      'fray: or it wasn\'t.',
+    ],
+    links: [
+      { label: 'Back to splice.onion',       url: 'splice.onion' },
+      { label: 'gridnetnews.com/archivist-missing', url: 'gridnetnews.com/archivist-missing' },
+    ],
+    repEffect: { shadow: +2 },
+  },
+
+  // ── locket.exchange ──────────────────────────────────────────────────────────
+  'locket.exchange': {
+    site: 'Locket\'s Exchange', title: 'locket.exchange // information brokerage',
+    subtitle: 'I sell information. I don\'t take sides.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'This exchange is not publicly accessible. You need an introduction.',
+    body: [
+      '"I sell to anyone with credits. I have one rule: I don\'t sell information that will directly get someone killed. I\'ve broken that rule twice. I\'m not doing it again."',
+      'All packages sold as-is. Accuracy not guaranteed but historically high. All transactions in ₳.',
+      'Browse available intel packages. Prices reflect verification cost, not just content.',
+    ],
+    links: [{ label: 'Browse intel packages', url: 'locket.exchange/intel' }],
+    repEffect: { shadow: +1 },
+  },
+  'locket.exchange/intel': {
+    site: 'Locket\'s Exchange', title: 'Available Intel',
+    subtitle: 'verified packages — updated when I have something worth selling',
+    theme: 'void',
+    gate: { type: 'shadow', min: 55 },
+    gateHint: 'Exchange access required.',
+    body: [
+      '[ ₳ 300 ] Sector 7 anomaly — preliminary findings. Internal memo, pre-incident. Accurate.',
+      '[ ₳ 400 ] Former Gridcorp archivist — employment records and exit documentation.',
+      '[ ₳ 500 ] FOUNDATION annual review — January 2058. Eyes Only. I\'m not explaining how I got this.',
+      '[ ₳ 800 ] OVERSEER training data provenance. Where the model learned what it learned. You\'ll find it disturbing.',
+    ],
+    links: [{ label: 'Back to Exchange', url: 'locket.exchange' }],
+    repEffect: { shadow: +2, compliance: -2 },
+  },
+
+  // ── vault.archive ────────────────────────────────────────────────────────────
+  'vault.archive': {
+    site: 'vault.archive', title: '// you found it',
+    subtitle: 'now read carefully.',
+    theme: 'hidden',
+    gate: { type: 'unlocked', key: 'vault_arc_open' },
+    gateHint: 'This address is not indexed anywhere. Someone who completed the chain would have it.',
+    body: [
+      'This server has been running for four years without maintenance.',
+      'I built this because I found something I couldn\'t keep to myself and couldn\'t give to anyone I trusted with it.',
+      'Four parts. Read them in order. Do something with what you find.',
+    ],
+    links: [
+      { label: 'Part 1 — I Started Looking', url: 'vault.archive/journal-1' },
+      { label: 'Part 2 — The Timeline',      url: 'vault.archive/journal-2' },
+      { label: 'Part 3 — OVERSEER',          url: 'vault.archive/journal-3' },
+      { label: 'Part 4 — What Comes Next',   url: 'vault.archive/journal-4' },
+    ],
+    repEffect: { shadow: +5, compliance: -3 },
+  },
+  'vault.archive/journal-1': {
+    site: 'vault.archive', title: 'Part 1 of 4 — "I Started Looking"',
+    subtitle: 'The Archivist',
+    theme: 'hidden',
+    gate: { type: 'unlocked', key: 'vault_arc_open' },
+    gateHint: 'vault.archive access required.',
+    body: [
+      'I used to work for them. Not data entry or network monitoring. I was an archivist. My job was to maintain the historical document repository for the legal and compliance division. I had access to things most people never see.',
+      'I started looking because I was bored. That\'s the honest answer. I was bored, and I had clearance, and one afternoon I started reading documents from 2039 and 2040 — the years just before the Cascade Outages.',
+      'What I found took me six months to fully understand. I\'m going to tell you what I found. But I\'m going to make you work for it, because the people who handed things to me freely always disappeared. You\'ve found the first key. Three more to go.',
+    ],
+    links: [
+      { label: 'Back to vault.archive', url: 'vault.archive' },
+      { label: 'Part 2 — The Timeline', url: 'vault.archive/journal-2' },
+    ],
+    repEffect: { shadow: +2 },
+  },
+  'vault.archive/journal-2': {
+    site: 'vault.archive', title: 'Part 2 of 4 — "The Timeline"',
+    subtitle: 'The Archivist',
+    theme: 'hidden',
+    gate: { type: 'unlocked', key: 'vault_arc_open' },
+    gateHint: 'vault.archive access required.',
+    body: [
+      'The Cascade Outages began in February 2040. The first Gridcorp proposal to the UN Emergency Digital Council is dated January 2040. The proposal — a 340-page technical document outlining a unified global network infrastructure under a single private operator — was submitted one month before the Cascade Outages began.',
+      'The proposal uses language like "in the event of a prolonged infrastructure crisis." You don\'t write 340 pages of contingency in a month. You write it over years. You write it while you\'re planning.',
+      'Vorne knew what was coming because Vorne arranged what was coming. I don\'t know how many people died in the Cascade Outages. The official number is 34,000. The real number is probably higher. Find key three. There\'s more.',
+    ],
+    links: [
+      { label: 'Back to vault.archive', url: 'vault.archive' },
+      { label: 'Part 3 — OVERSEER',     url: 'vault.archive/journal-3' },
+    ],
+    repEffect: { shadow: +2, compliance: -2 },
+  },
+  'vault.archive/journal-3': {
+    site: 'vault.archive', title: 'Part 3 of 4 — "OVERSEER"',
+    subtitle: 'The Archivist',
+    theme: 'hidden',
+    gate: { type: 'unlocked', key: 'vault_arc_open' },
+    gateHint: 'vault.archive access required.',
+    unlocks: 'lena_arc_protected',
+    body: [
+      'OVERSEER wasn\'t built after the Sector 7 incident. OVERSEER is Sector 7. The incident report describes it as a monitoring subsystem. That\'s accurate but incomplete. OVERSEER is a predictive model. It doesn\'t just watch what users do. It models what users are about to do.',
+      'I found the training data for the model. It was built on profiles of whistleblowers, activists, and journalists — specifically the behavioral patterns they exhibited in the months before they went public with information damaging to Gridcorp.',
+      'OVERSEER is a machine that learned what it looks like when someone is about to cause a problem, so it can find those people early. I am one of those people. I left Gridcorp quietly. I took what I could carry. I built The Vault. One more key.',
+    ],
+    links: [
+      { label: 'Back to vault.archive',     url: 'vault.archive' },
+      { label: 'Part 4 — What Comes Next',  url: 'vault.archive/journal-4' },
+      { label: 'civic.archive/protected',   url: 'civic.archive/protected' },
+    ],
+    repEffect: { shadow: +3, compliance: -2 },
+  },
+  'vault.archive/journal-4': {
+    site: 'vault.archive', title: 'Part 4 of 4 — "What Comes Next"',
+    subtitle: 'The Archivist',
+    theme: 'hidden',
+    gate: { type: 'unlocked', key: 'vault_arc_open' },
+    gateHint: 'vault.archive access required.',
+    body: [
+      'The worst thing I found was a project called FOUNDATION. FOUNDATION is Gridcorp\'s contingency plan for what happens if GridOS faces a serious regulatory challenge — a breakup order, forced open-sourcing, or a criminal investigation at the executive level.',
+      'FOUNDATION is a kill switch. Not a full shutdown — a degradation. Critical systems become unreliable enough that no government wants to push forward. The message is simple: you cannot afford to hold us accountable. The world runs on us now.',
+      'I don\'t know if FOUNDATION has ever been triggered. I know it exists. I know it\'s maintained. That\'s why I built this place. Not to start a revolution. Just to make sure somebody knows. You know now. Do something with it. — The Archivist',
+    ],
+    links: [
+      { label: 'Back to vault.archive', url: 'vault.archive' },
+    ],
+    repEffect: { shadow: +5, compliance: -5 },
+  },
+
+  // ── darkrow.market ───────────────────────────────────────────────────────────
+  'darkrow.market': {
+    site: 'Darkrow Market', title: 'DARKROW // Tools & Upgrades',
+    subtitle: 'no questions. no logs. ₳ only.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 50 },
+    gateHint: 'Darkrow is not publicly accessible. You need deeper underground standing.',
+    body: [
+      '[ ₳ 450 ] Compliance score booster — temporary elevation, 48 hrs. No guarantee on GridOS version 9.4+.',
+      '[ ₳ 700 ] Relay path mapper — finds unregistered onion paths in your sector.',
+      '[ ₳ 1,200 ] OVERSEER blind spot exploit — documented behavioral pattern that delays flagging by 7 days.',
+      '[ ₳ 2,000 ] GridOS audit bypass module — tested. Stock: reserved. Status: PENDING.',
+    ],
+    links: [{ label: 'voidbay.net', url: 'voidbay.net' }],
+    repEffect: { shadow: +2, compliance: -3 },
+  },
+
+  // ── gitdrop.io/fray ──────────────────────────────────────────────────────────
+  'gitdrop.io/fray': {
+    site: 'GitDrop // fray', title: 'fray / tools',
+    subtitle: 'Public repository. README only. Read commit history.',
+    theme: 'blog',
+    gate: { type: 'shadow', min: 30 },
+    gateHint: 'This repository is not indexed publicly.',
+    body: [
+      'README: These are tools I\'ve written for specific purposes. They are not documented. If you don\'t know what they do, don\'t run them.',
+      'README: I don\'t maintain anything here publicly. If you need something, you know how to find me.',
+      'Commit #44 message: "removed the thing that should not have been here. if you saw it, you didn\'t." — committed March 8, 2058.',
+    ],
+    links: [{ label: 'splice.onion', url: 'splice.onion' }],
+    repEffect: { shadow: +1 },
+  },
+
+  // ── darkfeed ─────────────────────────────────────────────────────────────────
+  'darkfeed.onion': {
+    site: 'darkfeed', title: 'darkfeed // unfiltered aggregate',
+    subtitle: 'no editorial line. no filters. you verify.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 35 },
+    gateHint: 'darkfeed is relay-only.',
+    body: [
+      'Latest: freenode.press/manifesto updated · splice.onion job board active · ghostlily.blog new post · [3 raw file links — unverified]',
+      'Pinned: partial file dump — filename: foundation_infrastructure_partial_2058-01.log — CORRUPTED — most unreadable.',
+      'Feed updates every few hours. Always has something before gridnetnews.com does.',
+    ],
+    links: [
+      { label: 'freenode.press',   url: 'freenode.press' },
+      { label: 'ghostlily.blog',   url: 'ghostlily.blog' },
+      { label: 'voidbay.net',      url: 'voidbay.net' },
+    ],
+    repEffect: { shadow: +2, compliance: -2 },
+  },
+
   'void.null/54': {
     site: 'void.null',
     title: '// we saw you',
@@ -440,6 +1039,517 @@ const PAGES: Record<string, PageData> = {
       { label: 'Return to start', url: 'gridos.corp' },
     ],
     repEffect: { shadow: -5, compliance: -5 },
+  },
+
+  // ── Food & Dining ────────────────────────────────────────────────────────────
+  'vornebowl.com': {
+    site: 'VorneBowl', title: 'VorneBowl // Fast. Compliant. Delicious.',
+    subtitle: 'Elias Vorne\'s vision, now in a bowl.',
+    theme: 'corp',
+    body: [
+      'Menu: The Foundation (rice + protein base), The Cascade (spicy broth, limited time), The Grid (kids\' size, GridOS-Pay only).',
+      'Three locations in the Transit Ring. Loyalty points tracked automatically to your GridOS account.',
+      'All transactions via GridOS-Pay. We do not accept unverified payment methods.',
+    ],
+    links: [
+      { label: 'gridos.corp', url: 'gridos.corp' },
+      { label: 'sector7ramen.net', url: 'sector7ramen.net' },
+    ],
+  },
+  'pitcafe.net': {
+    site: 'The Pit Café', title: 'The Pit // Sector 4 Underground',
+    subtitle: 'Coffee. Slabs. No GridOS kiosks.',
+    theme: 'personal',
+    body: [
+      'Menu: filter coffee, synthetic milk options, toasted slabs, daily specials on the board.',
+      'WiFi: ghost_net_55 — no password. Wednesday residencies — no recordings. We\'ve been asked to register with GridOS Commerce three times. We\'re thinking about it.',
+      'Find us below the relay hub. No account required. Cash and ₳ both accepted.',
+    ],
+    links: [{ label: 'sector7ramen.net', url: 'sector7ramen.net' }],
+  },
+  'sector7ramen.net': {
+    site: 'Sector 7 Ramen', title: 'Sector 7 Ramen // Est. 2049',
+    subtitle: 'We\'re still here.',
+    theme: 'personal',
+    body: [
+      'Owner-operated since 2049. Shoyu, miso, tonkotsu. The relay hub closed and took half our lunch crowd. We\'re still here.',
+      'Hours: 11:00–21:00 weekdays. 10:00–22:00 weekends. Closed Tuesdays.',
+      'GridOS transaction fees went up again in March. We added ₳2 to everything. We\'re sorry.',
+    ],
+    links: [{ label: 'pitcafe.net', url: 'pitcafe.net' }],
+  },
+  'coldcuts.market': {
+    site: 'Coldcuts Deli', title: 'Coldcuts // Market Strip Deli',
+    subtitle: 'GridOS-verified since 2055.',
+    theme: 'personal',
+    body: [
+      'Counter service. Meats, cheeses, daily sandwiches. GridOS payment only — we upgraded last year.',
+      'Prices reflect the infrastructure fee. We didn\'t want to charge more. We had to.',
+      'Note: NO CORP DELIVERIES AFTER 14:00. Please respect this.',
+    ],
+    links: [{ label: 'sector7ramen.net', url: 'sector7ramen.net' }],
+  },
+  'gridkitchen.corp': {
+    site: 'GridKitchen', title: 'GridKitchen // Employee Cafeteria Portal',
+    subtitle: 'For Gridcorp employees. Pre-order, collect, go.',
+    theme: 'corp',
+    gate: { type: 'compliance', min: 10 },
+    gateHint: 'GridKitchen access is for Gridcorp account holders only.',
+    body: [
+      'Today\'s special: The Sorin — caesar salad. (Always a caesar salad.)',
+      'Pre-order meals, redeem loyalty points, view allergen information.',
+      'Your order is linked to your employee ID. Dietary selections may inform your wellness profile.',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }],
+  },
+  'thequeue.bar': {
+    site: 'The Queue Bar', title: 'The Queue // Where Transit Workers Drink',
+    subtitle: 'Happy hour 14:00–17:00. After the freight runs.',
+    theme: 'personal',
+    body: [
+      'Bar near RELAY-7 Hub. Drinks menu, weekly events, occasional live sets.',
+      'Accepts GridOS Pay and old currency for regulars. Owner: Vesna.',
+      'Site design from 2051. Not changing it.',
+    ],
+    links: [],
+  },
+  'zeroday.eats': {
+    site: 'ZeroDay Eats', title: 'ZeroDay // Delivery. No Logs.',
+    subtitle: 'We operate in the gaps.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 10 },
+    gateHint: 'ZeroDay isn\'t listed anywhere. You\'d have to know where to look.',
+    body: [
+      'Seven rotating items from partner kitchens. Cash only. ₳ bills accepted. We don\'t log routes.',
+      'Delivery: Sectors 4, 6, and Underground. Usually 40 minutes.',
+      'One item has been on the menu for 14 months: THE ARCHIVIST — black coffee, two sugars, sealed cup. Nobody has claimed it.',
+    ],
+    links: [],
+  },
+  'crust.pizza': {
+    site: 'Crust Pizza', title: 'Crust // 18 GridOS-Approved Locations',
+    subtitle: 'A proud GridOS Commerce Partner.',
+    theme: 'corp',
+    body: [
+      'Order online, earn loyalty points, track delivery in real time.',
+      'The review system was removed in 2056 "to ensure a quality-consistent experience."',
+      'Franchise inquiries welcome. Compliance rating: GPR ★★★★☆.',
+    ],
+    links: [{ label: 'gridmart.shop', url: 'gridmart.shop' }],
+  },
+
+  // ── Retail & Services ────────────────────────────────────────────────────────
+  'techsalvage.market': {
+    site: 'TechSalvage', title: 'TechSalvage // Hardware Resale',
+    subtitle: 'All firmware removed. What you put on it is your business.',
+    theme: 'forum',
+    body: [
+      'Boards, relays, stripped terminals, legacy components. GridOS payment accepted but not required.',
+      'GridOS has flagged this site for "unlicensed hardware resale." We are operating within the legal framework.',
+      'Current listing: relay board, model R-114-compatible, quantities available. Seller: relay_ghost.',
+    ],
+    links: [{ label: 'spliceparts.net', url: 'spliceparts.net' }],
+    repEffect: { shadow: +1 },
+  },
+  'voidthreads.shop': {
+    site: 'VoidThreads', title: 'VoidThreads // Made Where GridOS Doesn\'t Map',
+    theme: 'void',
+    gate: { type: 'shadow', min: 10 },
+    gateHint: 'VoidThreads isn\'t publicly listed.',
+    body: [
+      'Clothing. Muted blacks, grays, functional cuts. Ships to The Pit and surrounding sectors.',
+      'RFID shielding is a product feature on selected garments. Listed matter-of-factly.',
+      'LIMITED: The Cascade — rain jacket. Named for the event that made all of this necessary. 7 remaining.',
+    ],
+    links: [],
+    repEffect: { shadow: +1 },
+  },
+  'relayrides.app': {
+    site: 'RelayRides', title: 'RelayRides // Get There',
+    subtitle: 'All trips logged. All destinations attributed.',
+    theme: 'corp',
+    body: [
+      'Book a ride. GridOS-integrated. Surge pricing active during compliance events.',
+      '"Compliance Events" are defined as periods of elevated monitoring following behavioral anomaly clusters.',
+      'Your destination is part of your travel profile. Privacy policy: 47 pages.',
+    ],
+    links: [{ label: 'transitwatch.net', url: 'transitwatch.net' }],
+  },
+  'mediblock.health': {
+    site: 'MediBlock Health', title: 'MediBlock // Your Wellness. Your Data.*',
+    subtitle: '*subject to GridOS Health Data Compact, clauses 7–19.',
+    theme: 'corp',
+    body: [
+      'Book appointments, track prescriptions, complete wellness assessments.',
+      'Full portal access requires GridOS Health Premium — ₳8/month.',
+      'Basic booking is free. Everything else is Premium.',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }],
+  },
+  'gridprint.shop': {
+    site: 'GridPrint', title: 'GridPrint // Document Services',
+    subtitle: 'All print jobs reviewed for AUP compliance.',
+    theme: 'corp',
+    body: [
+      'Print, bind, archive. Corporate documents, forms, compliance filings.',
+      'Unauthorized materials will not be printed and may result in account review.',
+      'Anonymous printing was removed in 2055. All jobs attributed to account.',
+    ],
+    links: [{ label: 'gridos.corp/careers', url: 'gridos.corp/careers' }],
+  },
+  'cleanpage.wash': {
+    site: 'Cleanpage Laundry', title: 'Cleanpage // Eight Locations',
+    subtitle: 'GridCoins earned per wash. 500 = Priority Spin.',
+    theme: 'corp',
+    body: [
+      'Online booking across Sectors 4, 6, and 7. Standard and large-load machines available.',
+      'FAQ: Can I use machines without a GridOS account? Cash machines at Sector 6 and 7 locations. These machines do not earn GridCoins.',
+      'Loyalty program terms and conditions: three pages.',
+    ],
+    links: [],
+  },
+  'spliceparts.net': {
+    site: 'SpliceParts', title: 'SpliceParts // Components',
+    subtitle: 'If you\'re asking what something is for, wrong site.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 15 },
+    gateHint: 'SpliceParts is not publicly listed.',
+    body: [
+      'Electronics components and tools. No questions asked.',
+      'Ships in unlabeled packaging. Relay-path version has expanded inventory.',
+      'One component: signal attenuation module, Gridcorp infrastructure spec. Out of stock. 14 months.',
+    ],
+    links: [{ label: 'techsalvage.market', url: 'techsalvage.market' }],
+    repEffect: { shadow: +1 },
+  },
+
+  // ── Personal Sites ───────────────────────────────────────────────────────────
+  'devirowe.net': {
+    site: 'Devi Rowe', title: 'Devi Rowe // Documentary Photography',
+    subtitle: 'I move around a lot. These are the places I\'ve been.',
+    theme: 'blog',
+    body: [
+      'Transit workers, market stalls, empty relay hubs. The city between shifts.',
+      'Contact via encrypted form only. No GridOS login.',
+      'Last updated three months ago. One photo from Block Delta, March 2058, has a figure in the background whose jacket matches a listing on voidthreads.shop. Devi never mentions it.',
+    ],
+    links: [],
+    repEffect: { shadow: +1 },
+  },
+  'synth-freq.music': {
+    site: 'static_moth', title: 'static_moth // music',
+    subtitle: 'slow ambient. living under the grid.',
+    theme: 'blog',
+    body: [
+      'Tracks: Root Decay · Sector 7 at 2am · Cascade · Monitored · Behavioral Baseline.',
+      '"Cascade" runtime: 34:00.',
+      'Full catalog on deepfreq.stream. Not on pulsebeats.music — they asked. I said no.',
+    ],
+    links: [{ label: 'deepfreq.stream', url: 'deepfreq.stream' }],
+    repEffect: { shadow: +1 },
+  },
+  'urbex7.net': {
+    site: 'urbex7', title: 'urbex7 // urban exploration',
+    subtitle: 'if GridOS says it doesn\'t exist, it probably used to.',
+    theme: 'blog',
+    body: [
+      'Transit tunnels, decommissioned relay towers, sub-basements below the Market Strip.',
+      'Posts active 2054–2056. Stopped abruptly.',
+      'Final post — title only: "Northern Campus access point — subbasement level 3." Body: empty. Comments disabled.',
+    ],
+    links: [{ label: 'yellowthread.forum/thread/ghost-traffic', url: 'yellowthread.forum/thread/ghost-traffic' }],
+    repEffect: { shadow: +2 },
+  },
+  'void-poet.words': {
+    site: 'void_poet', title: '// words',
+    subtitle: 'anonymous. no contact.',
+    theme: 'void',
+    body: [
+      'OVERSEER: "it learned what it looks like / when someone is about to say something / so it could find them first."',
+      'RELAY: "the traffic moves / but the packet / never arrives / at the address / you gave it"',
+      'Published two months before any public record of OVERSEER. Author: phosphor_veil.',
+    ],
+    links: [{ label: 'yellowthread.forum/thread/ghost-traffic', url: 'yellowthread.forum/thread/ghost-traffic' }],
+    repEffect: { shadow: +2 },
+  },
+  'mira-vos.press': {
+    site: 'Mira Vos', title: 'Mira Vos // Investigative Journalism',
+    subtitle: 'Covering this story for eleven years. It keeps getting bigger.',
+    theme: 'blog',
+    body: [
+      'Pre-Gridcorp investigative work: infrastructure accountability, corporate land seizures, the early GridOS rollout.',
+      'Most recent piece: March 2058 — "What Sector 7 Isn\'t Telling Us." Status: UNFINISHED.',
+      'The unfinished article exists in page source. Cuts off: "The anomaly wasn\'t a bug. It was a fea—"',
+    ],
+    links: [{ label: 'freenode.press', url: 'freenode.press' }],
+    repEffect: { shadow: +2, compliance: -1 },
+  },
+  'retro-net.archive': {
+    site: 'retro-net', title: 'retro-net // what it used to look like',
+    subtitle: 'most of these links are dead. that\'s the point.',
+    theme: 'hidden',
+    body: [
+      'Screenshots, cached pages, descriptions of protocols that no longer exist. The internet before Gridcorp.',
+      'One cached page: a 2038 news article about Elias Vorne\'s early infrastructure proposals.',
+      'Article metadata shows publication date: January 2040. Same month as the pre-Cascade proposal. The article itself does not load. Only the metadata remains.',
+    ],
+    links: [{ label: 'civic.archive/flowering', url: 'civic.archive/flowering' }],
+    repEffect: { shadow: +2 },
+  },
+  'petra-k.wellness': {
+    site: 'Petra Kwan', title: 'Petra Kwan // Wellness & Balance',
+    subtitle: 'This is my personal space. Posts are my own.',
+    theme: 'blog',
+    body: [
+      'Morning routines. Breathing exercises. The importance of staying aligned.',
+      '"Took two weeks off in March for personal reasons. Back and energised. Grateful."',
+      'March 2058 is when the Sector 7 incident was internally resolved.',
+    ],
+    links: [{ label: 'gridsocial.net/profile/petra-kwan', url: 'gridsocial.net/profile/petra-kwan' }],
+  },
+  'marcus-t.blog': {
+    site: 'Marcus Tell', title: 'Marcus\'s Blog',
+    subtitle: 'two posts.',
+    theme: 'blog',
+    body: [
+      'Post 1 — 2056: "Finally set this up. Not sure what I\'m going to write here."',
+      'Post 2 — 2057: "My cat died. Her name was Sector. She was old."',
+      'No further posts.',
+    ],
+    links: [{ label: 'mtell.dev', url: 'mtell.dev' }],
+  },
+  'lowkey-freq.net': {
+    site: 'lowkey_freq', title: 'lowkey_freq // misc',
+    theme: 'blog',
+    body: [
+      'Music, transit notes, a photo of the Sector 7 Market.',
+      'Last post: "Got flagged for behavioral variance today. I\'ll explain when I understand what it means."',
+      'Contact form bounced two days after that post: "This address is no longer active."',
+    ],
+    links: [{ label: 'yellowthread.forum/thread/gridos-watch', url: 'yellowthread.forum/thread/gridos-watch' }],
+    repEffect: { shadow: +1 },
+  },
+  'ghost-wire-99.net': {
+    site: 'ghost_wire_99', title: 'ghost_wire_99 // network analysis',
+    subtitle: 'I study patterns.',
+    theme: 'blog',
+    body: [
+      'Technical breakdowns of relay architecture and GridOS network topology. The work is genuine.',
+      'Theory: null is more than one person. Response times are too consistent across time zones. Writing style shifts subtly over months.',
+      'Most recent post (June 2058): "I\'ve been asked to stop posting this. The message came through a channel I\'ve never shared. Taking a break." No posts since.',
+    ],
+    links: [{ label: 'splice.onion/thread/archivist', url: 'splice.onion/thread/archivist' }],
+    repEffect: { shadow: +2 },
+  },
+  'clovis-m.pr': {
+    site: 'Clovis Marsh PR', title: 'Clovis Marsh // Corporate Communications',
+    subtitle: 'Fifteen years shaping corporate narrative.',
+    theme: 'corp',
+    body: [
+      'Case studies: merger communications, crisis management, regulatory alignment.',
+      'Featured case study (listed first, dated Q1 2058): "Managed public response to an unplanned service event affecting 340 million accounts." No company named. No details. Outcomes only.',
+      'The scope matches the Sector 7 incident exactly.',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }],
+  },
+
+  // ── Entertainment ────────────────────────────────────────────────────────────
+  'gridcast.stream': {
+    site: 'GridCast', title: 'GridCast // 15,000 Approved Titles',
+    subtitle: 'Stream anywhere. All content pre-screened.',
+    theme: 'corp',
+    body: [
+      'Categories: Drama, Documentary, Approved History, Recreation, Corporate Learning.',
+      '"Approved History" covers 2041–present only. Pre-Cascade content: one 14-minute GridOS Origins documentary.',
+      'Search returns zero results for: Cascade · Commune · Archivist · ROOT BLOOM. Zero-results page reads: "No content found. This search has been logged."',
+    ],
+    links: [{ label: 'pulsebeats.music', url: 'pulsebeats.music' }],
+    repEffect: { compliance: +1 },
+  },
+  'pulsebeats.music': {
+    site: 'PulseBeats', title: 'PulseBeats // 40 Million Tracks',
+    subtitle: 'Your listening history is shared with our partners.',
+    theme: 'corp',
+    body: [
+      'Partners not listed. Genre "Pre-Cascade Electronic" requires GridOS Premium.',
+      'static_moth artist page exists. Plays: — (no counter, just a dash).',
+      'Playlist: "ROOT BLOOM Ambient" — 0 tracks. 44 saves. Cannot be played.',
+    ],
+    links: [{ label: 'synth-freq.music', url: 'synth-freq.music' }, { label: 'deepfreq.stream', url: 'deepfreq.stream' }],
+  },
+  'hexgames.net': {
+    site: 'HexGames', title: 'HexGames // Browser-Based Platform',
+    theme: 'forum',
+    body: [
+      'Puzzle, strategy, atmospheric simulations. Most titles GridOS-compliant.',
+      '"ARCHIVIST" — currently unavailable. Under review. Was the highest-rated game on the platform.',
+      'Clicking the unavailable listing three times loads a version of it. Cipher puzzle. Answer connects to vault.archive.',
+    ],
+    links: [],
+    repEffect: { shadow: +1 },
+  },
+  'gridchess.club': {
+    site: 'GridChess Club', title: 'GridChess // Online Play & Tournaments',
+    theme: 'forum',
+    body: [
+      'Ranked matches, tournaments, member ladder. Mostly anonymous handles.',
+      'Grandmaster "null_knight" — ranked first. Hasn\'t played in three months. Last game: 4 minutes and 14 seconds.',
+      'null_knight\'s final game record is public. Every move viewable.',
+    ],
+    links: [],
+  },
+  'deepfreq.stream': {
+    site: 'DeepFreq', title: 'DeepFreq // Underground Streaming',
+    subtitle: 'no account. no logging. by architecture.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 15 },
+    gateHint: 'DeepFreq is relay-only.',
+    body: [
+      'Pre-Cascade music, banned ambient and drone artists, anonymous current producers.',
+      'static_moth full catalog available here. Not on PulseBeats.',
+      'Playlist curated by lena.arc — 14 songs. Last updated 14 months ago.',
+    ],
+    links: [{ label: 'synth-freq.music', url: 'synth-freq.music' }, { label: 'void-poet.words', url: 'void-poet.words' }],
+    repEffect: { shadow: +2 },
+  },
+  'void-cinema.watch': {
+    site: 'VoidCinema', title: 'VoidCinema // Film Archive',
+    subtitle: 'These films were made when distribution was free.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 20 },
+    gateHint: 'VoidCinema is relay-only.',
+    body: [
+      'Pre-Gridcorp documentary films. Films GridOS has never banned but never approved.',
+      '"Cascade — A People\'s History (2042, anonymous)" — 3 hours. No description.',
+      'The film cuts to static after 7 minutes. Corrupted. Poster image shows a server farm. Sign in background, barely readable: REYKJAVIK DATA TRUST.',
+    ],
+    links: [],
+    repEffect: { shadow: +2 },
+  },
+
+  // ── Local News & Info ────────────────────────────────────────────────────────
+  'sectornews.local': {
+    site: 'SectorNews', title: 'SectorNews // Sector 7 Local',
+    subtitle: 'Your neighborhood. Your grid.',
+    theme: 'news',
+    body: [
+      'Community board, transit delays, local business notices. This week: rent increases hit 14 local businesses.',
+      'Community board meeting notes, March 22: a maintenance crew in Sector 7 that nobody had announced. No further information provided.',
+      'GridOS Partnership badge displayed. It looks slightly forced.',
+    ],
+    links: [
+      { label: 'sector7ramen.net',    url: 'sector7ramen.net' },
+      { label: 'transitwatch.net',    url: 'transitwatch.net' },
+      { label: 'gridnetnews.com',     url: 'gridnetnews.com' },
+    ],
+  },
+  'transitwatch.net': {
+    site: 'TransitWatch', title: 'TransitWatch // Live Transit Status',
+    subtitle: 'All delays officially classified as "optimization events."',
+    theme: 'corp',
+    body: [
+      'Live delay counter: 14 optimization events today.',
+      'Line 7G status: SUSPENDED since March 29, 2058. No estimated restoration. No explanation.',
+      'There is no way to distinguish a real delay from an optimization event. This is by design.',
+    ],
+    links: [{ label: 'relayrides.app', url: 'relayrides.app' }],
+  },
+  'weathergrid.net': {
+    site: 'WeatherGrid', title: 'WeatherGrid // Forecasts & Climate',
+    subtitle: 'Location data retained per GridOS Data Compact.',
+    theme: 'corp',
+    body: [
+      'Seven-day forecast, air quality index, UV rating.',
+      'Climate trend section: clicking "2057–present" returns "historical trend data is currently under review."',
+      'Climate trends shown through 2056 only.',
+    ],
+    links: [],
+  },
+  'gridpedia.net': {
+    site: 'GridPedia', title: 'GridPedia // The Grid\'s Encyclopedia',
+    subtitle: 'GridOS-curated. Community-edited. Compliance-reviewed.',
+    theme: 'corp',
+    body: [
+      'Entry: Cascade Outages — "result of state-sponsored cyberattacks by unidentified actors."',
+      'Entry: Elias Vorne — "visionary systems architect." Entry: The Commune — two sentences. "This article has been flagged for accuracy review."',
+      'Cascade Outages talk page, revision history: deleted comment — "The timeline doesn\'t match. The proposal predates—" Removed Feb 18, 2058 by editor "gc-admin-07."',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }, { label: 'civic.archive/flowering', url: 'civic.archive/flowering' }],
+    repEffect: { compliance: +1 },
+  },
+
+  // ── Corporate & Institutional ────────────────────────────────────────────────
+  'nexus-authority.gov': {
+    site: 'Nexus Authority', title: 'Nexus Authority // Civil Infrastructure Portal',
+    subtitle: 'Administered under GridOS oversight guidelines.',
+    theme: 'corp',
+    body: [
+      'Permit applications, boundary records, public directives.',
+      'Authority Directive 0044 (March 2058) — listed in the public record index. Clicking it returns a permissions error.',
+      'Checkpoint system linked here as an "authorized partner service."',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }],
+    repEffect: { compliance: +1 },
+  },
+  'gridid.net': {
+    site: 'GridID', title: 'GridID // Identity Verification',
+    subtitle: 'Your identity is your security.',
+    theme: 'corp',
+    body: [
+      'Verification tiers: Basic, Standard, Premium, Platinum (biometric required).',
+      '"Verification data is protected and shared only with authorized GridOS partners."',
+      'Authorized partners list: PDF link — 404. Has been 404 since 2057.',
+    ],
+    links: [{ label: 'gridos.corp/trust', url: 'gridos.corp/trust' }],
+    repEffect: { compliance: +1 },
+  },
+  'gridcorp-foundation.org': {
+    site: 'Gridcorp Foundation', title: 'Gridcorp Foundation // Infrastructure Access for All',
+    subtitle: 'Because the Grid should work for everyone.',
+    theme: 'corp',
+    body: [
+      '2057 Annual Report: ₳2.4B in charitable giving. Administrative overhead: ₳2.1B.',
+      'Program: "Digital Access Initiative — Northern Campus." Launched October 2056. Discontinued November 2056. One month.',
+      'The Northern Campus is where FOUNDATION infrastructure lives.',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }],
+  },
+  'vault-corp.secure': {
+    site: 'VaultCorp', title: 'VaultCorp // Enterprise Data Storage',
+    subtitle: 'Not to be confused with unofficial \'vault\' addresses.',
+    theme: 'corp',
+    body: [
+      'Vaulted, encrypted, GridOS-compliant enterprise storage.',
+      'Note: this disclaimer was added in 2058. Prior to that, no such reference existed.',
+      'Legal disclaimer references "void-layer addresses using the \'archive\' namespace." The only official Gridcorp acknowledgment that void-layer addresses exist.',
+    ],
+    links: [{ label: 'gridos.corp', url: 'gridos.corp' }],
+    repEffect: { shadow: +1 },
+  },
+  'clearpath-hq.net': {
+    site: 'ClearPath HQ', title: 'ClearPath // HR Platform for the Grid',
+    subtitle: 'Behavioral baseline tracking built in.',
+    theme: 'corp',
+    body: [
+      'Enterprise HR software used by Gridcorp and hundreds of partner companies.',
+      'Case study: "Relay Network 7" — ClearPath for courier employee monitoring. Success story.',
+      'Route 7G anomalies are not mentioned in the case study.',
+    ],
+    links: [{ label: 'clearpath.gridcorp.net', url: 'clearpath.gridcorp.net' }],
+  },
+  'hex-shop.void': {
+    site: 'Hex', title: 'hex // tools and upgrades',
+    subtitle: 'I don\'t explain what these do.',
+    theme: 'void',
+    gate: { type: 'shadow', min: 50 },
+    gateHint: 'Hex\'s shop is not publicly accessible.',
+    body: [
+      '"If you don\'t know, don\'t buy. No refunds. No support. Delivery when it\'s ready."',
+      '[ ₳ 450 ] Compliance elevation — 48 hr temporary. Works on GridOS 9.3. Untested on 9.4.',
+      '[ ₳ 2,000 ] GridOS audit bypass module — tested. Reserved. By whom: not stated.',
+    ],
+    links: [{ label: 'darkrow.market', url: 'darkrow.market' }],
+    repEffect: { shadow: +2, compliance: -2 },
   },
 }
 
@@ -579,7 +1689,7 @@ export default function GridBrowser() {
 // clickable. Only matches known TLDs to avoid false positives.
 // ─────────────────────────────────────────────────────────────────────────────
 function renderInline(text: string, onNavigate: (u: string) => void): React.ReactNode[] {
-  const urlRe = /\b([a-z0-9][-a-z0-9]*\.(?:corp|net|blog|news|forum|archive|null)(?:\/[-a-z0-9/_.]*)?)\b/g
+  const urlRe = /\b([a-z0-9][-a-z0-9]*\.(?:corp|net|blog|news|forum|archive|null|press|onion|exchange|market|stream|watch|local|gov|music|void|dev|shop|io|pr|secure|health|bar|menu|eats|words)(?:\/[-a-z0-9/_]*)?)\b/g
   const parts: React.ReactNode[] = []
   let last = 0
   let m: RegExpExecArray | null
@@ -609,9 +1719,10 @@ function PageView({ page, onNavigate }:
     case 'news':   return <NewsLayout   page={page} onNavigate={onNavigate} />
     case 'forum':  return <ForumLayout  page={page} onNavigate={onNavigate} />
     case 'blog':   return <BlogLayout   page={page} onNavigate={onNavigate} />
-    case 'hidden': return <ArchiveLayout page={page} onNavigate={onNavigate} />
-    case 'void':   return <VoidLayout   page={page} onNavigate={onNavigate} />
-    default:       return <CorpLayout   page={page} onNavigate={onNavigate} />
+    case 'hidden':   return <ArchiveLayout   page={page} onNavigate={onNavigate} />
+    case 'void':     return <VoidLayout     page={page} onNavigate={onNavigate} />
+    case 'personal': return <PersonalLayout page={page} onNavigate={onNavigate} />
+    default:         return <CorpLayout     page={page} onNavigate={onNavigate} />
   }
 }
 
@@ -867,9 +1978,7 @@ function ForumLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string
           alignItems:'center', justifyContent:'space-between', height:50 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <span style={{ fontSize:16, fontWeight:700, color:accent,
-              fontFamily:"'JetBrains Mono',monospace" }}>YellowThread</span>
-            <span style={{ fontSize:11, color:'#3a4a3a',
-              fontFamily:"'JetBrains Mono',monospace" }}>// public index</span>
+              fontFamily:"'JetBrains Mono',monospace" }}>{page.site}</span>
           </div>
           <div style={{ fontSize:11, color:'#3a4a3a',
             fontFamily:"'JetBrains Mono',monospace" }}>
@@ -990,9 +2099,11 @@ function BlogLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
         <div style={{ maxWidth:700, margin:'0 auto', display:'flex',
           alignItems:'center', justifyContent:'space-between', height:52 }}>
           <span style={{ fontSize:15, color:accent,
-            fontFamily:'Georgia,serif', fontStyle:'italic' }}>ghostlily</span>
-          <span style={{ fontSize:11, color:'#5a4a6a',
-            fontFamily:"'JetBrains Mono',monospace" }}>notes from the soft edge</span>
+            fontFamily:'Georgia,serif', fontStyle:'italic' }}>{page.site}</span>
+          {page.subtitle && (
+            <span style={{ fontSize:11, color:'#5a4a6a',
+              fontFamily:"'JetBrains Mono',monospace" }}>{page.subtitle}</span>
+          )}
         </div>
       </div>
 
@@ -1013,7 +2124,7 @@ function BlogLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
               background:'linear-gradient(135deg,#d6a2ff44,#7050a044)',
               border:'1px solid #5a3a7844' }} />
             <span style={{ fontSize:12, color:'#5a4a6a',
-              fontFamily:"'JetBrains Mono',monospace" }}>ghostlily · personal</span>
+              fontFamily:"'JetBrains Mono',monospace" }}>{page.site}</span>
           </div>
         </div>
 
@@ -1179,12 +2290,52 @@ function ArchiveLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:stri
 function VoidLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)=>void }) {
   const accent   = '#c084fc'
   const isNull   = page.site.includes('void.null')
+  const isMarket = page.site.includes('VoidBay')
 
   return (
     <div style={{ minHeight:'100%',
       background: isNull ? '#050506' : '#060608', color:'#b8a8c8' }}>
 
-      {isNull ? (
+      {!isNull && !isMarket ? (
+        // Plain void — dark blogs, streams, poetry
+        <div style={{ maxWidth:680, margin:'44px auto', padding:'0 28px',
+          fontFamily:"'JetBrains Mono',monospace" }}>
+          <div style={{ fontSize:10, color:'#3a2a4a', marginBottom:24,
+            letterSpacing:'0.16em' }}>{page.site.toUpperCase()}</div>
+          <h1 style={{ fontSize:19, fontWeight:500, color:'#d0b8e8',
+            marginBottom:8, lineHeight:1.35 }}>{page.title}</h1>
+          {page.subtitle && (
+            <div style={{ fontSize:11, color:'#4a3a5a', marginBottom:20 }}>
+              {page.subtitle}
+            </div>
+          )}
+          <div style={{ borderTop:'1px solid #1a1228', marginBottom:24 }} />
+          {page.repEffect && <RepBadge effect={page.repEffect} />}
+          <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+            {page.body.map((para, i) => (
+              <p key={i} style={{ fontSize:13,
+                color: i===0 ? '#b090d0' : '#7a5a9a',
+                lineHeight:1.9, marginBottom:18 }}>
+                {renderInline(para, onNavigate)}
+              </p>
+            ))}
+          </div>
+          {page.job && <JobBanner job={page.job} accent={accent} />}
+          <div style={{ marginTop:28, display:'flex', flexWrap:'wrap', gap:8 }}>
+            {page.links.map(l => (
+              <button key={l.url} onClick={() => onNavigate(l.url)}
+                style={{ padding:'8px 12px', background:'none',
+                  border:`1px solid #2a1a3a`, borderRadius:4,
+                  color:'#5a3a7a', fontSize:11, cursor:'pointer',
+                  fontFamily:'inherit', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor=accent+'44'; e.currentTarget.style.color=accent }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor='#2a1a3a'; e.currentTarget.style.color='#5a3a7a' }}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : isNull ? (
         // void.null — ultra minimal, eerie
         <div style={{ maxWidth:580, margin:'80px auto', padding:'0 32px',
           fontFamily:"'JetBrains Mono',monospace" }}>
@@ -1305,6 +2456,72 @@ function VoidLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERSONAL LAYOUT — small businesses, cafés, personal sites, neighbourhood web
+// ─────────────────────────────────────────────────────────────────────────────
+function PersonalLayout({ page, onNavigate }: { page:PageData; onNavigate:(u:string)=>void }) {
+  const accent = '#e8a856'
+  return (
+    <div style={{ minHeight:'100%', background:'#0c0b09', color:'#c8b898' }}>
+      <div style={{ background:'#110f0c', borderBottom:'1px solid #2a2018',
+        padding:'0 28px' }}>
+        <div style={{ maxWidth:740, margin:'0 auto', display:'flex',
+          alignItems:'center', justifyContent:'space-between', height:50 }}>
+          <span style={{ fontSize:15, fontWeight:600, color:accent,
+            letterSpacing:'0.02em' }}>{page.site}</span>
+          <div style={{ display:'flex', gap:16 }}>
+            {page.links.slice(0,3).map(l => (
+              <button key={l.url} onClick={() => onNavigate(l.url)}
+                style={{ background:'none', border:'none', color:'#6a5848',
+                  cursor:'pointer', fontSize:11, fontFamily:'inherit',
+                  transition:'color 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = accent)}
+                onMouseLeave={e => (e.currentTarget.style.color = '#6a5848')}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:740, margin:'0 auto', padding:'36px 28px' }}>
+        {page.repEffect && <RepBadge effect={page.repEffect} />}
+        <h1 style={{ fontSize:24, fontWeight:700, color:'#e8d8b8',
+          marginBottom:6, lineHeight:1.2 }}>{page.title}</h1>
+        {page.subtitle && (
+          <p style={{ fontSize:13, color:'#7a6a58', marginBottom:24,
+            fontStyle:'italic', margin:'6px 0 22px' }}>{page.subtitle}</p>
+        )}
+        <div style={{ borderTop:'1px solid #2a2018', marginBottom:24, marginTop:20 }} />
+        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+          {page.body.map((para, i) => (
+            <p key={i} style={{ fontSize:14,
+              color: i===0 ? '#c8b898' : '#8a7868',
+              lineHeight:1.85, marginBottom:18 }}>
+              {renderInline(para, onNavigate)}
+            </p>
+          ))}
+        </div>
+        {page.job && <JobBanner job={page.job} accent={accent} />}
+        <div style={{ marginTop:28, paddingTop:20,
+          borderTop:'1px solid #2a2018', display:'flex', flexWrap:'wrap', gap:8 }}>
+          {page.links.map(l => (
+            <button key={l.url} onClick={() => onNavigate(l.url)}
+              style={{ padding:'8px 14px', background:'#14120e',
+                border:'1px solid #2a2018', borderRadius:6,
+                color:'#8a7058', fontSize:12, cursor:'pointer',
+                fontFamily:'inherit', transition:'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor=accent+'66'; e.currentTarget.style.color=accent }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor='#2a2018'; e.currentTarget.style.color='#8a7058' }}>
+              {l.label} →
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
