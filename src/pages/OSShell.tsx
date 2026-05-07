@@ -10,7 +10,8 @@ import AppStore   from '@/apps/AppStore'
 import NodeApp    from '@/apps/NodeApp'
 import Terminal   from '@/apps/Terminal'
 import FileSystem from '@/apps/FileSystem'
-import MapApp     from '@/apps/MapApp'
+import MapApp        from '@/apps/MapApp'
+import CheckpointApp from '@/apps/CheckpointApp'
 import RepHUD     from '@/components/RepHUD'
 import BootScreen from '@/components/BootScreen'
 import StartMenu  from '@/components/StartMenu'
@@ -51,7 +52,8 @@ const ALL_APPS = [
   { id: 'node',     title: 'NODE',        icon: '[~]', w: 780, h: 560, accent: '#00e5ff' },
   { id: 'terminal', title: 'Terminal',    icon: '>_',  w: 680, h: 440, accent: '#00cc88' },
   { id: 'files',    title: 'File System', icon: '/fs', w: 720, h: 500, accent: '#ffaa00' },
-  { id: 'map',      title: 'City Map',    icon: '[M]', w: 820, h: 540, accent: '#00cc88' },
+  { id: 'map',        title: 'City Map',    icon: '[M]',  w: 820, h: 540, accent: '#00cc88' },
+  { id: 'checkpoint', title: 'Checkpoint', icon: '[C]',  w: 900, h: 580, accent: '#ffaa00' },
 ]
 
 let _topZ = 10
@@ -284,6 +286,7 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
     if (win.title === 'Terminal')    return <Terminal />
     if (win.title === 'File System') return <FileSystem />
     if (win.title === 'City Map')    return <MapApp />
+    if (win.title === 'Checkpoint')  return <CheckpointApp />
     return (
       <div style={{
         width: '100%', height: '100%',
