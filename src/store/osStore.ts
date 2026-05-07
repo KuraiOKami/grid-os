@@ -2,71 +2,74 @@ import { create } from 'zustand'
 import type { ReactNode } from 'react'
 
 export interface WindowState {
-  id: string
-  title: string
-  icon: string
-  content: ReactNode
-  x: number
-  y: number
-  width: number
-  height: number
-  zIndex: number
-  focused: boolean
-  minimized: boolean
-  maximized: boolean
+  id:          string
+  title:       string
+  icon:        string
+  content:     ReactNode   // null for app windows (rendered by title), set for system panels
+  x:           number
+  y:           number
+  width:       number
+  height:      number
+  zIndex:      number
+  focused:     boolean
+  minimized:   boolean
+  maximized:   boolean
   restoreRect: { x: number; y: number; width: number; height: number }
 }
 
 interface OSStore {
-  windows: WindowState[]
-  topZ: number
-  desktopRef: HTMLElement | null
-  setDesktopRef: (el: HTMLElement | null) => void
-  openApp: (appId: string) => void
-  /** Open any window with explicit content + config. Used for system panels. */
-  openWindow: (cfg: {
-    id: string
-    title: string
-    icon: string
-    content: ReactNode
-    width: number
-    height: number
-  }) => void
-  closeWindow: (id: string) => void
-  focusWindow: (id: string) => void
-  updateWindowPos: (id: string, x: number, y: number) => void
+  windows:        WindowState[]
+  topZ:           number
+  desktopRef:     HTMLElement | null
+  setDesktopRef:  (el: HTMLElement | null) => void
+  /** Open a built-in app by id (content rendered by title in OsWindow). */
+  openApp:        (appId: string) => void
+  /** Open any window with explicit JSX content. Used by system panels from StartMenu. */
+  openWindow:     (cfg: { id: string; title: string; icon: string; content: ReactNode; width: number; height: number }) => void
+  closeWindow:    (id: string) => void
+  focusWindow:    (id: string) => void
+  updateWindowPos:  (id: string, x: number, y: number) => void
   updateWindowSize: (id: string, width: number, height: number) => void
   minimizeWindow: (id: string) => void
-  restoreWindow: (id: string) => void
+  restoreWindow:  (id: string) => void
   toggleMaximize: (id: string) => void
 }
 
 const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number; height: number }> = {
-  browser:  { title: 'GridBrowser', icon: 'WWW',  width: 820, height: 540 },
-  terminal: { title: 'Terminal',    icon: '>_',   width: 620, height: 420 },
-  files:    { title: 'File System', icon: '/fs',  width: 660, height: 460 },
-  jobs:     { title: 'Job Board',   icon: '\u25a0\u25a0', width: 700, height: 480 },
+  browser:    { title: 'GridBrowser', icon: 'WWW',  width: 820, height: 540 },
+  mail:       { title: 'Mail',        icon: '@',    width: 720, height: 500 },
+  jobs:       { title: 'Job Board',   icon: '[ ]',  width: 700, height: 500 },
+  appstore:   { title: 'App Store',   icon: '[+]',  width: 760, height: 520 },
+  watch:      { title: 'Watch',       icon: '[W]',  width: 780, height: 520 },
+  node:       { title: 'NODE',        icon: '[~]',  width: 780, height: 560 },
+  terminal:   { title: 'Terminal',    icon: '>_',   width: 680, height: 440 },
+  files:      { title: 'File System', icon: '/fs',  width: 720, height: 500 },
+  map:        { title: 'City Map',    icon: '[M]',  width: 820, height: 540 },
+  checkpoint: { title: 'Checkpoint',  icon: '[C]',  width: 900, height: 580 },
 }
 
 function getDesktopSize(desktopRef: HTMLElement | null) {
   if (desktopRef) return { dw: desktopRef.clientWidth, dh: desktopRef.clientHeight }
-  return { dw: window.innerWidth, dh: window.innerHeight - 40 }
+  return { dw: window.innerWidth, dh: window.innerHeight - 44 }
 }
 
 export const useOSStore = create<OSStore>((set, get) => ({
-  windows: [],
-  topZ: 10,
+  windows:    [],
+  topZ:       10,
   desktopRef: null,
 
   setDesktopRef: (el) => set({ desktopRef: el }),
 
   openApp: (appId) => {
-    const { topZ, windows } = get()
+    const { topZ, windows, desktopRef } = get()
     const newZ   = topZ + 1
     const id     = `${appId}-${Date.now()}`
     const cfg    = APP_DEFAULTS[appId] ?? { title: appId, icon: '?', width: 600, height: 400 }
+    const { dw, dh } = getDesktopSize(desktopRef)
     const offset = windows.length * 24
-    const rect   = { x: 120 + offset, y: 60 + offset, width: cfg.width, height: cfg.height }
+    const x = Math.min(120 + offset, dw - cfg.width  - 20)
+    const y = Math.min( 60 + offset, dh - cfg.height - 20)
+    const rect = { x, y, width: cfg.width, height: cfg.height }
     const win: WindowState = {
       id, title: cfg.title, icon: cfg.icon, content: null,
       ...rect, zIndex: newZ, focused: true, minimized: false, maximized: false, restoreRect: rect,
@@ -74,11 +77,9 @@ export const useOSStore = create<OSStore>((set, get) => ({
     set({ topZ: newZ, windows: [...windows.map(w => ({ ...w, focused: false })), win] })
   },
 
-  // Generic open — caller provides content (JSX lives in .tsx files, not here).
-  // If a window with the same id already exists, focus/unminimize it instead.
   openWindow: ({ id, title, icon, content, width, height }) => {
     const { windows, topZ, desktopRef } = get()
-    const newZ    = topZ + 1
+    const newZ     = topZ + 1
     const existing = windows.find(w => w.id === id)
 
     if (existing) {
@@ -162,18 +163,9 @@ export const useOSStore = create<OSStore>((set, get) => ({
       windows: state.windows.map(w => {
         if (w.id !== id) return w
         if (w.maximized) {
-          return {
-            ...w, maximized: false,
-            x: w.restoreRect.x, y: w.restoreRect.y,
-            width: w.restoreRect.width, height: w.restoreRect.height,
-          }
-        } else {
-          return {
-            ...w, maximized: true,
-            restoreRect: { x: w.x, y: w.y, width: w.width, height: w.height },
-            x: 0, y: 0, width: dw, height: dh,
-          }
+          return { ...w, maximized: false, x: w.restoreRect.x, y: w.restoreRect.y, width: w.restoreRect.width, height: w.restoreRect.height }
         }
+        return { ...w, maximized: true, restoreRect: { x: w.x, y: w.y, width: w.width, height: w.height }, x: 0, y: 0, width: dw, height: dh }
       }),
     }))
   },

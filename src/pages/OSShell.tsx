@@ -1,34 +1,21 @@
 // ── OSShell.tsx ────────────────────────────────────────────────────────────
-// Main desktop shell. Reads unlockStore to determine which icons appear.
-
 import { useState, useEffect, useRef } from 'react'
-import GridBrowser from '@/apps/GridBrowser'
-import JobBoard    from '@/apps/JobBoard'
-import WatchApp   from '@/apps/WatchApp'
-import MailApp    from '@/apps/MailApp'
-import AppStore   from '@/apps/AppStore'
-import NodeApp    from '@/apps/NodeApp'
-import Terminal   from '@/apps/Terminal'
-import FileSystem from '@/apps/FileSystem'
+import GridBrowser   from '@/apps/GridBrowser'
+import JobBoard      from '@/apps/JobBoard'
+import WatchApp      from '@/apps/WatchApp'
+import MailApp       from '@/apps/MailApp'
+import AppStore      from '@/apps/AppStore'
+import NodeApp       from '@/apps/NodeApp'
+import Terminal      from '@/apps/Terminal'
+import FileSystem    from '@/apps/FileSystem'
 import MapApp        from '@/apps/MapApp'
 import CheckpointApp from '@/apps/CheckpointApp'
-import RepHUD     from '@/components/RepHUD'
-import BootScreen from '@/components/BootScreen'
-import StartMenu  from '@/components/StartMenu'
+import RepHUD        from '@/components/RepHUD'
+import BootScreen    from '@/components/BootScreen'
+import StartMenu     from '@/components/StartMenu'
 import { useMailStore }   from '@/store/mailStore'
 import { useUnlockStore } from '@/store/unlockStore'
-
-interface Win {
-  id:      string
-  title:   string
-  icon:    string
-  x:       number
-  y:       number
-  w:       number
-  h:       number
-  z:       number
-  focused: boolean
-}
+import { useOSStore, type WindowState } from '@/store/osStore'
 
 const C = {
   bg:      '#0a0a0f',
@@ -44,29 +31,44 @@ const C = {
 }
 
 const ALL_APPS = [
-  { id: 'browser',  title: 'GridBrowser', icon: 'WWW', w: 820, h: 540, accent: '#00e5ff' },
-  { id: 'mail',     title: 'Mail',        icon: '@',   w: 720, h: 500, accent: '#00e5ff' },
-  { id: 'jobs',     title: 'Job Board',   icon: '[ ]', w: 700, h: 500, accent: '#00cc88' },
-  { id: 'appstore', title: 'App Store',   icon: '[+]', w: 760, h: 520, accent: '#d6a2ff' },
-  { id: 'watch',    title: 'Watch',       icon: '[W]', w: 780, h: 520, accent: '#ff3b5c' },
-  { id: 'node',     title: 'NODE',        icon: '[~]', w: 780, h: 560, accent: '#00e5ff' },
-  { id: 'terminal', title: 'Terminal',    icon: '>_',  w: 680, h: 440, accent: '#00cc88' },
-  { id: 'files',    title: 'File System', icon: '/fs', w: 720, h: 500, accent: '#ffaa00' },
+  { id: 'browser',    title: 'GridBrowser', icon: 'WWW',  w: 820, h: 540, accent: '#00e5ff' },
+  { id: 'mail',       title: 'Mail',        icon: '@',    w: 720, h: 500, accent: '#00e5ff' },
+  { id: 'jobs',       title: 'Job Board',   icon: '[ ]',  w: 700, h: 500, accent: '#00cc88' },
+  { id: 'appstore',   title: 'App Store',   icon: '[+]',  w: 760, h: 520, accent: '#d6a2ff' },
+  { id: 'watch',      title: 'Watch',       icon: '[W]',  w: 780, h: 520, accent: '#ff3b5c' },
+  { id: 'node',       title: 'NODE',        icon: '[~]',  w: 780, h: 560, accent: '#00e5ff' },
+  { id: 'terminal',   title: 'Terminal',    icon: '>_',   w: 680, h: 440, accent: '#00cc88' },
+  { id: 'files',      title: 'File System', icon: '/fs',  w: 720, h: 500, accent: '#ffaa00' },
   { id: 'map',        title: 'City Map',    icon: '[M]',  w: 820, h: 540, accent: '#00cc88' },
-  { id: 'checkpoint', title: 'Checkpoint', icon: '[C]',  w: 900, h: 580, accent: '#ffaa00' },
+  { id: 'checkpoint', title: 'Checkpoint',  icon: '[C]',  w: 900, h: 580, accent: '#ffaa00' },
 ]
-
-let _topZ = 10
 
 export default function OSShell() {
   const [booted,   setBooted]   = useState(false)
-  const [wins,     setWins]     = useState<Win[]>([])
   const [time,     setTime]     = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const desktopRef = useRef<HTMLDivElement>(null)
+
+  // ─ store ───────────────────────────────────────────────────────────
+  const windows       = useOSStore(s => s.windows)
+  const openApp       = useOSStore(s => s.openApp)
+  const closeWindow   = useOSStore(s => s.closeWindow)
+  const focusWindow   = useOSStore(s => s.focusWindow)
+  const updatePos     = useOSStore(s => s.updateWindowPos)
+  const toggleMax     = useOSStore(s => s.toggleMaximize)
+  const minimizeWin   = useOSStore(s => s.minimizeWindow)
+  const restoreWin    = useOSStore(s => s.restoreWindow)
+  const setDesktopRef = useOSStore(s => s.setDesktopRef)
 
   const unreadCount = useMailStore(s => s.unreadCount)()
   const installed   = useUnlockStore(s => s.installed)
   const visibleApps = ALL_APPS.filter(a => installed.includes(a.id))
+
+  // Register desktop element so openWindow can center panels
+  useEffect(() => {
+    setDesktopRef(desktopRef.current)
+    return () => setDesktopRef(null)
+  }, [setDesktopRef])
 
   useEffect(() => {
     const tick = () =>
@@ -76,32 +78,6 @@ export default function OSShell() {
     return () => clearInterval(id)
   }, [])
 
-  const openApp = (appId: string) => {
-    const cfg = ALL_APPS.find(a => a.id === appId)!
-    _topZ++
-    const offset = wins.length * 28
-    setWins(prev => [
-      ...prev.map(w => ({ ...w, focused: false })),
-      {
-        id: `${appId}-${Date.now()}`, title: cfg.title, icon: cfg.icon,
-        x: 130 + offset, y: 60 + offset, w: cfg.w, h: cfg.h,
-        z: _topZ, focused: true,
-      },
-    ])
-  }
-
-  const closeWin  = (id: string) => setWins(prev => prev.filter(w => w.id !== id))
-
-  const focusWin  = (id: string) => {
-    _topZ++
-    setWins(prev => prev.map(w =>
-      w.id === id ? { ...w, focused: true, z: _topZ } : { ...w, focused: false }
-    ))
-  }
-
-  const moveWin = (id: string, x: number, y: number) =>
-    setWins(prev => prev.map(w => w.id === id ? { ...w, x, y } : w))
-
   return (
     <>
       {!booted && <BootScreen onDone={() => setBooted(true)} />}
@@ -109,7 +85,7 @@ export default function OSShell() {
       {menuOpen && (
         <StartMenu
           onClose={() => setMenuOpen(false)}
-          onOpenApp={openApp}
+          onOpenApp={(id) => { openApp(id); setMenuOpen(false) }}
         />
       )}
 
@@ -120,7 +96,9 @@ export default function OSShell() {
         opacity: booted ? 1 : 0, transition: 'opacity 0.4s ease',
       }}>
         {/* Desktop */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <div ref={desktopRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+
+          {/* Desktop icons */}
           <div style={{
             position: 'absolute', top: 24, left: 24,
             display: 'flex', flexDirection: 'column', gap: 20,
@@ -137,13 +115,16 @@ export default function OSShell() {
             ))}
           </div>
 
-          {wins.map(win => (
+          {/* All windows — both app windows and system panels */}
+          {windows.map(win => (
             <OsWindow
               key={win.id}
               win={win}
-              onClose={() => closeWin(win.id)}
-              onFocus={() => focusWin(win.id)}
-              onMove={(x, y) => moveWin(win.id, x, y)}
+              onClose={() => closeWindow(win.id)}
+              onFocus={() => focusWindow(win.id)}
+              onMove={(x, y) => updatePos(win.id, x, y)}
+              onToggleMax={() => toggleMax(win.id)}
+              onMinimize={() => minimizeWin(win.id)}
             />
           ))}
         </div>
@@ -170,15 +151,21 @@ export default function OSShell() {
 
           <div style={{ width: 1, height: 20, background: C.border }} />
 
+          {/* Taskbar buttons for open windows */}
           <div style={{ flex: 1, display: 'flex', gap: 4 }}>
-            {wins.map(w => (
-              <button key={w.id} onClick={() => focusWin(w.id)} style={{
-                padding: '3px 12px', fontSize: 11, borderRadius: 4,
-                cursor: 'pointer', fontFamily: 'inherit',
-                border: `1px solid ${w.focused ? C.accent + '66' : 'transparent'}`,
-                background: w.focused ? C.accent + '22' : 'none',
-                color: w.focused ? C.accent : C.muted,
-              }}>
+            {windows.map(w => (
+              <button
+                key={w.id}
+                onClick={() => w.minimized ? restoreWin(w.id) : focusWindow(w.id)}
+                style={{
+                  padding: '3px 12px', fontSize: 11, borderRadius: 4,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${w.focused ? C.accent + '66' : 'transparent'}`,
+                  background: w.focused ? C.accent + '22' : 'none',
+                  color: w.minimized ? C.muted + '88' : w.focused ? C.accent : C.muted,
+                  textDecoration: w.minimized ? 'line-through' : 'none',
+                }}
+              >
                 {w.title}
               </button>
             ))}
@@ -199,7 +186,7 @@ export default function OSShell() {
   )
 }
 
-// ── Desktop Icon
+// ── Desktop Icon ───────────────────────────────────────────────────────────
 function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
   icon: string; label: string; accent?: string; badge?: number; onClick: () => void
 }) {
@@ -249,17 +236,22 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
   )
 }
 
-// ── OS Window
-function OsWindow({ win, onClose, onFocus, onMove }: {
-  win: Win
-  onClose: () => void
-  onFocus: () => void
-  onMove: (x: number, y: number) => void
+// ── OS Window ───────────────────────────────────────────────────────────
+function OsWindow({ win, onClose, onFocus, onMove, onToggleMax, onMinimize }: {
+  win: WindowState
+  onClose:     () => void
+  onFocus:     () => void
+  onMove:      (x: number, y: number) => void
+  onToggleMax: () => void
+  onMinimize:  () => void
 }) {
   const dragRef = useRef<{ ox: number; oy: number } | null>(null)
   const isWatch = win.title === 'Watch'
 
+  if (win.minimized) return null
+
   const startDrag = (e: React.MouseEvent) => {
+    if (win.maximized) return
     e.preventDefault()
     onFocus()
     dragRef.current = { ox: e.clientX - win.x, oy: e.clientY - win.y }
@@ -276,7 +268,10 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
     window.addEventListener('mouseup', up)
   }
 
+  // If the window was opened via openWindow (system panels), it carries its own content.
+  // If opened via openApp, render by title.
   function renderBody() {
+    if (win.content) return win.content
     if (win.title === 'GridBrowser') return <GridBrowser />
     if (win.title === 'Job Board')   return <JobBoard />
     if (win.title === 'Watch')       return <WatchApp />
@@ -293,8 +288,8 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: 8,
       }}>
-        <span style={{ fontSize: 22, color: '#00e5ff', fontWeight: 'bold' }}>{win.icon}</span>
-        <span style={{ fontSize: 12, color: '#6b6b80' }}>{win.title}</span>
+        <span style={{ fontSize: 22, color: C.accent, fontWeight: 'bold' }}>{win.icon}</span>
+        <span style={{ fontSize: 12, color: C.muted }}>{win.title}</span>
         <span style={{ fontSize: 10, color: '#3a3a4a' }}>// coming soon</span>
       </div>
     )
@@ -304,32 +299,46 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
     <div
       onMouseDown={onFocus}
       style={{
-        position: 'absolute', left: win.x, top: win.y,
-        width: win.w, height: win.h, zIndex: win.z,
+        position: 'absolute',
+        left: win.x, top: win.y, width: win.width, height: win.height,
+        zIndex: win.zIndex,
         display: 'flex', flexDirection: 'column',
-        background: '#111118', borderRadius: 6,
+        background: '#111118', borderRadius: win.maximized ? 0 : 6,
         border: `1px solid ${isWatch ? '#ff3b5c55' : '#00e5ff55'}`,
         boxShadow: win.focused ? '0 8px 40px #00000088' : '0 4px 20px #00000066',
+        transition: 'box-shadow 0.15s',
       }}
     >
+      {/* Title bar */}
       <div
         onMouseDown={startDrag}
+        onDoubleClick={onToggleMax}
         style={{
           height: 32, display: 'flex', alignItems: 'center',
           padding: '0 12px', gap: 8,
           borderBottom: '1px solid #2a2a3a',
           background: '#16161f',
-          borderRadius: '6px 6px 0 0',
-          flexShrink: 0, cursor: 'move', userSelect: 'none',
+          borderRadius: win.maximized ? 0 : '6px 6px 0 0',
+          flexShrink: 0, cursor: win.maximized ? 'default' : 'move',
+          userSelect: 'none',
         }}
       >
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={e => { e.stopPropagation(); onClose() }}
+            title="Close"
             style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#ff3b5cbb' }}
           />
-          <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ffaa0044' }} />
-          <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#00cc8844' }} />
+          <button
+            onClick={e => { e.stopPropagation(); onMinimize() }}
+            title="Minimize"
+            style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#ffaa00bb' }}
+          />
+          <button
+            onClick={e => { e.stopPropagation(); onToggleMax() }}
+            title="Maximize"
+            style={{ width: 12, height: 12, borderRadius: '50%', border: 'none', cursor: 'pointer', background: '#00cc88bb' }}
+          />
         </div>
         <span style={{
           flex: 1, textAlign: 'center', fontSize: 11,
@@ -339,6 +348,7 @@ function OsWindow({ win, onClose, onFocus, onMove }: {
         </span>
       </div>
 
+      {/* Body */}
       <div
         onMouseDown={e => e.stopPropagation()}
         style={{
