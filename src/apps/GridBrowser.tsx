@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { addJob } from '@/store/jobStore'
 import { useRepStore } from '@/store/reputationStore'
 import { useSite } from '@/hooks/useSite'
@@ -28,8 +28,6 @@ type PageData = {
 }
 
 // ── helpers: shape a SiteRow into PageData ───────────────────────────────
-// This adapter lets the rest of the render logic stay identical whether the
-// page came from Supabase or from the local PAGES fallback.
 function siteRowToPageData(site: SiteRow): PageData {
   const content = site.content ?? []
 
@@ -62,7 +60,7 @@ function siteRowToPageData(site: SiteRow): PageData {
   }
 }
 
-// ── page registry (local fallback for non-Supabase sites) ────────────────
+// ── page registry (local fallback) ───────────────────────────────────────
 const PAGES: Record<string, PageData> = {
   'gridos.corp': {
     site: 'GridOS Corporate',
@@ -92,8 +90,8 @@ const PAGES: Record<string, PageData> = {
       'Analysts note concern over rising "ghost traffic" within unmanaged public nodes.',
     ],
     links: [
-      { label: 'Return to Home',          url: 'gridos.corp' },
-      { label: 'Read Trust & Safety',     url: 'gridos.corp/trust' },
+      { label: 'Return to Home',           url: 'gridos.corp' },
+      { label: 'Read Trust & Safety',      url: 'gridos.corp/trust' },
       { label: 'View Pulse News coverage', url: 'pulse.news' },
     ],
   },
@@ -179,8 +177,8 @@ const PAGES: Record<string, PageData> = {
     ],
     links: [
       { label: 'Market Brief: GridOS climbs again', url: 'pulse.news/markets/gridos' },
-      { label: 'Local outages spread',             url: 'pulse.news/outages' },
-      { label: 'Open Ghostlily blog',              url: 'ghostlily.blog' },
+      { label: 'Local outages spread',              url: 'pulse.news/outages' },
+      { label: 'Open Ghostlily blog',               url: 'ghostlily.blog' },
     ],
   },
   'pulse.news/markets/gridos': {
@@ -350,8 +348,8 @@ const PAGES: Record<string, PageData> = {
       'The site has been 404 on GridOS routing tables since 2029. It is still here.',
     ],
     links: [
-      { label: 'Browse listings',  url: 'voidbay.net/listings' },
-      { label: 'Anonymous drops',  url: 'voidbay.net/anon-drops' },
+      { label: 'Browse listings', url: 'voidbay.net/listings' },
+      { label: 'Anonymous drops', url: 'voidbay.net/anon-drops' },
     ],
     repEffect: { shadow: +1, compliance: -2 },
   },
@@ -369,8 +367,8 @@ const PAGES: Record<string, PageData> = {
       '[ ₳ 2,200 ] ROOT BLOOM suppressor script — delays one personal flag by 72 hours.',
     ],
     links: [
-      { label: 'VoidBay Home',     url: 'voidbay.net' },
-      { label: 'Anonymous drops',  url: 'voidbay.net/anon-drops' },
+      { label: 'VoidBay Home',    url: 'voidbay.net' },
+      { label: 'Anonymous drops', url: 'voidbay.net/anon-drops' },
     ],
     job: { title: 'Source Suppressor Script Components', corp: 'Anonymous', pay: '₳ 1,100 / run' },
     repEffect: { shadow: +1, compliance: -2 },
@@ -403,20 +401,20 @@ const PAGES: Record<string, PageData> = {
       'Former Gridcorp compliance employee reported missing. Federal case assigned.',
     ],
     links: [
-      { label: 'Sector 7 maintenance extended',      url: 'gridnetnews.com/sector7-maintenance' },
-      { label: 'GridMart expands same-day delivery',  url: 'gridnetnews.com/gridmart-expansion' },
-      { label: 'Commune suspect arrested',            url: 'gridnetnews.com/commune-arrest' },
-      { label: 'Record Q1 profits',                  url: 'gridnetnews.com/q1-profits' },
-      { label: 'Archivist employee reported missing', url: 'gridnetnews.com/archivist-missing' },
-      { label: 'GridSocial: 500 million accounts',   url: 'gridnetnews.com/gridsocial-500m' },
-      { label: 'Splice forum taken offline',         url: 'gridnetnews.com/splice-dmca' },
-      { label: 'Northern campus power irregularities',url: 'gridnetnews.com/northern-campus-power' },
-      { label: 'GridOS 9.4 update rolls out',        url: 'gridnetnews.com/gridos-update-9-4' },
+      { label: 'Sector 7 maintenance extended',       url: 'gridnetnews.com/sector7-maintenance' },
+      { label: 'GridMart expands same-day delivery',   url: 'gridnetnews.com/gridmart-expansion' },
+      { label: 'Commune suspect arrested',             url: 'gridnetnews.com/commune-arrest' },
+      { label: 'Record Q1 profits',                   url: 'gridnetnews.com/q1-profits' },
+      { label: 'Archivist employee reported missing',  url: 'gridnetnews.com/archivist-missing' },
+      { label: 'GridSocial: 500 million accounts',    url: 'gridnetnews.com/gridsocial-500m' },
+      { label: 'Splice forum taken offline',          url: 'gridnetnews.com/splice-dmca' },
+      { label: 'Northern campus power irregularities', url: 'gridnetnews.com/northern-campus-power' },
+      { label: 'GridOS 9.4 update rolls out',         url: 'gridnetnews.com/gridos-update-9-4' },
     ],
     repEffect: { compliance: +1 },
   },
   'gridsocial.net': {
-    site: 'GridSocial', title: 'GridSocial // What\'s on the Grid',
+    site: 'GridSocial', title: "GridSocial // What's on the Grid",
     subtitle: '500 million connections. All activity reviewed for AUP compliance.',
     theme: 'corp',
     body: [
@@ -437,7 +435,7 @@ const PAGES: Record<string, PageData> = {
     subtitle: 'seven posts. all noodles.',
     theme: 'blog',
     body: [
-      'Writing about noodles because it\'s the one thing that stays the same wherever I go.',
+      "Writing about noodles because it's the one thing that stays the same wherever I go.",
       'Most recent: "The relay hub location closed. Their shoyu was the best in Sector 4. This is a loss."',
       'I am not affiliated with any grid provider. This blog is mine.',
     ],
@@ -451,8 +449,8 @@ const PAGES: Record<string, PageData> = {
     subtitle: 'Eleven years at Gridcorp. I keep things running.',
     theme: 'blog',
     body: [
-      'Projects: GridOS helpdesk ticketing integration (2054), node sanitation automation scripts (2056), internal patch scheduler (2057).',
-      'I\'m not looking for new opportunities. This site is mostly for my own record-keeping.',
+      "Projects: GridOS helpdesk ticketing integration (2054), node sanitation automation scripts (2056), internal patch scheduler (2057).",
+      "I'm not looking for new opportunities. This site is mostly for my own record-keeping.",
       'Last updated: 2056.',
     ],
     links: [{ label: 'Gridcorp Careers', url: 'gridos.corp/careers' }],
@@ -467,26 +465,86 @@ const PAGES: Record<string, PageData> = {
       'All purchases require a GridOS account and are attributed to your identity profile.',
     ],
     links: [
-      { label: 'Your cart',    url: 'gridmart.shop/cart' },
+      { label: 'Your cart',     url: 'gridmart.shop/cart' },
       { label: 'Order history', url: 'gridmart.shop/orders' },
     ],
     repEffect: { compliance: +1 },
   },
 }
 
-// ── theme colours ─────────────────────────────────────────────────────────
-const THEME_STYLES: Record<SiteTheme, { bg: string; text: string; accent: string; border: string; tag: string }> = {
-  corp:     { bg: 'bg-slate-950',  text: 'text-slate-100',  accent: 'text-blue-400',   border: 'border-blue-900/40',  tag: 'bg-blue-950 text-blue-300' },
-  news:     { bg: 'bg-zinc-950',   text: 'text-zinc-100',   accent: 'text-amber-400',  border: 'border-amber-900/40', tag: 'bg-amber-950 text-amber-300' },
-  forum:    { bg: 'bg-neutral-950',text: 'text-neutral-100',accent: 'text-yellow-400', border: 'border-yellow-900/30',tag: 'bg-yellow-950 text-yellow-300' },
-  blog:     { bg: 'bg-stone-950',  text: 'text-stone-100',  accent: 'text-emerald-400',border: 'border-emerald-900/30',tag: 'bg-emerald-950 text-emerald-300' },
-  hidden:   { bg: 'bg-zinc-950',   text: 'text-zinc-300',   accent: 'text-cyan-400',   border: 'border-cyan-900/30',  tag: 'bg-cyan-950 text-cyan-300' },
-  void:     { bg: 'bg-black',      text: 'text-red-200',    accent: 'text-red-400',    border: 'border-red-900/40',   tag: 'bg-red-950 text-red-300' },
-  personal: { bg: 'bg-slate-950',  text: 'text-slate-200',  accent: 'text-violet-400', border: 'border-violet-900/30',tag: 'bg-violet-950 text-violet-300' },
+// ── theme config ──────────────────────────────────────────────────────────
+// Each theme has colour tokens PLUS a distinct visual identity for the header chrome.
+type ThemeConfig = {
+  bg: string
+  text: string
+  accent: string
+  border: string
+  tag: string
+  // header bar styling
+  headerBg: string
+  headerBorder: string
+  // site banner — the colored strip that gives each site its identity
+  bannerBg: string
+  bannerText: string
+  bannerLabel: string   // short all-caps identifier shown in the banner
+  // divider between sections
+  divider: string
+}
+
+const THEME_STYLES: Record<SiteTheme, ThemeConfig> = {
+  corp: {
+    bg: 'bg-slate-950', text: 'text-slate-100', accent: 'text-blue-400',
+    border: 'border-blue-900/40', tag: 'bg-blue-950 text-blue-300',
+    headerBg: 'bg-slate-900', headerBorder: 'border-blue-900/50',
+    bannerBg: 'bg-blue-950', bannerText: 'text-blue-200', bannerLabel: 'GRIDOS CORP',
+    divider: 'border-blue-900/30',
+  },
+  news: {
+    bg: 'bg-zinc-950', text: 'text-zinc-100', accent: 'text-amber-400',
+    border: 'border-amber-900/40', tag: 'bg-amber-950 text-amber-300',
+    headerBg: 'bg-zinc-900', headerBorder: 'border-amber-900/50',
+    bannerBg: 'bg-amber-950', bannerText: 'text-amber-200', bannerLabel: 'NEWS FEED',
+    divider: 'border-amber-900/30',
+  },
+  forum: {
+    bg: 'bg-neutral-950', text: 'text-neutral-100', accent: 'text-yellow-400',
+    border: 'border-yellow-900/30', tag: 'bg-yellow-950 text-yellow-300',
+    headerBg: 'bg-neutral-900', headerBorder: 'border-yellow-900/40',
+    bannerBg: 'bg-yellow-950', bannerText: 'text-yellow-200', bannerLabel: 'FORUM',
+    divider: 'border-yellow-900/25',
+  },
+  blog: {
+    bg: 'bg-stone-950', text: 'text-stone-100', accent: 'text-emerald-400',
+    border: 'border-emerald-900/30', tag: 'bg-emerald-950 text-emerald-300',
+    headerBg: 'bg-stone-900', headerBorder: 'border-emerald-900/40',
+    bannerBg: 'bg-emerald-950/60', bannerText: 'text-emerald-300', bannerLabel: 'BLOG',
+    divider: 'border-emerald-900/25',
+  },
+  hidden: {
+    bg: 'bg-zinc-950', text: 'text-zinc-300', accent: 'text-cyan-400',
+    border: 'border-cyan-900/30', tag: 'bg-cyan-950 text-cyan-300',
+    headerBg: 'bg-zinc-900', headerBorder: 'border-cyan-900/40',
+    bannerBg: 'bg-cyan-950/50', bannerText: 'text-cyan-400', bannerLabel: 'ARCHIVE MIRROR',
+    divider: 'border-cyan-900/25',
+  },
+  void: {
+    bg: 'bg-black', text: 'text-red-200', accent: 'text-red-400',
+    border: 'border-red-900/40', tag: 'bg-red-950 text-red-300',
+    headerBg: 'bg-zinc-950', headerBorder: 'border-red-900/50',
+    bannerBg: 'bg-red-950/70', bannerText: 'text-red-300', bannerLabel: 'VOID',
+    divider: 'border-red-900/30',
+  },
+  personal: {
+    bg: 'bg-slate-950', text: 'text-slate-200', accent: 'text-violet-400',
+    border: 'border-violet-900/30', tag: 'bg-violet-950 text-violet-300',
+    headerBg: 'bg-slate-900', headerBorder: 'border-violet-900/40',
+    bannerBg: 'bg-violet-950/50', bannerText: 'text-violet-300', bannerLabel: 'PERSONAL',
+    divider: 'border-violet-900/25',
+  },
 }
 
 // ── forum post renderer ───────────────────────────────────────────────────
-function ForumPost({ row, t }: { row: SiteContentRow; t: typeof THEME_STYLES[SiteTheme] }) {
+function ForumPost({ row, t }: { row: SiteContentRow; t: ThemeConfig }) {
   if (row.post_removed) {
     return (
       <div className={`px-3 py-2 rounded border ${t.border} opacity-40 italic text-xs`}>
@@ -507,64 +565,64 @@ function ForumPost({ row, t }: { row: SiteContentRow; t: typeof THEME_STYLES[Sit
   )
 }
 
+// ── section divider ───────────────────────────────────────────────────────
+function Divider({ t }: { t: ThemeConfig }) {
+  return <div className={`border-t ${t.divider} my-1`} />
+}
+
 // ── main component ────────────────────────────────────────────────────────
 export default function GridBrowser() {
-  const [url, setUrl]       = useState('gridos.corp')
-  const [input, setInput]   = useState('gridos.corp')
+  const [url, setUrl]     = useState('gridos.corp')
+  const [input, setInput] = useState('gridos.corp')
   const { compliance, shadow, adjust } = useRepStore()
-  const { unlocks }         = useRepStore() as any
+  const { unlocks } = useRepStore() as any
 
-  // ── Supabase lookup ─────────────────────────────────────────────────────
-  // useSite returns 'not_found' for slugs that only live in PAGES.
-  // In that case we fall back to the local registry seamlessly.
+  // ── Supabase lookup ──────────────────────────────────────────────────────
   const supaResult = useSite(url)
 
-  // ── Resolve page data ───────────────────────────────────────────────────
+  // ── Resolve page data ────────────────────────────────────────────────────
   const page = useMemo<PageData | null>(() => {
     if (supaResult.status === 'ok') return siteRowToPageData(supaResult.site)
-    if (supaResult.status === 'not_found' || supaResult.status === 'idle') {
-      return PAGES[url] ?? null
-    }
-    // loading / error: return local fallback while waiting
     return PAGES[url] ?? null
   }, [supaResult, url])
 
   const isLoadingFromDB = supaResult.status === 'loading' && !PAGES[url]
+  const t = THEME_STYLES[page?.theme ?? 'corp']
 
-  const t = THEME_STYLES[(page?.theme ?? 'corp')]
-
-  // ── Access gate check ───────────────────────────────────────────────────
+  // ── Access gate check ────────────────────────────────────────────────────
   const gateBlocked = useMemo(() => {
     if (!page?.gate) return false
     const g = page.gate
     if (g.type === 'compliance') return compliance < g.min
-    if (g.type === 'shadow')     return shadow     < g.min
+    if (g.type === 'shadow')     return shadow < g.min
     if (g.type === 'unlocked')   return !(unlocks as Set<string>)?.has(g.key)
     return false
   }, [page, compliance, shadow, unlocks])
+
+  // ── Rep effect — applied AFTER render via useEffect (fixes setState-in-render) ──
+  const [lastApplied, setLastApplied] = useState('')
+
+  useEffect(() => {
+    if (!page || gateBlocked) return
+    if (url === lastApplied) return
+    setLastApplied(url)
+    if (page.repEffect?.compliance) adjust('compliance', page.repEffect.compliance)
+    if (page.repEffect?.shadow)     adjust('shadow',     page.repEffect.shadow)
+  }, [url, page, gateBlocked]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigate ─────────────────────────────────────────────────────────────
   function navigate(target: string) {
     const clean = target.trim().toLowerCase().replace(/^https?:\/\//, '')
     setUrl(clean)
     setInput(clean)
-    // rep effect applied after gate check on render
-  }
-
-  // Apply rep effect once per navigation (for pages that pass gate)
-  const lastRepUrl = useMemo(() => ({ current: '' }), [])
-  if (page && !gateBlocked && url !== lastRepUrl.current) {
-    lastRepUrl.current = url
-    if (page.repEffect?.compliance) adjust('compliance', page.repEffect.compliance)
-    if (page.repEffect?.shadow)     adjust('shadow',     page.repEffect.shadow)
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className={`flex flex-col h-full ${t.bg} ${t.text} font-mono text-sm`}>
 
-      {/* address bar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-black/30">
+      {/* ── address bar ── */}
+      <div className={`flex items-center gap-2 px-3 py-2 border-b ${t.headerBorder} ${t.headerBg}`}>
         <span className={`text-xs ${t.accent} opacity-60 select-none`}>GRID://</span>
         <input
           className="flex-1 bg-transparent outline-none text-xs tracking-wide caret-current"
@@ -581,21 +639,22 @@ export default function GridBrowser() {
         </button>
       </div>
 
-      {/* body */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* ── page body ── */}
+      <div className="flex-1 overflow-y-auto">
 
-        {/* loading state */}
+        {/* loading */}
         {isLoadingFromDB && (
-          <div className="opacity-40 text-xs animate-pulse">connecting to grid node…</div>
+          <div className="px-4 py-3 opacity-40 text-xs animate-pulse">connecting to grid node…</div>
         )}
 
-        {/* error state from Supabase (non-fatal, local fallback used) */}
+        {/* degraded sync notice */}
         {supaResult.status === 'error' && (
-          <div className="text-xs opacity-30 italic">⚠ remote sync degraded — serving cached data</div>
+          <div className="px-4 py-2 text-xs opacity-30 italic">⚠ remote sync degraded — serving cached data</div>
         )}
 
+        {/* 404 */}
         {!page && !isLoadingFromDB && (
-          <div className="space-y-1">
+          <div className="px-4 py-4 space-y-1">
             <p className="text-red-400">404 — node not found</p>
             <p className="opacity-40 text-xs">{url} is not responding or does not exist.</p>
           </div>
@@ -603,86 +662,107 @@ export default function GridBrowser() {
 
         {page && (
           <>
-            {/* header */}
-            <div className="space-y-1">
-              <div className={`text-xs opacity-40`}>{page.site}</div>
-              <h1 className={`text-base font-bold ${t.accent}`}>{page.title}</h1>
-              {page.subtitle && <p className="text-xs opacity-50 italic">{page.subtitle}</p>}
+            {/* ── site identity banner ── */}
+            <div className={`${t.bannerBg} px-4 py-2 flex items-center justify-between border-b ${t.border}`}>
+              <span className={`text-xs tracking-widest uppercase opacity-60 ${t.bannerText}`}>
+                {t.bannerLabel}
+              </span>
+              <span className="text-xs opacity-30">{page.site}</span>
             </div>
 
-            {/* live indicator — shown when site is served from Supabase */}
-            {supaResult.status === 'ok' && (
-              <div className="flex items-center gap-1.5">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full ${t.accent.replace('text-', 'bg-')} animate-pulse`} />
-                <span className="text-xs opacity-30">live</span>
-              </div>
-            )}
+            <div className="px-4 py-4 space-y-4">
 
-            {/* gate */}
-            {gateBlocked ? (
-              <div className={`border ${t.border} rounded px-3 py-3 space-y-1`}>
-                <p className="text-xs text-red-400">⛔ ACCESS DENIED</p>
-                <p className="text-xs opacity-60">{page.gateHint ?? 'You do not have the required access level for this node.'}</p>
-              </div>
-            ) : (
-              <>
-                {/* body paragraphs */}
-                {page.body.length > 0 && (
-                  <div className="space-y-2">
-                    {page.body.map((line, i) => (
-                      <p key={i} className="text-xs leading-relaxed opacity-80">{line}</p>
-                    ))}
-                  </div>
-                )}
+              {/* live pulse */}
+              {supaResult.status === 'ok' && (
+                <div className="flex items-center gap-1.5">
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${t.accent.replace('text-', 'bg-')} animate-pulse`} />
+                  <span className="text-xs opacity-30">live</span>
+                </div>
+              )}
 
-                {/* forum posts — rendered for Supabase forum sites */}
-                {supaResult.status === 'ok' && (() => {
-                  const posts = (supaResult.site.content ?? [])
-                    .filter(c => c.kind === 'forum_post')
-                    .sort((a, b) => a.sort_order - b.sort_order)
-                  if (posts.length === 0) return null
-                  return (
+              {/* page title */}
+              <div className="space-y-1">
+                <h1 className={`text-base font-bold ${t.accent}`}>{page.title}</h1>
+                {page.subtitle && <p className="text-xs opacity-50 italic">{page.subtitle}</p>}
+              </div>
+
+              <Divider t={t} />
+
+              {/* gate */}
+              {gateBlocked ? (
+                <div className={`border ${t.border} rounded px-3 py-3 space-y-1`}>
+                  <p className="text-xs text-red-400">⛔ ACCESS DENIED</p>
+                  <p className="text-xs opacity-60">{page.gateHint ?? 'You do not have the required access level for this node.'}</p>
+                </div>
+              ) : (
+                <>
+                  {/* body paragraphs */}
+                  {page.body.length > 0 && (
                     <div className="space-y-2">
-                      <div className="text-xs opacity-30 uppercase tracking-widest">threads</div>
-                      {posts.map(p => (
-                        <ForumPost key={p.id} row={p} t={t} />
+                      {page.body.map((line, i) => (
+                        <p key={i} className="text-xs leading-relaxed opacity-80">{line}</p>
                       ))}
                     </div>
-                  )
-                })()}
+                  )}
 
-                {/* job */}
-                {page.job && (
-                  <div className={`border ${t.border} rounded px-3 py-2 space-y-1`}>
-                    <div className="text-xs opacity-40 uppercase tracking-wider">available contract</div>
-                    <div className={`text-xs font-semibold ${t.accent}`}>{page.job.title}</div>
-                    <div className="text-xs opacity-60">{page.job.corp} · {page.job.pay}</div>
-                    <button
-                      onClick={() => { addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay }) }}
-                      className={`mt-1 text-xs px-2 py-0.5 rounded border ${t.border} hover:bg-white/5 transition-colors`}
-                    >
-                      Accept contract
-                    </button>
-                  </div>
-                )}
+                  {/* forum posts */}
+                  {supaResult.status === 'ok' && (() => {
+                    const posts = (supaResult.site.content ?? [])
+                      .filter(c => c.kind === 'forum_post')
+                      .sort((a, b) => a.sort_order - b.sort_order)
+                    if (posts.length === 0) return null
+                    return (
+                      <>
+                        <Divider t={t} />
+                        <div className="space-y-2">
+                          <div className="text-xs opacity-30 uppercase tracking-widest">threads</div>
+                          {posts.map(p => (
+                            <ForumPost key={p.id} row={p} t={t} />
+                          ))}
+                        </div>
+                      </>
+                    )
+                  })()}
 
-                {/* nav links */}
-                {page.links.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="text-xs opacity-30 uppercase tracking-widest">links</div>
-                    {page.links.map((lnk, i) => (
-                      <button
-                        key={i}
-                        onClick={() => navigate(lnk.url)}
-                        className={`block text-left text-xs ${t.accent} hover:underline opacity-80 hover:opacity-100 transition-opacity`}
-                      >
-                        → {lnk.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+                  {/* available contract */}
+                  {page.job && (
+                    <>
+                      <Divider t={t} />
+                      <div className={`border ${t.border} rounded px-3 py-2 space-y-1`}>
+                        <div className="text-xs opacity-40 uppercase tracking-wider">available contract</div>
+                        <div className={`text-xs font-semibold ${t.accent}`}>{page.job.title}</div>
+                        <div className="text-xs opacity-60">{page.job.corp} · {page.job.pay}</div>
+                        <button
+                          onClick={() => { addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay }) }}
+                          className={`mt-1 text-xs px-2 py-0.5 rounded border ${t.border} hover:bg-white/5 transition-colors`}
+                        >
+                          Accept contract
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* nav links */}
+                  {page.links.length > 0 && (
+                    <>
+                      <Divider t={t} />
+                      <div className="space-y-1">
+                        <div className="text-xs opacity-30 uppercase tracking-widest">links</div>
+                        {page.links.map((lnk, i) => (
+                          <button
+                            key={i}
+                            onClick={() => navigate(lnk.url)}
+                            className={`block text-left text-xs ${t.accent} hover:underline opacity-80 hover:opacity-100 transition-opacity`}
+                          >
+                            → {lnk.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </>
         )}
       </div>
