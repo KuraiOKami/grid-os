@@ -554,22 +554,31 @@ type LayoutProps = {
 function ForumPost({ row, t }: { row: SiteContentRow; t: ThemeConfig }) {
   if (row.post_removed) {
     return (
-      <div className="px-4 py-3 rounded-lg border border-neutral-200 bg-neutral-50 opacity-50 italic text-xs text-neutral-400">
-        {row.post_body}
+      <div className="border border-neutral-200 rounded-lg px-4 py-3 bg-neutral-50">
+        <p className="text-xs italic text-neutral-400 select-none">{row.post_body}</p>
       </div>
     )
   }
   const handle = row.post_handle ?? row.post_author ?? 'anon'
+  const seed = handle.charCodeAt(0) % 6
+  const avatarColors = [
+    'bg-amber-200 text-amber-900',
+    'bg-sky-200 text-sky-900',
+    'bg-rose-200 text-rose-900',
+    'bg-violet-200 text-violet-900',
+    'bg-teal-200 text-teal-900',
+    'bg-orange-200 text-orange-900',
+  ]
   const initials = handle.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || '??'
   return (
-    <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3 space-y-1.5">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-yellow-200 flex items-center justify-center shrink-0">
-          <span className="text-yellow-900 text-xs font-bold leading-none">{initials}</span>
+    <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3 space-y-2 hover:border-neutral-300 transition-colors">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${avatarColors[seed]}`}>
+          <span className="text-xs font-bold leading-none">{initials}</span>
         </div>
         <span className="text-xs font-semibold text-neutral-700">{handle}</span>
         {row.post_replies != null && row.post_replies > 0 && (
-          <span className="text-xs text-neutral-400 ml-auto">{row.post_replies} replies</span>
+          <span className="ml-auto text-xs text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded">{row.post_replies} replies</span>
         )}
       </div>
       <p className="text-xs text-neutral-600 leading-relaxed pl-8">{row.post_body}</p>
@@ -610,64 +619,62 @@ function VoidContractCard({ job, url }: { job: JobOffer; url: string }) {
 }
 
 // ── LAYOUT: CORP ──────────────────────────────────────────────────────────
-// Real enterprise website. Light mode, white cards, blue hero, proper nav.
+// Enterprise website. White surfaces, blue hero banner, card-based content, top nav.
 function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 text-slate-800 font-sans text-sm flex flex-col">
-      {/* Top nav bar */}
-      <div className="bg-white border-b border-slate-200 px-5 py-2.5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Corp logo mark */}
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-blue-700 rounded flex items-center justify-center">
-              <span className="text-white text-xs font-black leading-none">G</span>
-            </div>
-            <span className="text-xs font-bold text-slate-800 tracking-tight">{page.site}</span>
+    <div className="flex-1 overflow-y-auto bg-white text-slate-800 font-sans text-sm flex flex-col">
+
+      {/* ── Top nav ── */}
+      <nav className="bg-white border-b border-slate-200 px-4 py-0 flex items-center shrink-0" style={{ height: '44px' }}>
+        <div className="flex items-center gap-2 mr-6">
+          <div className="w-6 h-6 rounded bg-blue-700 flex items-center justify-center shrink-0">
+            <span className="text-white text-xs font-black leading-none">G</span>
           </div>
+          <span className="text-xs font-bold text-slate-800 tracking-tight whitespace-nowrap">{page.site}</span>
         </div>
-        <div className="flex items-center gap-3">
-          {page.links.slice(0, 3).map((lnk, i) => (
+        <div className="flex items-center gap-1 flex-1 overflow-hidden">
+          {page.links.slice(0, 4).map((lnk, i) => (
             <button key={i} onClick={() => navigate(lnk.url)}
-              className="text-xs text-slate-500 hover:text-slate-800 transition-colors hidden sm:block">
+              className="text-xs text-slate-500 hover:text-slate-900 px-2.5 py-1 rounded hover:bg-slate-100 transition-colors whitespace-nowrap truncate max-w-[120px]">
               {lnk.label}
             </button>
           ))}
-          {isLive && (
-            <div className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              <span className="text-xs text-green-700 font-medium">Live</span>
-            </div>
-          )}
         </div>
-      </div>
+        {isLive && (
+          <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 shrink-0 ml-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+            <span className="text-xs text-green-700 font-medium">Live</span>
+          </div>
+        )}
+      </nav>
 
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-6 py-8 text-white shrink-0">
-        <div className="inline-flex items-center gap-1.5 bg-blue-700/40 border border-blue-600/30 rounded-full px-3 py-1 mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-300" />
+      {/* ── Hero banner ── */}
+      <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-6 py-7 text-white shrink-0">
+        <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0" />
           <span className="text-xs text-blue-200 uppercase tracking-wider font-medium">Official Communication</span>
         </div>
-        <h1 className="text-xl font-bold text-white leading-tight mb-1">{page.title}</h1>
-        {page.subtitle && <p className="text-sm text-blue-200 leading-relaxed">{page.subtitle}</p>}
+        <h1 className="text-xl font-extrabold text-white leading-tight">{page.title}</h1>
+        {page.subtitle && <p className="text-sm text-blue-200 mt-1.5 leading-relaxed max-w-sm">{page.subtitle}</p>}
       </div>
 
-      {/* Content */}
-      <div className="px-5 py-6 space-y-6 flex-1">
+      {/* ── Body ── */}
+      <div className="px-5 py-5 space-y-5 flex-1 bg-slate-50">
         {gateBlocked ? (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-red-500 text-sm">⛔</span>
-              <p className="text-sm font-semibold text-red-700">Access Restricted</p>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex gap-3 items-start">
+            <span className="text-red-400 text-lg shrink-0">⛔</span>
+            <div>
+              <p className="text-sm font-semibold text-red-700 mb-0.5">Access Restricted</p>
+              <p className="text-xs text-red-500 leading-relaxed">{page.gateHint ?? 'You do not have the required clearance level.'}</p>
             </div>
-            <p className="text-xs text-red-500 leading-relaxed">{page.gateHint ?? 'You do not have the required clearance level.'}</p>
           </div>
         ) : (
           <>
             {page.body.length > 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
                 {page.body.map((line, i) => (
-                  <div key={i} className="px-5 py-4 flex gap-4 items-start border-b border-slate-100 last:border-0">
-                    <span className="text-xs font-mono text-slate-300 shrink-0 mt-0.5 tabular-nums w-5 text-right">{i + 1}</span>
+                  <div key={i} className="px-5 py-4 flex gap-4 items-start">
+                    <span className="text-xs font-mono text-slate-300 shrink-0 mt-0.5 tabular-nums select-none w-5 text-right">{i + 1}</span>
                     <p className="text-sm text-slate-600 leading-relaxed">{line}</p>
                   </div>
                 ))}
@@ -675,14 +682,12 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
             )}
 
             {page.job && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-blue-700 text-white px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Open Role</span>
-                </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 space-y-2.5">
+                <span className="inline-block text-xs bg-blue-700 text-white px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Open Role</span>
                 <p className="text-sm font-bold text-blue-900">{page.job.title}</p>
                 <p className="text-xs text-blue-600">{page.job.corp} · {page.job.pay}</p>
                 <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
-                  className="text-xs bg-blue-700 hover:bg-blue-800 text-white px-4 py-1.5 rounded-lg transition-colors font-medium">
+                  className="text-xs bg-blue-700 hover:bg-blue-800 active:bg-blue-900 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold">
                   Apply Now →
                 </button>
               </div>
@@ -690,14 +695,14 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 
             {page.links.length > 0 && (
               <div>
-                <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">Quick Links</p>
-                <div className="space-y-2">
+                <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-2.5">Quick Links</p>
+                <div className="space-y-1.5">
                   {page.links.map((lnk, i) => (
                     <button key={i} onClick={() => navigate(lnk.url)}
-                      className="w-full flex items-center gap-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg px-4 py-3 text-left transition-all group">
+                      className="w-full flex items-center gap-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg px-4 py-2.5 text-left transition-all group">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                      <span className="text-sm text-slate-700 group-hover:text-blue-700 transition-colors">{lnk.label}</span>
-                      <span className="ml-auto text-slate-300 group-hover:text-blue-400 text-base leading-none">›</span>
+                      <span className="text-sm text-slate-700 group-hover:text-blue-700 transition-colors flex-1 truncate">{lnk.label}</span>
+                      <span className="text-slate-300 group-hover:text-blue-400 text-lg leading-none">›</span>
                     </button>
                   ))}
                 </div>
@@ -707,65 +712,77 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         )}
       </div>
 
-      <div className="px-5 py-3 border-t border-slate-200 bg-white shrink-0">
-        <p className="text-xs text-slate-400">© GridOS Corp. All activity is monitored and logged under the Unified Access Compact.</p>
+      {/* ── Footer ── */}
+      <div className="px-5 py-2.5 border-t border-slate-200 bg-white shrink-0">
+        <p className="text-xs text-slate-400">© GridOS Corp. All activity monitored under the Unified Access Compact.</p>
       </div>
     </div>
   )
 }
 
 // ── LAYOUT: NEWS ──────────────────────────────────────────────────────────
-// Real newspaper / wire service. Dark masthead, article body, pull quotes.
+// Newspaper / wire service. Dark masthead, byline strip, pull quotes, article layout.
 function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
-  const siteName = page.site.toUpperCase()
   return (
-    <div className="flex-1 overflow-y-auto bg-neutral-50 text-neutral-900 font-sans text-sm flex flex-col">
-      {/* Masthead */}
-      <div className="bg-neutral-900 px-4 py-2.5 flex items-center justify-between shrink-0">
-        <span className="text-xs font-black text-amber-400 tracking-widest uppercase">{siteName}</span>
-        <div className="flex items-center gap-2.5">
+    <div className="flex-1 overflow-y-auto bg-white text-neutral-900 font-sans text-sm flex flex-col">
+
+      {/* ── Masthead ── */}
+      <div className="bg-neutral-950 px-4 py-2.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-amber-500 rounded-sm flex items-center justify-center shrink-0">
+            <span className="text-neutral-950 text-xs font-black leading-none">P</span>
+          </div>
+          <span className="text-xs font-black text-white tracking-widest uppercase">{page.site}</span>
+        </div>
+        <div className="flex items-center gap-2">
           {isLive && (
             <span className="flex items-center gap-1 bg-red-600 text-white text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wide">
-              <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-              Live
+              <span className="w-1 h-1 rounded-full bg-white animate-pulse" />Live
             </span>
           )}
-          <span className="text-xs text-neutral-500 font-mono">07 MAY 2026</span>
+          <span className="text-xs text-neutral-500 font-mono tabular-nums">07 MAY 2026</span>
         </div>
       </div>
 
-      {/* Section tag + Headline */}
-      <div className="bg-white border-b-2 border-neutral-900 px-5 py-5 shrink-0">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wide">Markets</span>
+      {/* ── Category + Headline ── */}
+      <div className="bg-white border-b-2 border-neutral-950 px-5 pt-4 pb-4 shrink-0">
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">Markets</span>
           <span className="text-xs text-neutral-400">·</span>
           <span className="text-xs text-neutral-500">07 May 2026</span>
         </div>
-        <h1 className="text-lg font-black text-neutral-900 leading-tight">{page.title}</h1>
-        {page.subtitle && <p className="text-sm text-neutral-500 mt-1.5 italic font-light border-l-4 border-amber-400 pl-3">{page.subtitle}</p>}
+        <h1 className="text-xl font-black text-neutral-950 leading-tight tracking-tight">{page.title}</h1>
+        {page.subtitle && (
+          <p className="mt-2 text-sm text-neutral-500 italic border-l-4 border-amber-400 pl-3 leading-snug">{page.subtitle}</p>
+        )}
       </div>
 
-      {/* Byline strip */}
-      <div className="px-5 py-2 bg-neutral-100 border-b border-neutral-200 shrink-0">
-        <p className="text-xs text-neutral-500">By <span className="font-semibold text-neutral-700">{page.site} Staff</span> · Automated wire feed</p>
+      {/* ── Byline ── */}
+      <div className="px-5 py-2 bg-neutral-100 border-b border-neutral-200 shrink-0 flex items-center gap-3">
+        <p className="text-xs text-neutral-500">By <span className="font-semibold text-neutral-700">{page.site} Staff</span></p>
+        <span className="text-neutral-300">·</span>
+        <p className="text-xs text-neutral-400">Automated wire feed</p>
       </div>
 
-      {/* Article */}
-      <div className="px-5 py-5 space-y-6 flex-1">
+      {/* ── Article ── */}
+      <div className="px-5 py-5 space-y-5 flex-1">
         {gateBlocked ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <p className="text-sm font-semibold text-amber-800">🔒 Subscriber Content</p>
-            <p className="text-xs text-amber-600 mt-1">{page.gateHint ?? 'This article requires a verified subscriber account.'}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 items-start">
+            <span className="text-amber-500 text-base shrink-0">🔒</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Subscriber Content</p>
+              <p className="text-xs text-amber-600 mt-0.5">{page.gateHint ?? 'This article requires a verified subscriber account.'}</p>
+            </div>
           </div>
         ) : (
           <>
             {page.body.length > 0 && (
-              <div className="space-y-0">
+              <div>
                 {page.body.map((line, i) => (
                   i === 1 && page.body.length > 2 ? (
-                    <div key={i} className="my-4 border-l-4 border-amber-500 pl-4 py-2 bg-amber-50 rounded-r-lg">
+                    <blockquote key={i} className="my-4 border-l-4 border-amber-500 pl-4 pr-3 py-2.5 bg-amber-50 rounded-r-lg">
                       <p className="text-sm text-neutral-700 italic font-medium leading-relaxed">{line}</p>
-                    </div>
+                    </blockquote>
                   ) : (
                     <p key={i} className="text-sm text-neutral-700 leading-relaxed py-2.5 border-b border-neutral-100 last:border-0">{line}</p>
                   )
@@ -774,7 +791,7 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
             )}
 
             {page.job && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-1.5">
+              <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 space-y-1.5">
                 <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Sponsored · Job Listing</p>
                 <p className="text-sm font-semibold text-neutral-800">{page.job.title}</p>
                 <p className="text-xs text-neutral-500">{page.job.corp} · {page.job.pay}</p>
@@ -786,12 +803,12 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
             )}
 
             {page.links.length > 0 && (
-              <div className="border-t-2 border-neutral-900 pt-4">
-                <p className="text-xs font-black uppercase tracking-widest text-neutral-500 mb-3">More Coverage</p>
-                <div className="space-y-0">
+              <div className="border-t-2 border-neutral-950 pt-4">
+                <p className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">More Coverage</p>
+                <div>
                   {page.links.map((lnk, i) => (
                     <button key={i} onClick={() => navigate(lnk.url)}
-                      className="w-full text-left border-b border-neutral-100 last:border-0 py-2.5 group flex items-center gap-2">
+                      className="w-full text-left flex items-center gap-2 py-2.5 border-b border-neutral-100 last:border-0 group">
                       <span className="text-amber-500 shrink-0 text-base leading-none">›</span>
                       <span className="text-sm text-neutral-800 group-hover:text-amber-600 font-medium transition-colors">{lnk.label}</span>
                     </button>
@@ -807,55 +824,60 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: BLOG ──────────────────────────────────────────────────────────
-// Real personal blog. Clean editorial, serif feel, minimal chrome.
+// Personal blog. Minimal chrome, editorial feel, author avatar, warm stone palette.
 function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
-  const author = page.site.replace(/\.(blog|dev|net)$/, '')
+  const author = page.site.replace(/\.(blog|dev|net|com)$/, '')
+  const wordCount = page.body.reduce((n, l) => n + l.split(' ').length, 0)
 
   return (
     <div className="flex-1 overflow-y-auto bg-stone-50 text-stone-800 font-sans text-sm flex flex-col">
-      {/* Minimal header */}
+
+      {/* ── Minimal header ── */}
       <div className="bg-white border-b border-stone-200 px-5 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-emerald-800 flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-full bg-stone-800 flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-bold">{author[0]?.toUpperCase()}</span>
           </div>
-          <div>
-            <span className="text-xs font-bold text-stone-800 block leading-tight">{page.site}</span>
-            <span className="text-xs text-stone-400 leading-tight">personal blog</span>
+          <div className="leading-tight">
+            <p className="text-xs font-bold text-stone-800">{page.site}</p>
+            <p className="text-xs text-stone-400">personal blog</p>
           </div>
         </div>
         {isLive && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span className="text-xs text-stone-400">live</span>
           </div>
         )}
       </div>
 
-      {/* Post header */}
-      <div className="px-6 pt-7 pb-5 border-b border-stone-200 bg-white shrink-0">
+      {/* ── Post header ── */}
+      <div className="bg-white px-6 pt-6 pb-5 border-b border-stone-200 shrink-0">
         <h1 className="text-lg font-bold text-stone-900 leading-snug">{page.title}</h1>
-        {page.subtitle && <p className="text-sm text-stone-500 italic mt-1.5">{page.subtitle}</p>}
-        <div className="flex items-center gap-2 mt-4 text-xs text-stone-400">
+        {page.subtitle && <p className="text-sm text-stone-400 italic mt-1.5">{page.subtitle}</p>}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-3 text-xs text-stone-400">
           <span className="font-medium text-stone-600">{author}</span>
           <span>·</span>
           <span>07 May 2026</span>
-          <span>·</span>
-          <span>{page.body.reduce((n, l) => n + l.split(' ').length, 0)} words</span>
+          {wordCount > 0 && <><span>·</span><span>{wordCount} words</span></>}
         </div>
+        <div className="w-10 h-0.5 bg-stone-800 mt-4" />
       </div>
 
-      {/* Post body */}
-      <div className="px-6 py-6 space-y-6 flex-1 max-w-prose">
+      {/* ── Post body ── */}
+      <div className="px-6 py-6 space-y-5 flex-1">
         {gateBlocked ? (
-          <div className="bg-stone-100 border border-stone-300 rounded-lg p-4">
-            <p className="text-sm font-semibold text-stone-700">🔒 Private Entry</p>
-            <p className="text-xs text-stone-500 mt-1">{page.gateHint ?? 'This post is not publicly accessible.'}</p>
+          <div className="bg-stone-100 border border-stone-300 rounded-lg p-4 flex gap-3 items-start">
+            <span className="text-stone-400 shrink-0">🔒</span>
+            <div>
+              <p className="text-sm font-semibold text-stone-700">Private Entry</p>
+              <p className="text-xs text-stone-500 mt-0.5">{page.gateHint ?? 'This post is not publicly accessible.'}</p>
+            </div>
           </div>
         ) : (
           <>
             {page.body.length > 0 && (
-              <div className="prose prose-sm prose-stone max-w-none space-y-4">
+              <div className="space-y-4 max-w-prose">
                 {page.body.map((line, i) => (
                   <p key={i} className="text-sm text-stone-700 leading-loose">{line}</p>
                 ))}
@@ -863,7 +885,7 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
             )}
 
             {page.job && (
-              <div className="border border-dashed border-stone-300 rounded-lg px-4 py-4 space-y-2 bg-stone-100/60">
+              <div className="border border-dashed border-stone-400 rounded-lg px-4 py-4 space-y-2 bg-stone-100/50">
                 <p className="text-xs text-stone-400 uppercase tracking-wider font-medium">// dropped here</p>
                 <p className="text-sm font-semibold text-stone-800">{page.job.title}</p>
                 <p className="text-xs text-stone-500">{page.job.corp} · {page.job.pay}</p>
@@ -875,13 +897,13 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
             )}
 
             {page.links.length > 0 && (
-              <div className="pt-6 border-t border-stone-200 space-y-2.5">
+              <div className="pt-5 border-t border-stone-200 space-y-2.5">
                 <p className="text-xs text-stone-400 uppercase tracking-wider font-medium mb-3">— See Also —</p>
                 {page.links.map((lnk, i) => (
                   <button key={i} onClick={() => navigate(lnk.url)}
-                    className="flex items-center gap-2 text-xs text-emerald-700 hover:text-emerald-900 transition-colors group">
-                    <span className="text-emerald-400 group-hover:text-emerald-600">↳</span>
-                    <span className="underline underline-offset-2">{lnk.label}</span>
+                    className="flex items-center gap-2 text-xs text-stone-600 hover:text-stone-900 transition-colors group">
+                    <span className="text-stone-400 group-hover:text-stone-600 shrink-0">↳</span>
+                    <span className="underline underline-offset-2 decoration-stone-300 group-hover:decoration-stone-600">{lnk.label}</span>
                   </button>
                 ))}
               </div>
@@ -894,40 +916,52 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: ARCHIVE ───────────────────────────────────────────────────────
-// WikiLeaks / civic document dump. Dark mono, record IDs, dashed borders.
+// Classified civic document dump. Dark mono, record IDs, dashed borders, cyan tones.
 function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-zinc-950 text-zinc-300 font-mono text-xs flex flex-col">
-      <div className="px-4 py-3 border-b border-cyan-900/30 bg-zinc-900/80 shrink-0">
+
+      {/* ── Header ── */}
+      <div className="px-4 py-3 border-b border-cyan-900/30 bg-zinc-900 shrink-0">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-cyan-700/60 uppercase tracking-widest text-xs">{page.site}</span>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border border-cyan-800/50 rounded-sm flex items-center justify-center shrink-0">
+              <span className="text-cyan-700 text-xs leading-none font-bold">▣</span>
+            </div>
+            <span className="text-cyan-700/70 uppercase tracking-widest text-xs">{page.site}</span>
+          </div>
           {isLive && (
             <div className="flex items-center gap-1">
               <span className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse" />
-              <span className="text-cyan-600/60 text-xs">mirror live</span>
+              <span className="text-cyan-700/60 text-xs">mirror live</span>
             </div>
           )}
         </div>
         <h1 className="text-sm font-semibold text-cyan-300 leading-snug">{page.title}</h1>
         {page.subtitle && <p className="text-xs text-zinc-500 italic mt-0.5">{page.subtitle}</p>}
-        <div className="mt-2 pt-1.5 border-t border-cyan-900/20 text-xs text-cyan-900/60 uppercase tracking-widest">
-          CLASSIFIED ARCHIVE · MIRROR 441-C · READ ONLY
+        <div className="mt-2 pt-1.5 border-t border-cyan-900/20 flex items-center gap-3">
+          <span className="text-xs text-cyan-900/60 uppercase tracking-widest">CLASSIFIED ARCHIVE</span>
+          <span className="text-cyan-900/40">·</span>
+          <span className="text-xs text-cyan-900/60 uppercase tracking-widest">MIRROR 441-C</span>
+          <span className="text-cyan-900/40">·</span>
+          <span className="text-xs text-cyan-900/60 uppercase tracking-widest">READ ONLY</span>
         </div>
       </div>
 
+      {/* ── Content ── */}
       <div className="px-4 py-4 space-y-5 flex-1">
         {gateBlocked ? (
-          <div className="border border-red-900/40 rounded px-3 py-2 bg-red-950/10">
-            <p className="text-xs text-red-400 font-bold">⛔ CLEARANCE REQUIRED</p>
+          <div className="border border-red-900/50 rounded px-3 py-2.5 bg-red-950/20">
+            <p className="text-xs text-red-400 font-bold uppercase tracking-wider">⛔ CLEARANCE REQUIRED</p>
             <p className="text-xs text-zinc-500 mt-1">{page.gateHint ?? 'Insufficient access level for this node.'}</p>
           </div>
         ) : (
           <>
             {page.body.length > 0 && (
-              <div className="border border-dashed border-cyan-900/30 rounded divide-y divide-cyan-900/20">
+              <div className="border border-dashed border-cyan-900/40 rounded overflow-hidden divide-y divide-cyan-900/20">
                 {page.body.map((line, i) => (
-                  <div key={i} className="px-3 py-2.5 flex gap-3 items-start">
-                    <span className="text-xs text-cyan-800/50 uppercase tracking-widest shrink-0 mt-0.5 tabular-nums">
+                  <div key={i} className="px-3 py-2.5 flex gap-3 items-start hover:bg-cyan-950/20 transition-colors">
+                    <span className="text-xs text-cyan-900/50 uppercase tracking-widest shrink-0 mt-0.5 tabular-nums select-none">
                       REC-{String(i + 1).padStart(3, '0')}
                     </span>
                     <p className="text-xs text-zinc-300 leading-relaxed">{line}</p>
@@ -937,12 +971,12 @@ function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts
             )}
 
             {page.job && (
-              <div className="border border-dashed border-cyan-900/30 rounded px-3 py-2 space-y-1">
-                <div className="text-xs text-cyan-800/50 uppercase tracking-wider">// contract</div>
+              <div className="border border-dashed border-cyan-900/40 rounded px-3 py-2.5 space-y-1.5">
+                <div className="text-xs text-cyan-800/60 uppercase tracking-wider">// contract available</div>
                 <div className="text-xs font-semibold text-cyan-300">{page.job.title}</div>
                 <div className="text-xs text-zinc-500">{page.job.corp} · {page.job.pay}</div>
                 <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
-                  className="mt-1 text-xs px-2 py-0.5 rounded border border-cyan-900/40 text-cyan-600 hover:text-cyan-300 transition-colors">
+                  className="mt-0.5 text-xs px-2 py-0.5 rounded border border-cyan-900/40 text-cyan-600 hover:text-cyan-300 transition-colors">
                   accept contract
                 </button>
               </div>
@@ -950,12 +984,12 @@ function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts
 
             {page.links.length > 0 && (
               <div>
-                <div className="text-xs text-cyan-800/60 uppercase tracking-widest mb-2">CROSS-REFERENCES</div>
-                <div className="border border-dashed border-cyan-900/30 rounded divide-y divide-cyan-900/20">
+                <div className="text-xs text-cyan-900/60 uppercase tracking-widest mb-2">CROSS-REFERENCES</div>
+                <div className="border border-dashed border-cyan-900/40 rounded overflow-hidden divide-y divide-cyan-900/20">
                   {page.links.map((lnk, i) => (
                     <button key={i} onClick={() => navigate(lnk.url)}
                       className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-cyan-950/30 transition-colors">
-                      <span className="text-xs text-cyan-900/70 tabular-nums shrink-0">[{String(i + 1).padStart(2, '0')}]</span>
+                      <span className="text-xs text-cyan-900/60 tabular-nums shrink-0 select-none">[{String(i + 1).padStart(2, '0')}]</span>
                       <span className="text-xs text-cyan-400 hover:text-cyan-200 transition-colors">{lnk.label}</span>
                     </button>
                   ))}
@@ -970,22 +1004,37 @@ function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts
 }
 
 // ── LAYOUT: VOID ──────────────────────────────────────────────────────────
-// Dark market terminal. Hostile, sparse, red-on-black.
+// Dark-net grey market terminal. Pure black, red tones, hostile sparse mono.
 function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-black text-red-200 font-mono text-xs flex flex-col">
-      <div className="px-4 pt-3 pb-2 border-b border-red-900/30 shrink-0">
-        <div className="text-xs text-red-900/70 uppercase tracking-widest mb-1.5 animate-pulse">
+
+      {/* ── Header ── */}
+      <div className="px-4 pt-3 pb-2.5 border-b border-red-900/30 bg-zinc-950 shrink-0">
+        <div className="text-xs text-red-900/60 uppercase tracking-widest mb-2 animate-pulse">
           !! UNREGISTERED NODE !! GRID ROUTING DISABLED !!
         </div>
         <h1 className="text-sm font-bold text-red-300 leading-snug">{page.title}</h1>
-        {page.subtitle && <p className="text-xs text-red-900/60 mt-0.5">{page.subtitle}</p>}
+        {page.subtitle && <p className="text-xs text-red-900/50 mt-0.5">{page.subtitle}</p>}
+        <div className="mt-2 pt-1.5 border-t border-red-900/20 flex items-center gap-2">
+          <span className="text-xs text-red-900/40 uppercase tracking-widest">{page.site}</span>
+          {isLive && (
+            <>
+              <span className="text-red-900/30">·</span>
+              <div className="flex items-center gap-1">
+                <span className="w-1 h-1 rounded-full bg-red-700 animate-pulse" />
+                <span className="text-xs text-red-900/50">active</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
+      {/* ── Content ── */}
       <div className="px-4 py-3 space-y-4 flex-1">
         {gateBlocked ? (
-          <div className="border border-red-900/40 px-3 py-2 rounded">
-            <p className="text-xs text-red-500 font-bold">⛔ ACCESS DENIED</p>
+          <div className="border border-red-900/40 px-3 py-2.5 rounded">
+            <p className="text-xs text-red-500 font-bold uppercase tracking-wider">⛔ ACCESS DENIED</p>
             <p className="text-xs text-red-900/60 mt-1">{page.gateHint ?? 'You lack the required standing.'}</p>
           </div>
         ) : (
@@ -994,7 +1043,7 @@ function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
               <div className="bg-red-950/10 border border-red-900/20 rounded px-3 py-2.5 space-y-2">
                 {page.body.map((line, i) => (
                   <p key={i} className="text-xs text-red-200/70 leading-relaxed">
-                    <span className="text-red-900/60 mr-1.5">&gt;</span>{line}
+                    <span className="text-red-900/50 mr-1.5 select-none">&gt;</span>{line}
                   </p>
                 ))}
               </div>
@@ -1004,11 +1053,11 @@ function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 
             {page.links.length > 0 && (
               <div className="space-y-1.5">
-                <div className="text-xs text-red-900/50 uppercase tracking-widest">-- NAV --</div>
+                <div className="text-xs text-red-900/40 uppercase tracking-widest select-none">-- NAV --</div>
                 {page.links.map((lnk, i) => (
                   <button key={i} onClick={() => navigate(lnk.url)}
-                    className="block text-left text-xs text-red-500/70 hover:text-red-300 transition-colors">
-                    [{i}] {lnk.label}
+                    className="block text-left text-xs text-red-600/70 hover:text-red-300 transition-colors">
+                    <span className="text-red-900/50 mr-1.5 select-none">[{i}]</span>{lnk.label}
                   </button>
                 ))}
               </div>
@@ -1021,41 +1070,56 @@ function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: FORUM ─────────────────────────────────────────────────────────
-// Real forum board — Reddit/HN style. Yellow header, thread cards, user avatars.
+// Community board. Yellow top bar, upvote header, reply cards with colour-coded avatars.
 function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
+  const replyCount = forumPosts.length > 0 ? forumPosts.length : page.body.length
+
   return (
     <div className="flex-1 overflow-y-auto bg-neutral-100 text-neutral-800 font-sans text-sm flex flex-col">
-      {/* Board nav */}
+
+      {/* ── Board nav ── */}
       <div className="bg-yellow-500 px-4 py-2.5 flex items-center justify-between shrink-0">
-        <span className="text-xs font-black text-yellow-900 uppercase tracking-wide">{page.site}</span>
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-yellow-900/20 rounded flex items-center justify-center shrink-0">
+            <span className="text-yellow-900 text-xs font-black leading-none">Y</span>
+          </div>
+          <span className="text-xs font-black text-yellow-950 uppercase tracking-wider">{page.site}</span>
+        </div>
         {isLive && (
-          <div className="flex items-center gap-1 bg-yellow-600/30 px-2 py-0.5 rounded-full">
+          <div className="flex items-center gap-1.5 bg-yellow-600/30 px-2 py-0.5 rounded-full">
             <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-            <span className="text-xs text-yellow-900 font-bold">LIVE</span>
+            <span className="text-xs text-yellow-950 font-bold">LIVE</span>
           </div>
         )}
       </div>
 
-      {/* Thread header */}
+      {/* ── Thread header ── */}
       <div className="bg-white border-b border-neutral-200 px-4 py-4 shrink-0">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded bg-yellow-100 border border-yellow-300 flex items-center justify-center shrink-0 mt-0.5">
-            <span className="text-yellow-700 font-black text-sm">▲</span>
+          <div className="flex flex-col items-center gap-0.5 shrink-0 mt-0.5">
+            <button className="text-neutral-300 hover:text-amber-500 transition-colors text-base leading-none">▲</button>
+            <span className="text-xs font-bold text-neutral-600 tabular-nums">42</span>
+            <button className="text-neutral-300 hover:text-blue-500 transition-colors text-base leading-none">▼</button>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold text-neutral-900 leading-snug">{page.title}</h1>
             {page.subtitle && <p className="text-xs text-neutral-400 italic mt-0.5">{page.subtitle}</p>}
-            <div className="flex items-center gap-3 mt-1.5 text-xs text-neutral-400">
-              <span>{forumPosts.length > 0 ? forumPosts.length : page.body.length} replies</span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs text-neutral-400">
+              <span className="font-medium">{replyCount} replies</span>
               <span>·</span>
               <span>07 May 2026</span>
-              <span>·</span>
-              <span className="text-neutral-500 font-medium">thread/gridos-watch</span>
+              {page.links.length > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-neutral-500 font-mono truncate max-w-[140px]">{url}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Posts ── */}
       <div className="px-4 py-3 space-y-2 flex-1">
         {gateBlocked ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -1064,25 +1128,25 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
           </div>
         ) : (
           <>
-            {/* OP post */}
+            {/* OP body */}
             {page.body.length > 0 && (
-              <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3 space-y-2">
+              <div className="bg-white rounded-lg border-2 border-yellow-400 px-4 py-3 space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center shrink-0">
-                    <span className="text-yellow-900 text-xs font-black leading-none">OP</span>
+                  <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
+                    <span className="text-yellow-950 text-xs font-black leading-none">OP</span>
                   </div>
                   <span className="text-xs font-bold text-neutral-700">Original Post</span>
-                  <span className="text-xs text-neutral-400 ml-auto">07 May</span>
+                  <span className="text-xs text-neutral-400 ml-auto">07 May · pinned</span>
                 </div>
                 {page.body.map((line, i) => (
-                  <p key={i} className="text-xs text-neutral-600 leading-relaxed pl-7">{line}</p>
+                  <p key={i} className="text-xs text-neutral-600 leading-relaxed pl-8">{line}</p>
                 ))}
               </div>
             )}
 
             {/* Replies */}
             {forumPosts.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {forumPosts.map(p => (
                   <ForumPost key={p.id} row={p} t={t} />
                 ))}
@@ -1097,8 +1161,9 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
                 <div className="space-y-1.5">
                   {page.links.map((lnk, i) => (
                     <button key={i} onClick={() => navigate(lnk.url)}
-                      className="block text-left text-xs text-yellow-700 hover:text-yellow-900 transition-colors">
-                      ▸ <span className="underline underline-offset-2">{lnk.label}</span>
+                      className="flex items-center gap-1.5 text-xs text-yellow-700 hover:text-yellow-900 transition-colors group">
+                      <span className="shrink-0 group-hover:translate-x-0.5 transition-transform">▸</span>
+                      <span className="underline underline-offset-2 decoration-yellow-300 group-hover:decoration-yellow-600">{lnk.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1159,7 +1224,6 @@ export default function GridBrowser() {
 
   const layoutProps: LayoutProps = { page: page!, t, url, navigate, gateBlocked, isLive, forumPosts }
 
-  // Address bar is always dark/mono regardless of page theme for the OS chrome feel
   return (
     <div className="flex flex-col h-full bg-slate-900 font-mono text-sm">
 
