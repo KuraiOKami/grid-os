@@ -1,10 +1,16 @@
-// ── engine/index.ts ───────────────────────────────────────────────────────────
-// Barrel export for the condition engine package.
-// Import from '@/lib/engine' rather than deep paths.
+// ── src/lib/engine/index.ts ───────────────────────────────────────────────────
+// Public surface of the engine module.
+// Import from '@/lib/engine' — not from sub-files directly.
 
-export type { ConditionNode }      from './conditionTypes'
-export type { GameStateSnapshot }  from './evaluate'
-export type { Effect }             from './effects'
+export type {
+  ConditionNode,
+  Effect,
+  GameStateSnapshot,
+  TriggerRow,
+  TriggerEvent,
+  RepTrack,
+} from './types'
 
-export { evaluate, snapshotGameState } from './evaluate'
-export { dispatchEffect, dispatchAll } from './dispatch'
+export { evaluate, buildSnapshot } from './evaluator'
+export { effectHandlers }         from './effectHandlers'
+export { triggerEffect, dispatchEffects, runTrigger } from './dispatch'
