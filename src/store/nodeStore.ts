@@ -2,6 +2,7 @@
 // Zustand store for NODE — the in-world social media platform.
 // Signals (posts), uplinks (likes), relays (retweets), follows.
 // Idle system: deployable scripts, influence currency, inbox, NPC ticker.
+// Ops system: covert operations with cooldowns and intel results.
 
 import { create } from 'zustand'
 import type { FactionId } from '@/lib/factions'
@@ -125,6 +126,146 @@ export const SCRIPT_DEFS: ScriptDef[] = [
   },
 ]
 
+// ── Ops System ────────────────────────────────────────────────────────────────
+
+export type OpCategory = 'recon' | 'disinformation' | 'extraction' | 'sabotage'
+
+export type OpStatus = 'idle' | 'active' | 'cooldown' | 'complete'
+
+export interface OpDef {
+  id:             string
+  name:           string
+  category:       OpCategory
+  desc:           string
+  durationMs:     number   // how long the op takes to run
+  cooldownMs:     number   // lockout after completion
+  costInfluence:  number
+  minInfluence?:  number   // influence floor required to unlock
+  minShadow?:     number
+  successChance:  number   // 0–1
+  intelTemplates: string[] // success results shown to player
+  failTemplates:  string[] // failure messages
+}
+
+export interface ActiveOp {
+  defId:      string
+  startedAt:  number   // when op was launched
+  endsAt:     number   // startedAt + durationMs
+  cooldownAt: number   // endsAt + cooldownMs
+  succeeded?: boolean  // set when op resolves
+  intel?:     string   // the result string shown to player
+}
+
+export const OP_DEFS: OpDef[] = [
+  {
+    id: 'passive_scan',
+    name: 'Passive Scan',
+    category: 'recon',
+    desc: 'Sweeps public node traffic for patterns. Low risk, low yield. Good starting point.',
+    durationMs:    20_000,
+    cooldownMs:    60_000,
+    costInfluence: 0,
+    successChance: 0.90,
+    intelTemplates: [
+      'Scan complete. NEXUS patrol frequency elevated in Sector 4 — avoid grid routes through the eastern relay.',
+      'Public node log shows 3 unregistered IDs active in the last cycle. Cross-referencing with known PHX handles.',
+      'Traffic anomaly detected: high-volume burst from IRON_OPS node 20 minutes ago. Possible contract handoff.',
+      'Scan flagged a ghost relay operating through a citizen node (@mira_guild adjacent). Signal leaking from underground traffic.',
+      'Public Frequency board shows coordinated uplink spike on #GhostShell. Not organic — bot-assisted amplification likely.',
+    ],
+    failTemplates: [
+      'Scan returned no useful signal. Grid noise too high this cycle.',
+      'Scan interrupted — NEXUS sweep detected in the target sector. Pulled out early.',
+    ],
+  },
+  {
+    id: 'deep_trace',
+    name: 'Deep Trace',
+    category: 'recon',
+    desc: 'Traces an anonymous node back through relay hops. Slow but reveals hidden identities.',
+    durationMs:    45_000,
+    cooldownMs:    120_000,
+    costInfluence: 8,
+    minShadow:     10,
+    successChance: 0.70,
+    intelTemplates: [
+      'Trace complete. PHX_LEAKS relay chain ends at a node registered to a Sector 7 fabrication co-op. Civilian cover.',
+      'Deep trace resolved 4 relay hops. Final node: unregistered. Last known ping: 11 hours ago from a SYND-adjacent district.',
+      'Target node identified. Handle: @void_runner_441. No NEXUS flag on record — clean profile, heavy underground traffic.',
+      'Trace hit a dead-end mirror node. Someone set up a deliberate loop. This person knows what they\'re doing.',
+      'Relay chain traced to a ghost cluster operated by the Iron Circuit. Not PHX — IRON private comms.',
+    ],
+    failTemplates: [
+      'Trace failed. Node obfuscation too deep — hit a dead mirror after 2 hops.',
+      'NEXUS routing flagged the trace before completion. Pulled the thread before it bounced back.',
+    ],
+  },
+  {
+    id: 'signal_plant',
+    name: 'Signal Plant',
+    category: 'disinformation',
+    desc: 'Injects a crafted signal into the feed through a spoofed node. Hard to trace back.',
+    durationMs:    30_000,
+    cooldownMs:    90_000,
+    costInfluence: 15,
+    minShadow:     20,
+    successChance: 0.75,
+    intelTemplates: [
+      'Signal planted. Fake compliance advisory seeded into the Sector 4 feed. NPC reaction expected within 2 cycles.',
+      'Plant successful. Fabricated IronCircuit alert now circulating. Three citizen accounts already relayed it.',
+      'Disinfo drop live. SYND-adjacent nodes picking up the planted rumor. Ledger noise should follow.',
+      'Signal plant confirmed. PHX_LEAKS relay network spreading the fake advisory — ironic.',
+    ],
+    failTemplates: [
+      'Plant rejected — spoofed node signature didn\'t pass grid authentication. Signal never reached the feed.',
+      'NEXUS bot flagged the plant within 60 seconds. Removed before any meaningful spread.',
+    ],
+  },
+  {
+    id: 'data_pull',
+    name: 'Data Pull',
+    category: 'extraction',
+    desc: 'Extracts a data packet from an exposed node. High risk. Significant intel potential.',
+    durationMs:    60_000,
+    cooldownMs:    180_000,
+    costInfluence: 25,
+    minInfluence:  20,
+    minShadow:     30,
+    successChance: 0.55,
+    intelTemplates: [
+      'Data pull complete. Extracted a partial NEXUS sector report — lists 6 citizen IDs under active compliance review.',
+      'Pull returned a Guild contract manifest. Three off-book contracts not listed on ContractHub. IRON involvement likely.',
+      'Extracted a SYND encrypted memo. Partial decrypt: mentions "Varn failsafe" and a node in Sector 9.',
+      'Data pull hit a honeypot partition. Exfiltrated before it triggered but only got surface layer data — grid map fragment.',
+    ],
+    failTemplates: [
+      'Data pull tripped a NEXUS intrusion alarm. Aborted with nothing. Expect elevated patrol activity.',
+      'Target node hardened since last scan. Pull returned empty — content had been wiped or moved.',
+    ],
+  },
+  {
+    id: 'relay_burn',
+    name: 'Relay Burn',
+    category: 'sabotage',
+    desc: 'Disrupts a target relay node, cutting it from the network for a full cycle. Loud.',
+    durationMs:    40_000,
+    cooldownMs:    240_000,
+    costInfluence: 30,
+    minInfluence:  25,
+    minShadow:     40,
+    successChance: 0.60,
+    intelTemplates: [
+      'Relay burn confirmed. NEXUS eastern grid relay is dark — traffic rerouting through sector 6 backup nodes.',
+      'Target relay node offline. IronCircuit contract board latency spiked 400ms — their dispatch is running slow.',
+      'Burn successful. PHX ghost relay chain disrupted — underground traffic in this sector is grounded for the cycle.',
+    ],
+    failTemplates: [
+      'Burn failed. Target node detected the injection and rerouted before the command landed.',
+      'Partial burn — node degraded but not down. NEXUS maintenance dispatched. Operation compromised.',
+    ],
+  },
+]
+
 // ── NPC Post Templates ────────────────────────────────────────────────────────
 
 const NPC_POST_TEMPLATES: Record<string, string[]> = {
@@ -143,7 +284,7 @@ const NPC_POST_TEMPLATES: Record<string, string[]> = {
   'citizen-vex': [
     'okay who else is seeing weird latency on the relay nodes lately. feels like something routing through this sector #GhostShell',
     'ran the ghost trace again. different topology than last time. the map is changing. #PHX',
-    'filed the sector 7 report. immediately got a "verification pending" flag. so that\'s fun',
+    'filed the sector 7 report. immediately got a \"verification pending\" flag. so that\'s fun',
     'successfully avoided three flag triggers tonight. new route is holding. #GhostShell #OPSEC',
   ],
   'citizen-mira': [
@@ -346,6 +487,10 @@ interface NodeState {
   scripts:   RunningScript[]
   inbox:     InboxMessage[]
 
+  // ops system
+  activeOps:     ActiveOp[]      // ops currently running or in cooldown
+  intelLog:      string[]        // last 20 intel results (success or fail)
+
   // actions — feed
   postSignal:  (body: string, tags?: string[]) => void
   uplink:      (id: string) => void
@@ -362,6 +507,11 @@ interface NodeState {
   tickNPC:      () => void
   addInbox:     (msg: Omit<InboxMessage, 'id' | 'read'>) => void
   markAllRead:  () => void
+
+  // actions — ops
+  launchOp:   (defId: string, playerShadow: number) => void
+  resolveOps: () => void          // call on a timer to check for completed ops
+  opStatus:   (defId: string) => OpStatus
 }
 
 // ── Store ──────────────────────────────────────────────────────────────────────
@@ -376,6 +526,8 @@ export const useNodeStore = create<NodeState>((set, get) => ({
   influence: 0,
   scripts:   [],
   inbox:     [],
+  activeOps: [],
+  intelLog:  [],
 
   // ── Feed actions ────────────────────────────────────────────────────────────
 
@@ -537,5 +689,78 @@ export const useNodeStore = create<NodeState>((set, get) => ({
 
   markAllRead: () => {
     set(s => ({ inbox: s.inbox.map(m => ({ ...m, read: true })) }))
+  },
+
+  // ── Ops actions ─────────────────────────────────────────────────────────────
+
+  launchOp: (defId, playerShadow) => {
+    const { influence, activeOps } = get()
+    const def = OP_DEFS.find(d => d.id === defId)
+    if (!def) return
+
+    // Already running or in cooldown
+    const existing = activeOps.find(o => o.defId === defId)
+    if (existing) return
+
+    // Gating checks
+    if (influence < def.costInfluence) return
+    if ((def.minShadow ?? 0) > playerShadow) return
+    if ((def.minInfluence ?? 0) > influence) return
+
+    const now = Date.now()
+    const op: ActiveOp = {
+      defId,
+      startedAt:  now,
+      endsAt:     now + def.durationMs,
+      cooldownAt: now + def.durationMs + def.cooldownMs,
+    }
+    set(s => ({
+      influence: s.influence - def.costInfluence,
+      activeOps: [...s.activeOps, op],
+    }))
+  },
+
+  resolveOps: () => {
+    const now = Date.now()
+    const { activeOps, intelLog } = get()
+    let changed = false
+    const newIntel: string[] = []
+
+    const updated = activeOps.map(op => {
+      // Already resolved
+      if (op.succeeded !== undefined) return op
+      // Not done yet
+      if (now < op.endsAt) return op
+
+      const def = OP_DEFS.find(d => d.id === op.defId)
+      if (!def) return op
+
+      const succeeded = Math.random() < def.successChance
+      const pool = succeeded ? def.intelTemplates : def.failTemplates
+      const intel = pool[Math.floor(Math.random() * pool.length)]
+
+      newIntel.push(intel)
+      changed = true
+      return { ...op, succeeded, intel }
+    })
+
+    // Prune fully expired cooldowns
+    const pruned = updated.filter(op => now < op.cooldownAt)
+
+    if (changed || pruned.length !== activeOps.length) {
+      set({
+        activeOps: pruned,
+        intelLog:  [...newIntel, ...intelLog].slice(0, 20),
+      })
+    }
+  },
+
+  opStatus: (defId) => {
+    const now = Date.now()
+    const op = get().activeOps.find(o => o.defId === defId)
+    if (!op) return 'idle'
+    if (now < op.endsAt) return 'active'
+    if (op.succeeded !== undefined && now < op.cooldownAt) return 'cooldown'
+    return 'complete'
   },
 }))
