@@ -18,7 +18,11 @@ import { useMissionStore }     from './missionStore'
 import { useEmailQueueStore, BOOT_EMAILS } from './emailQueue'
 import { useRepStore }         from './reputationStore'
 import { useMailStore }        from './mailStore'
-import { addFile as fsAddFile } from './fsStore'
+import { useFSStore } from './fsStore'
+
+function fsAddFile(name: string, content: string) {
+  useFSStore.getState().writeFile(['home', 'citizen', name], content)
+}
 
 const MINUTE = 60_000
 
@@ -291,7 +295,7 @@ function _completeMission02(
   useRepStore.getState().adjust('compliance', 1)
 
   // Phase 0.7: Memo 1 added to filesystem
-  fsAddFile({ name: 'memo_1_it_reminder.txt', path: '~/', type: 'txt', content:
+  fsAddFile('memo_1_it_reminder.txt',
 `From: Marcus Tell <mtell@gridos.corp>
 To: All Contractors
 Subject: IT reminder
@@ -302,7 +306,7 @@ make sure your compliance score is current. Access below 65 won't route.
 Also: close your unused tabs. Yes, I can see them.
 
 — Marcus`
-  })
+  )
 }
 
 // ── M-03 helpers ──────────────────────────────────────────────────────────────
@@ -329,7 +333,7 @@ function _checkM03Completion(
     story.addCredits(600)
     useRepStore.getState().adjust('shadow', 3)
 
-    fsAddFile({ name: 'memo_2_overseer_anomaly_preliminary.txt', path: '~/', type: 'txt', content:
+    fsAddFile('memo_2_overseer_anomaly_preliminary.txt',
 `[GRIDCORP INTERNAL — PRELIMINARY]
 
 OVERSEER anomaly — preliminary review
@@ -343,7 +347,7 @@ Cause: under review.
 Status: not disclosed to public infrastructure.
 
 — Office of Internal Compliance`
-    })
+    )
 
     // E-12 queued 20 min after completion (Silas / Commune intro)
     // E-12 definition lives in Phase 2/3 scope — placeholder note
