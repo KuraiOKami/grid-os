@@ -177,7 +177,17 @@ const MISSION_DEFS: Record<MissionId, MissionDef> = {
   'M-06': { id: 'M-06', title: 'Deep Cover',         giver: 'Commune',      description: '', status: 'inactive', objectives: [], reward: {} },
   'M-07': { id: 'M-07', title: 'The Archivist',      giver: 'E-25',         description: '', status: 'inactive', objectives: [], reward: {} },
   'M-08': { id: 'M-08', title: 'Gridfall',           giver: 'Null + Silas', description: '', status: 'inactive', objectives: [], reward: {} },
-  'S-01': { id: 'S-01', title: 'Lost Courier',       giver: 'self',         description: '', status: 'inactive', objectives: [], reward: {} },
+  'S-01': {
+    id: 'S-01', title: 'First Verdict', giver: 'GridOS Compliance Division',
+    description: 'You\'ve been granted analyst access to WATCH. Review your first case file, mark suspicious evidence, and submit a verdict. This is what compliance work actually looks like.',
+    status: 'inactive',
+    objectives: [
+      { id: 'S01-OBJ-1', label: 'Open the WATCH app',                              complete: false },
+      { id: 'S01-OBJ-2', label: 'Review a case — check the evidence tabs',          complete: false },
+      { id: 'S01-OBJ-3', label: 'Submit your first verdict',                        complete: false },
+    ],
+    reward: { credits: 280, compliance: 2 },
+  },
   'S-02': { id: 'S-02', title: 'The Noodle Cipher',  giver: 'E-23',         description: '', status: 'inactive', objectives: [], reward: {} },
   'S-03': { id: 'S-03', title: 'Reputation Run',     giver: 'E-26',         description: '', status: 'inactive', objectives: [], reward: {} },
   'S-04': { id: 'S-04', title: 'The Phisher',        giver: 'E-14',         description: '', status: 'inactive', objectives: [], reward: {} },

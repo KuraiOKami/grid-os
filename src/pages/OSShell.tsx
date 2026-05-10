@@ -479,7 +479,7 @@ function OsWindow({ win, onClose, onFocus, onMove, onResize, onToggleMax, onMini
     if (win.content)                              return win.content
     if (win.title === 'GridBrowser')              return <GridBrowser />
     if (win.title === 'Job Board')                return <JobBoard />
-    if (win.title === 'Watch')                    return <WatchApp />
+    if (win.title === 'Watch')                    { checkTriggers({ type: 'open_app', appId: 'watch' }); return <WatchApp /> }
     if (win.title === 'Mail')                     return <MailApp />
     if (win.title === 'App Store')                return <AppStore />
     if (win.title === 'NODE')                     return <NodeApp />

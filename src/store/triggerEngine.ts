@@ -29,10 +29,12 @@ const MINUTE = 60_000
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type TriggerEvent =
-  | { type: 'page_visit';   url:     string }
-  | { type: 'email_read';   emailId: string }
-  | { type: 'job_complete'; jobId:   string }
-  | { type: 'file_read';    path:    string }
+  | { type: 'page_visit';   url:      string }
+  | { type: 'email_read';   emailId:  string }
+  | { type: 'job_complete'; jobId:    string }
+  | { type: 'file_read';    path:     string }
+  | { type: 'open_app';     appId:    string }
+  | { type: 'watch_submit'; decision: string }
   | { type: 'rep_change' }
   | { type: 'game_start' }
 
@@ -45,12 +47,14 @@ export function checkTriggers(event: TriggerEvent) {
   const rep      = useRepStore.getState()
 
   switch (event.type) {
-    case 'game_start':    _onGameStart(story, missions, queue);          break
-    case 'email_read':    _onEmailRead(event.emailId, story, missions, queue); break
-    case 'page_visit':    _onPageVisit(event.url, story, missions, rep); break
-    case 'job_complete':  _onJobComplete(event.jobId, story, missions, queue, rep); break
-    case 'file_read':     _onFileRead(event.path, story, missions);      break
-    case 'rep_change':    _onRepChange(story, queue, rep);               break
+    case 'game_start':    _onGameStart(story, missions, queue);                    break
+    case 'email_read':    _onEmailRead(event.emailId, story, missions, queue);     break
+    case 'page_visit':    _onPageVisit(event.url, story, missions, rep);           break
+    case 'job_complete':  _onJobComplete(event.jobId, story, missions, queue, rep);break
+    case 'file_read':     _onFileRead(event.path, story, missions);                break
+    case 'open_app':      _onOpenApp(event.appId, story, missions);                break
+    case 'watch_submit':  _onWatchSubmit(event.decision, story, missions);         break
+    case 'rep_change':    _onRepChange(story, queue, rep);                         break
   }
 
   // Always re-evaluate phase advancement after any trigger
@@ -314,6 +318,81 @@ Also: close your unused tabs. Yes, I can see them.
 
 — Marcus`
   )
+
+  // Deliver Watch access code mail — reward for first job completion
+  const alreadySent = useMailStore.getState().mails.some(m => m.storyId === 'WATCH-ACCESS')
+  if (!alreadySent) {
+    useEmailQueueStore.getState().queueEmail({
+      deliverAt: Date.now() + 30_000,   // 30s after job completion
+      mail: {
+        storyId:   'WATCH-ACCESS',
+        tag:       'SYSTEM',
+        from:      'compliance@gridos.corp',
+        subject:   'Analyst Access — WATCH Intelligence System',
+        dot:       '#ff3b5c',
+        watchCode: 'WATCH-GRID-01',
+        body:
+`GRIDCORP COMPLIANCE DIVISION
+
+Based on your contract activity, you have been selected for analyst-level access to the WATCH Citizen Intelligence System.
+
+WATCH is used by GridOS compliance analysts to review flagged citizen behavior and issue formal verdicts. Your decisions carry operational weight.
+
+ACCESS CODE: WATCH-GRID-01
+
+Enter this code in the App Store to install WATCH. Review your first case file and submit a verdict to complete your analyst onboarding.
+
+Note: All WATCH activity is logged and attributed to your analyst profile. Decisions are permanent.
+
+— GridOS Compliance Division`,
+      } as any,
+    })
+  }
+}
+
+// ── open_app ──────────────────────────────────────────────────────────────────
+
+function _onOpenApp(
+  appId:    string,
+  story:    ReturnType<typeof useStoryStore.getState>,
+  missions: ReturnType<typeof useMissionStore.getState>,
+) {
+  // Activate S-01 when Watch is first opened
+  if (appId === 'watch' && story.getMission('S-01') === 'inactive' && story.hasFlag('FIRST_JOB_DONE')) {
+    missions.setMissionStatus('S-01', 'active')
+    story.setMission('S-01', 'active')
+  }
+  // S-01 OBJ-1: opened Watch
+  if (appId === 'watch' && story.getMission('S-01') === 'active') {
+    missions.setObjectiveComplete('S-01', 'S01-OBJ-1')
+  }
+}
+
+// ── watch_submit ──────────────────────────────────────────────────────────────
+
+function _onWatchSubmit(
+  decision: string,
+  story:    ReturnType<typeof useStoryStore.getState>,
+  missions: ReturnType<typeof useMissionStore.getState>,
+) {
+  if (story.getMission('S-01') !== 'active') return
+
+  // '__review__' = player is browsing evidence tabs (marks OBJ-2)
+  if (decision === '__review__') {
+    missions.setObjectiveComplete('S-01', 'S01-OBJ-2')
+    return
+  }
+
+  // Actual verdict submitted → complete OBJ-3 and the mission
+  missions.setObjectiveComplete('S-01', 'S01-OBJ-2')
+  missions.setObjectiveComplete('S-01', 'S01-OBJ-3')
+
+  if (missions.allObjectivesComplete('S-01')) {
+    missions.setMissionStatus('S-01', 'complete')
+    story.setMission('S-01', 'complete')
+    story.addCredits(280)
+    useRepStore.getState().adjust('compliance', 2)
+  }
 }
 
 // ── M-03 helpers ──────────────────────────────────────────────────────────────

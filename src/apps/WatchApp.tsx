@@ -8,6 +8,7 @@ import { useRepStore }    from '@/store/reputationStore'
 import { useMailStore }   from '@/store/mailStore'
 import { useWalletStore } from '@/store/walletStore'
 import { useCareerStore } from '@/store/careerStore'
+import { checkTriggers }  from '@/store/triggerEngine'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -574,7 +575,55 @@ const SESSION_QUOTA = 3
 
 // ── WatchApp ──────────────────────────────────────────────────────────────────
 
+const TUTORIAL_KEY = 'gridos_watch_tutorial_done'
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'WATCH // Analyst Access',
+    body: `You have been granted access to the WATCH Citizen Intelligence System.
+
+WATCH is used by GridOS Compliance Division analysts to review flagged citizen behavior and issue formal verdicts.
+
+Each case file contains data collected across five categories. Your job is to review the evidence and decide what happens next.
+
+Your decisions are logged. They are permanent. There is no appeal process.`,
+  },
+  {
+    title: 'HOW TO REVIEW A CASE',
+    body: `Each case has five data tabs:
+
+  ACTIVITY    — citizen's browsing history
+                Click any URL for intelligence context.
+
+  MESSAGES    — intercepted communications
+  JOBS        — employment and contract history
+  NODE        — social media and public posts
+  FINANCIALS  — payment records and transfers
+
+Click any item to MARK it as suspicious evidence.
+Marked items build your case for stronger verdicts.
+At least 1 marked item is required for FLAG or ESCALATE.`,
+  },
+  {
+    title: 'VERDICTS',
+    body: `After reviewing the evidence, choose a verdict:
+
+  NO THREAT   — File cleared. No action taken. Base pay.
+  LOW CONCERN — Soft flag added to their profile.
+  FLAG        — Forwarded for active review. Requires 1 mark.
+  ESCALATE    — Maximum action. Real consequences.
+  BURY FILE   — Mark the file clean. No official pay.
+                Available at Shadow ≥ 40.
+
+Read the outcome text before you confirm. These are not NPCs.
+Your first case is already queued. Choose carefully.`,
+  },
+]
+
 export default function WatchApp() {
+  const [tutStep,      setTutStep]      = useState(() =>
+    localStorage.getItem(TUTORIAL_KEY) ? -1 : 0
+  )
   const [viewMode,     setViewMode]     = useState<'cases' | 'monitor'>('cases')
   const [caseIndex,    setCaseIndex]    = useState(0)
   const [selected,     setSelected]     = useState<Decision | null>(null)
@@ -647,6 +696,7 @@ export default function WatchApp() {
     addXP('auditor', selected === 'escalate' ? 15 : 8)
     setSubmitted(prev => ({ ...prev, [current.id]: selected }))
     setSessionCount(n => n + 1)
+    checkTriggers({ type: 'watch_submit', decision: selected })
 
     // Pay out — including corrupt bury rewards for v.thresh / kade.synd
     const payout = current.pay[selected]
@@ -676,6 +726,85 @@ export default function WatchApp() {
     { key: 'node',       label: 'NODE',       count: current.nodePosts.length },
     { key: 'financials', label: 'FINANCIALS', count: current.financials.length },
   ]
+
+  // ── Tutorial overlay ────────────────────────────────────────────────────────
+  if (tutStep >= 0 && tutStep < TUTORIAL_STEPS.length) {
+    const step = TUTORIAL_STEPS[tutStep]
+    const isLast = tutStep === TUTORIAL_STEPS.length - 1
+    return (
+      <div style={{
+        height: '100%', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: C.bg, color: C.text,
+        fontFamily: "'JetBrains Mono', monospace", padding: 32,
+      }}>
+        <div style={{ maxWidth: 480, width: '100%' }}>
+          {/* Step indicator */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+            {TUTORIAL_STEPS.map((_, i) => (
+              <div key={i} style={{
+                height: 2, flex: 1, borderRadius: 1,
+                background: i <= tutStep ? C.danger : C.faint,
+                transition: 'background 0.2s',
+              }} />
+            ))}
+          </div>
+
+          {/* Title */}
+          <div style={{ color: C.danger, fontWeight: 'bold', fontSize: 13,
+            letterSpacing: '0.1em', marginBottom: 16 }}>
+            {step.title}
+          </div>
+
+          {/* Body */}
+          <pre style={{
+            color: C.muted, fontSize: 11, lineHeight: 1.9,
+            whiteSpace: 'pre-wrap', fontFamily: 'inherit',
+            marginBottom: 32,
+          }}>
+            {step.body}
+          </pre>
+
+          {/* Navigation */}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            {tutStep > 0 && (
+              <button
+                onClick={() => setTutStep(t => t - 1)}
+                style={{
+                  padding: '8px 20px', background: 'none',
+                  border: `1px solid ${C.faint}`, color: C.muted,
+                  borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                }}
+              >
+                ← BACK
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (isLast) {
+                  localStorage.setItem(TUTORIAL_KEY, '1')
+                  setTutStep(-1)
+                } else {
+                  setTutStep(t => t + 1)
+                }
+              }}
+              style={{
+                padding: '8px 28px',
+                background: isLast ? C.danger : 'none',
+                border: `1px solid ${isLast ? C.danger : C.border}`,
+                color: isLast ? '#fff' : C.text,
+                borderRadius: 4, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 11, fontWeight: 'bold',
+                letterSpacing: '0.06em',
+              }}
+            >
+              {isLast ? 'BEGIN REVIEW' : 'NEXT →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
@@ -898,7 +1027,7 @@ export default function WatchApp() {
           {/* Data tabs */}
           <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
             {DATA_TABS.map(t => (
-              <button key={t.key} onClick={() => setActiveTab(t.key)}
+              <button key={t.key} onClick={() => { setActiveTab(t.key); checkTriggers({ type: 'watch_submit', decision: '__review__' }) }}
                 style={{ flex: 1, padding: '6px 0', fontSize: 9, border: 'none',
                   cursor: 'pointer', fontFamily: 'inherit',
                   letterSpacing: '0.08em',
