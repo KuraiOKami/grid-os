@@ -63,10 +63,23 @@ const ALL_APPS = [
   { id: 'socket',    title: 'SOCKET',       icon: '[S]',  w: 760, h: 520, accent: '#00cc88' },
 ]
 
+const ICON_W    = 88    // px width per icon column slot
+const ICON_H    = 96    // px height per icon row slot
+const ICON_PAD  = 20    // px from desktop edge
+
+function defaultIconPos(index: number, desktopH: number): { x: number; y: number } {
+  const perCol = Math.max(1, Math.floor((desktopH - ICON_PAD * 2) / ICON_H))
+  return {
+    x: ICON_PAD + Math.floor(index / perCol) * ICON_W,
+    y: ICON_PAD + (index % perCol) * ICON_H,
+  }
+}
+
 export default function OSShell() {
-  const [booted,   setBooted]   = useState(false)
-  const [time,     setTime]     = useState('')
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [booted,        setBooted]        = useState(false)
+  const [time,          setTime]          = useState('')
+  const [menuOpen,      setMenuOpen]      = useState(false)
+  const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>({})
   const desktopRef = useRef<HTMLDivElement>(null)
 
   // ─ store ───────────────────────────────────────────────────────────
@@ -118,22 +131,25 @@ export default function OSShell() {
         {/* Desktop */}
         <div ref={desktopRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
-          {/* Desktop icons */}
-          <div style={{
-            position: 'absolute', top: 24, left: 24,
-            display: 'flex', flexDirection: 'column', gap: 20,
-          }}>
-            {visibleApps.map(app => (
+          {/* Desktop icons — absolutely positioned, draggable */}
+          {visibleApps.map((app, i) => {
+            const dh  = desktopRef.current?.clientHeight ?? 600
+            const pos = iconPositions[app.id] ?? defaultIconPos(i, dh)
+            return (
               <DesktopIcon
                 key={app.id}
                 icon={app.icon}
                 label={app.title}
                 accent={app.accent}
                 badge={app.id === 'mail' && unreadCount > 0 ? unreadCount : 0}
+                x={pos.x}
+                y={pos.y}
+                desktopRef={desktopRef}
                 onClick={() => openApp(app.id)}
+                onDrag={(x, y) => setIconPositions(p => ({ ...p, [app.id]: { x, y } }))}
               />
-            ))}
-          </div>
+            )
+          })}
 
           {/* All windows */}
           {windows.map(win => (
@@ -207,19 +223,68 @@ export default function OSShell() {
 }
 
 // ── DesktopIcon ───────────────────────────────────────────────────────────
-function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
-  icon: string; label: string; accent?: string; badge?: number; onClick: () => void
+function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, x, y, desktopRef, onClick, onDrag }: {
+  icon: string; label: string; accent?: string; badge?: number
+  x: number; y: number
+  desktopRef: React.RefObject<HTMLDivElement>
+  onClick: () => void
+  onDrag: (x: number, y: number) => void
 }) {
-  const [hov, setHov] = useState(false)
+  const [hov,     setHov]     = useState(false)
+  const [isDrag,  setIsDrag]  = useState(false)
+  const didMove = useRef(false)
+
+  function handleMouseDown(e: React.MouseEvent) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const startX  = e.clientX
+    const startY  = e.clientY
+    const originX = x
+    const originY = y
+    didMove.current = false
+
+    function onMove(me: MouseEvent) {
+      const dx = me.clientX - startX
+      const dy = me.clientY - startY
+      if (!didMove.current && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        didMove.current = true
+        setIsDrag(true)
+      }
+      if (!didMove.current) return
+      const desktop = desktopRef.current
+      const maxX = desktop ? desktop.clientWidth  - 72 : 9999
+      const maxY = desktop ? desktop.clientHeight - 72 : 9999
+      onDrag(
+        Math.max(0, Math.min(maxX, originX + dx)),
+        Math.max(0, Math.min(maxY, originY + dy)),
+      )
+    }
+
+    function onUp() {
+      setIsDrag(false)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup',   onUp)
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup',   onUp)
+  }
+
   return (
     <button
-      onClick={onClick}
+      onMouseDown={handleMouseDown}
+      onClick={() => { if (!didMove.current) onClick() }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        background: 'none', border: 'none', cursor: 'pointer',
+        position: 'absolute', left: x, top: y,
+        background: 'none', border: 'none',
+        cursor: isDrag ? 'grabbing' : 'pointer',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 5, width: 64, padding: 0, position: 'relative',
+        gap: 5, width: 64, padding: 0,
+        userSelect: 'none', zIndex: isDrag ? 999 : 1,
+        opacity: isDrag ? 0.85 : 1,
+        transition: isDrag ? 'none' : 'opacity 0.1s',
       }}
     >
       <div style={{
@@ -228,9 +293,10 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
         fontSize: 12, fontWeight: 'bold', letterSpacing: 1,
         background: '#111118', borderRadius: 6,
         color: hov ? accent : '#6b6b80',
-        border: `1px solid ${hov ? accent : '#2a2a3a'}`,
-        boxShadow: hov ? `0 0 12px ${accent}33` : 'none',
-        transition: 'all 0.15s', fontFamily: 'inherit', position: 'relative',
+        border: `1px solid ${hov || isDrag ? accent : '#2a2a3a'}`,
+        boxShadow: hov || isDrag ? `0 0 12px ${accent}33` : 'none',
+        transition: isDrag ? 'none' : 'all 0.15s',
+        fontFamily: 'inherit', position: 'relative',
       }}>
         {icon}
         {badge > 0 && (
@@ -249,6 +315,7 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, onClick }: {
       <span style={{
         fontSize: 10, color: hov ? '#c8c8d8' : '#6b6b80',
         textAlign: 'center', lineHeight: 1.3, transition: 'color 0.15s',
+        pointerEvents: 'none',
       }}>
         {label}
       </span>
