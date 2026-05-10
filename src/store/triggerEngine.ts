@@ -13,12 +13,12 @@
 //   - Any file opened   (pass 'file_read', path)
 //   - Any rep change    (call directly, no args needed)
 
-import { useStoryStore }       from './storyStore'
-import { useMissionStore }     from './missionStore'
-import { useEmailQueueStore, BOOT_EMAILS } from './emailQueue'
-import { useRepStore }         from './reputationStore'
-import { useMailStore }        from './mailStore'
-import { useFSStore } from './fsStore'
+import { useStoryStore }                          from './storyStore'
+import { useMissionStore }                        from './missionStore'
+import { useEmailQueueStore, queueStoryEmail }    from './emailQueue'
+import { useRepStore }                            from './reputationStore'
+import { useMailStore }                           from './mailStore'
+import { useFSStore }                             from './fsStore'
 
 function fsAddFile(name: string, content: string) {
   useFSStore.getState().writeFile(['home', 'citizen', name], content)
@@ -47,14 +47,14 @@ export function checkTriggers(event: TriggerEvent) {
   const rep      = useRepStore.getState()
 
   switch (event.type) {
-    case 'game_start':    _onGameStart(story, missions, queue);                    break
-    case 'email_read':    _onEmailRead(event.emailId, story, missions, queue);     break
-    case 'page_visit':    _onPageVisit(event.url, story, missions, rep);           break
-    case 'job_complete':  _onJobComplete(event.jobId, story, missions, queue, rep);break
-    case 'file_read':     _onFileRead(event.path, story, missions);                break
-    case 'open_app':      _onOpenApp(event.appId, story, missions);                break
-    case 'watch_submit':  _onWatchSubmit(event.decision, story, missions);         break
-    case 'rep_change':    _onRepChange(story, queue, rep);                         break
+    case 'game_start':    void _onGameStart(story, missions, queue);                    break
+    case 'email_read':    void _onEmailRead(event.emailId, story, missions, queue);     break
+    case 'page_visit':         _onPageVisit(event.url, story, missions, rep);           break
+    case 'job_complete':       _onJobComplete(event.jobId, story, missions, queue, rep);break
+    case 'file_read':          _onFileRead(event.path, story, missions);                break
+    case 'open_app':           _onOpenApp(event.appId, story, missions);                break
+    case 'watch_submit':       _onWatchSubmit(event.decision, story, missions);         break
+    case 'rep_change':         _onRepChange(story, queue, rep);                         break
   }
 
   // Always re-evaluate phase advancement after any trigger
@@ -65,7 +65,7 @@ export function checkTriggers(event: TriggerEvent) {
 // Phase 0.1: queue E-01 immediately.
 // M-01 becomes active on first game start.
 
-function _onGameStart(
+async function _onGameStart(
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
   queue:    ReturnType<typeof useEmailQueueStore.getState>,
@@ -76,11 +76,8 @@ function _onGameStart(
   missions.setMissionStatus('M-01', 'active')
   story.setMission('M-01', 'active')
 
-  // Phase 0.1 — deliver E-01 immediately
-  queue.queueEmail({
-    deliverAt: Date.now(),
-    mail:      { ...BOOT_EMAILS['E-01'], storyId: 'E-01' } as any,
-  })
+  // Phase 0.1 — deliver E-01 immediately (content from Supabase)
+  await queueStoryEmail('E-01', 0)
 
   // Timed flavor/lore mails — arrive gradually to drive notification UX
   queue.queueEmail({
@@ -140,7 +137,7 @@ If you believe this is an error, no action is required. Your compliance record w
 
 // ── email_read ────────────────────────────────────────────────────────────────
 
-function _onEmailRead(
+async function _onEmailRead(
   emailId:  string,
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
@@ -151,10 +148,7 @@ function _onEmailRead(
     const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-02')
     const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-02')
     if (!alreadySent && !alreadyQueued) {
-      queue.queueEmail({
-        deliverAt: Date.now() + 15_000,  // 15 seconds
-        mail:      { ...BOOT_EMAILS['E-02'], storyId: 'E-02' } as any,
-      })
+      await queueStoryEmail('E-02', 15_000)
     }
   }
 
@@ -171,15 +165,11 @@ function _onEmailRead(
     const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-04')
     const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-04')
     if (!alreadySent && !alreadyQueued) {
-      queue.queueEmail({
-        deliverAt: Date.now() + 5 * MINUTE,
-        mail:      { ...BOOT_EMAILS['E-04'], storyId: 'E-04' } as any,
-      })
+      await queueStoryEmail('E-04', 5 * MINUTE)
     }
   }
 
   // ── M-01 objective 2: track onboarding emails read ───────────────────────
-  // Objective completes when E-01 through E-04 all read (checked below)
   const ONBOARDING_EMAIL_IDS = ['E-01', 'E-02', 'E-03', 'E-04']
   if (ONBOARDING_EMAIL_IDS.includes(emailId)) {
     _checkM01Objective2(story, missions)
@@ -221,10 +211,7 @@ function _onPageVisit(
   if (SECTOR7_PAGES.includes(url) && !story.hasFlag('SECTOR7_SUSPECTED')) {
     story.setFlag('SECTOR7_SUSPECTED')
     // E-10 queued 45 min after flag set — the underground reaches out
-    useEmailQueueStore.getState().queueEmail({
-      deliverAt: Date.now() + 45 * MINUTE,
-      mail:      { ...BOOT_EMAILS['E-10'], storyId: 'E-10' } as any,
-    })
+    void queueStoryEmail('E-10', 45 * MINUTE)
   }
 
   // ── M-03 objective 1: visited Gridcorp intranet ───────────────────────────
@@ -237,7 +224,6 @@ function _onPageVisit(
   // ── OVERSEER pressure: intranet page visit ───────────────────────────────
   if (url === 'gridos.corp/internal') {
     story.adjustOverseer(+3)
-    // compliance gate: if compliance >= 65, intranet is accessible — no extra penalty
     if (rep.compliance >= 65) {
       story.adjustOverseer(-3)  // net zero if legitimately accessed
     }
@@ -265,9 +251,6 @@ function _onJobComplete(
     missions.setObjectiveComplete('M-02', 'M02-OBJ-1')
     _completeMission02(story, missions)
   }
-
-  // ── Phase 0.6: first job done → phase 1 entry (handled by phase check) ───
-  // Phase advancement is checked at the end of checkTriggers()
 }
 
 // ── file_read ─────────────────────────────────────────────────────────────────
@@ -293,35 +276,27 @@ function _onRepChange(
   queue:    ReturnType<typeof useEmailQueueStore.getState>,
   rep:      ReturnType<typeof useRepStore.getState>,
 ) {
-  // ── OVERSEER thresholds ───────────────────────────────────────────────────
   const flag = story.overseerFlag
 
   if (flag >= 40 && !story.hasFlag('AGENT44_WARNED')) {
-    // E-14 first wave — delivered by triggerEngine (definition in Phase 3 scope)
-    // Placeholder: log that threshold was hit
     console.warn('[OVERSEER] Flag ≥ 40 — E-14 first wave should be queued')
   }
 
   if (flag >= 90 && story.getMission('M-03') === 'active') {
-    // M-03 failure condition
-    missions.setMissionStatus('M-03', 'failed')
+    useMissionStore.getState().setMissionStatus('M-03', 'failed')
     story.setMission('M-03', 'failed')
     useRepStore.getState().adjust('compliance', -15)
     console.warn('[M-03] Failed — overseerFlag hit 90 before completion')
-    // 48-hour cooldown + Agent 44 email handled by game timer
   }
 }
 
 // ── M-01 helpers ──────────────────────────────────────────────────────────────
 
-// Called every time an onboarding email is read.
-// Marks objective 2 complete when E-01 through E-04 are all in the read inbox.
 function _checkM01Objective2(
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
 ) {
-  // Only require E-01 and E-02 — E-03/E-04 arrive after M-01 completes (no circular dep)
-  const mail = useMailStore.getState()
+  const mail     = useMailStore.getState()
   const required = ['E-01', 'E-02']
   const readIds  = mail.mails.filter(m => !m.unread).map(m => m.storyId ?? m.id)
   if (required.every(id => readIds.includes(id))) {
@@ -342,11 +317,8 @@ function _checkM01Completion(
   story.addCredits(100)
   story.setFlag('ONBOARDING_COMPLETE')
 
-  // Phase 0.4: E-03 queued immediately
-  useEmailQueueStore.getState().queueEmail({
-    deliverAt: Date.now(),
-    mail:      { ...BOOT_EMAILS['E-03'], storyId: 'E-03' } as any,
-  })
+  // Phase 0.4: E-03 queued immediately (content from Supabase)
+  void queueStoryEmail('E-03', 0)
 }
 
 // ── M-02 helpers ──────────────────────────────────────────────────────────────
@@ -360,7 +332,6 @@ function _completeMission02(
   story.setFlag('FIRST_JOB_DONE')
   useRepStore.getState().adjust('compliance', 1)
 
-  // Phase 0.7: Memo 1 added to filesystem
   fsAddFile('memo_1_it_reminder.txt',
 `From: Marcus Tell <mtell@gridos.corp>
 To: All Contractors
@@ -374,11 +345,10 @@ Also: close your unused tabs. Yes, I can see them.
 — Marcus`
   )
 
-  // Deliver Watch access code mail — reward for first job completion
   const alreadySent = useMailStore.getState().mails.some(m => m.storyId === 'WATCH-ACCESS')
   if (!alreadySent) {
     useEmailQueueStore.getState().queueEmail({
-      deliverAt: Date.now() + 30_000,   // 30s after job completion
+      deliverAt: Date.now() + 30_000,
       mail: {
         storyId:   'WATCH-ACCESS',
         tag:       'SYSTEM',
@@ -412,12 +382,10 @@ function _onOpenApp(
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
 ) {
-  // Activate S-01 when Watch is first opened
   if (appId === 'watch' && story.getMission('S-01') === 'inactive' && story.hasFlag('FIRST_JOB_DONE')) {
     missions.setMissionStatus('S-01', 'active')
     story.setMission('S-01', 'active')
   }
-  // S-01 OBJ-1: opened Watch
   if (appId === 'watch' && story.getMission('S-01') === 'active') {
     missions.setObjectiveComplete('S-01', 'S01-OBJ-1')
   }
@@ -432,13 +400,11 @@ function _onWatchSubmit(
 ) {
   if (story.getMission('S-01') !== 'active') return
 
-  // '__review__' = player is browsing evidence tabs (marks OBJ-2)
   if (decision === '__review__') {
     missions.setObjectiveComplete('S-01', 'S01-OBJ-2')
     return
   }
 
-  // Actual verdict submitted → complete OBJ-3 and the mission
   missions.setObjectiveComplete('S-01', 'S01-OBJ-2')
   missions.setObjectiveComplete('S-01', 'S01-OBJ-3')
 
@@ -463,9 +429,7 @@ function _checkM03Completion(
   const obj2 = missions.missions['M-03'].objectives.find(o => o.id === 'M03-OBJ-2')?.complete
   const obj3 = missions.missions['M-03'].objectives.find(o => o.id === 'M03-OBJ-3')?.complete
 
-  // Completion route A: intranet visited + compliance >= 65
   const routeA = obj1 && rep.compliance >= 65
-  // Completion route B: file extracted via terminal (obj2 set externally by terminal)
   const routeB = obj2
 
   if ((routeA || routeB) && obj3) {
@@ -490,8 +454,6 @@ Status: not disclosed to public infrastructure.
 — Office of Internal Compliance`
     )
 
-    // E-12 queued 20 min after completion (Silas / Commune intro)
-    // E-12 definition lives in Phase 2/3 scope — placeholder note
     console.info('[M-03 complete] E-12 should be queued for +20min delivery')
   }
 }
@@ -503,18 +465,15 @@ function _checkPhaseAdvancement(
 ) {
   const { phase, hasFlag } = story
 
-  // Phase 0 → 1: FIRST_JOB_DONE flag set
   if (phase === 0 && hasFlag('FIRST_JOB_DONE')) {
     story.setPhase(1)
     _onPhase1Entry()
   }
 
-  // Phase 1 → 2: E-10 read (UNDERGROUND_CONTACT_MADE flag)
   if (phase === 1 && hasFlag('UNDERGROUND_CONTACT_MADE')) {
     story.setPhase(2)
   }
 
-  // Phase 2 → 3: M-03 complete
   if (phase === 2 && story.getMission('M-03') === 'complete') {
     story.setPhase(3)
   }
@@ -523,11 +482,8 @@ function _checkPhaseAdvancement(
 function _onPhase1Entry() {
   const queue = useEmailQueueStore.getState()
 
-  // Phase 1.1–1.4: spam/flavor emails
-  // These use mailStore.send() directly since they're immediate or near-immediate
-  // Actual content defined in mailStore seed or sent here:
-  queue.queueEmail({ deliverAt: Date.now(),              mail: { tag: 'SYSTEM', from: 'noreply@gridmart.corp', subject: 'You left items in your cart!', dot: '#aaaaaa', body: 'Don\'t forget about your cart, citizen. Those items won\'t last forever.\n\n— GridMart' } })
-  queue.queueEmail({ deliverAt: Date.now() + 10*MINUTE,  mail: { tag: 'SYSTEM', from: 'petra.kwan@wellness.gridos.corp', subject: 'Wellness Wednesday', body: 'Take a breath. You\'ve been very productive today. Remember to hydrate.\n\n— Petra Kwan, GridOS Wellness Division' } })
-  queue.queueEmail({ deliverAt: Date.now() + 20*MINUTE,  mail: { tag: 'LORE', from: 'quarterly@gridcorp.net', subject: 'Gridcorp Q3 Report', body: 'Q3 productivity metrics are in. Sector 7 anomalies have been classified pending review. All other sectors nominal.\n\n— Clovis Marsh, Strategic Communications' } })
-  queue.queueEmail({ deliverAt: Date.now() + 15*MINUTE,  mail: { tag: 'SYSTEM', from: 'newsletter@noodlehut.blog', subject: "This month's noodle pick", body: "The ramen. Always the ramen.\nVisit us at noodlehut.blog for the monthly pick and our secret cipher page.\n\n— NoodleHut" } })
+  queue.queueEmail({ deliverAt: Date.now(),             mail: { tag: 'SYSTEM', from: 'noreply@gridmart.corp', subject: 'You left items in your cart!', dot: '#aaaaaa', body: "Don't forget about your cart, citizen. Those items won't last forever.\n\n— GridMart" } })
+  queue.queueEmail({ deliverAt: Date.now() + 10*MINUTE, mail: { tag: 'SYSTEM', from: 'petra.kwan@wellness.gridos.corp', subject: 'Wellness Wednesday', body: "Take a breath. You've been very productive today. Remember to hydrate.\n\n— Petra Kwan, GridOS Wellness Division" } })
+  queue.queueEmail({ deliverAt: Date.now() + 20*MINUTE, mail: { tag: 'LORE', from: 'quarterly@gridcorp.net', subject: 'Gridcorp Q3 Report', body: "Q3 productivity metrics are in. Sector 7 anomalies have been classified pending review. All other sectors nominal.\n\n— Clovis Marsh, Strategic Communications" } })
+  queue.queueEmail({ deliverAt: Date.now() + 15*MINUTE, mail: { tag: 'SYSTEM', from: 'newsletter@noodlehut.blog', subject: "This month's noodle pick", body: "The ramen. Always the ramen.\nVisit us at noodlehut.blog for the monthly pick and our secret cipher page.\n\n— NoodleHut" } })
 }
