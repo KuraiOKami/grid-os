@@ -146,13 +146,13 @@ function _onEmailRead(
   missions: ReturnType<typeof useMissionStore.getState>,
   queue:    ReturnType<typeof useEmailQueueStore.getState>,
 ) {
-  // ── Phase 0.2: E-01 read → queue E-02 after 2 min (once only) ───────────
+  // ── Phase 0.2: E-01 read → queue E-02 after 15 seconds (once only) ──────
   if (emailId === 'E-01') {
     const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-02')
     const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-02')
     if (!alreadySent && !alreadyQueued) {
       queue.queueEmail({
-        deliverAt: Date.now() + 2 * MINUTE,
+        deliverAt: Date.now() + 15_000,  // 15 seconds
         mail:      { ...BOOT_EMAILS['E-02'], storyId: 'E-02' } as any,
       })
     }
