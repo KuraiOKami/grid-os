@@ -470,6 +470,142 @@ const PAGES: Record<string, PageData> = {
     ],
     repEffect: { compliance: +1 },
   },
+  '__not_found__': {
+    site: 'GridOS Network',
+    title: 'Domain Not Found',
+    subtitle: 'This address is not registered on the Grid.',
+    theme: 'corp',
+    body: ['The domain you entered does not exist or has been removed from GridOS routing tables.'],
+    links: [{ label: 'Go to GridOS Home', url: 'gridos.corp' }],
+  },
+}
+
+// ── URL validation ────────────────────────────────────────────────────────
+const KNOWN_DOMAINS = new Set([
+  'gridos.corp', 'pulse.news', 'ghostlily.blog',
+  'civic.archive', 'voidbay.net', 'yellowthread.forum',
+  'gridnetnews.com', 'gridsocial.net', 'noodlehut.blog',
+  'mtell.dev', 'gridmart.shop',
+])
+
+function isValidGridUrl(url: string) {
+  return KNOWN_DOMAINS.has(url.split('/')[0])
+}
+
+// ── OPS panel (inline scan engine) ───────────────────────────────────────
+const _OPS_FIREWALL_GRADES = ['A+', 'A', 'B', 'C', 'D', 'F', 'NONE', 'UNKNOWN']
+const _OPS_NODE_OWNERS     = ['GRIDOS CORP', 'UNREGISTERED', 'PROXY-RELAY', 'CITIZEN NODE', 'DARK RELAY', 'GHOST NODE', 'GOV SECTOR 4', 'PRIVATE CORP']
+const _OPS_PORT_SETS       = ['80, 443, 8080', '22, 80, 443', '80, 443, 3306, 8443', '443 only', '21, 22, 80, 443, 8080, 9000', 'NONE VISIBLE']
+const _OPS_BEHAVIORS       = ['Logging all inbound', 'Rate-limiting suspicious IPs', 'Honeypot active on port 9001', 'Ghost traffic detected (14%)', 'No anomalies detected', 'Deep packet inspection enabled', 'Compliance beacon transmitting', 'Behavior profiling: ACTIVE']
+
+type OpsScanResult = { label: string; value: string; status: 'clean' | 'warn' | 'critical' | 'unknown' }
+
+function _opsSeedRng(seed: string) {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0
+  return () => { h ^= h << 13; h ^= h >> 7; h ^= h << 17; return (h >>> 0) / 0xFFFFFFFF }
+}
+
+function _opsGenerateScan(target: string): OpsScanResult[] {
+  const rng = _opsSeedRng(target || 'null')
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)]
+  const fw = pick(_OPS_FIREWALL_GRADES)
+  const fwStatus: OpsScanResult['status'] = ['A+', 'A'].includes(fw) ? 'clean' : ['B', 'C'].includes(fw) ? 'warn' : 'critical'
+  const ip = `${Math.floor(rng()*223)+1}.${Math.floor(rng()*254)+1}.${Math.floor(rng()*254)+1}.${Math.floor(rng()*254)+1}`
+  return [
+    { label: 'RESOLVED IP',     value: ip,                                                              status: 'unknown' },
+    { label: 'NODE OWNER',      value: pick(_OPS_NODE_OWNERS),                                          status: rng() > 0.5 ? 'warn' : 'clean' },
+    { label: 'FIREWALL GRADE',  value: fw,                                                              status: fwStatus },
+    { label: 'OPEN PORTS',      value: pick(_OPS_PORT_SETS),                                            status: rng() > 0.6 ? 'warn' : 'clean' },
+    { label: 'GRID COMPLIANCE', value: rng() > 0.5 ? 'COMPLIANT' : 'NON-COMPLIANT',                    status: rng() > 0.5 ? 'clean' : 'critical' },
+    { label: 'BEHAVIOR FLAGS',  value: pick(_OPS_BEHAVIORS),                                            status: rng() > 0.7 ? 'warn' : 'clean' },
+    { label: 'GHOST TRAFFIC',   value: `${Math.floor(rng() * 40)}%`,                                   status: rng() > 0.6 ? 'critical' : 'clean' },
+    { label: 'LAST PING',       value: `${Math.floor(rng() * 800) + 12}ms`,                            status: 'unknown' },
+  ]
+}
+
+function OpsScanRow({ row, reveal }: { row: OpsScanResult; reveal: boolean }) {
+  const dot = { clean: 'bg-green-500', warn: 'bg-yellow-500', critical: 'bg-red-500', unknown: 'bg-zinc-500' }[row.status]
+  return (
+    <div className={`flex items-start gap-2 py-1.5 border-b border-green-950/40 last:border-0 transition-all duration-300 ${reveal ? 'opacity-100' : 'opacity-0 translate-y-1'}`}>
+      <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} shrink-0 mt-1.5`} />
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-green-700/50 uppercase tracking-widest leading-none mb-0.5">{row.label}</div>
+        <div className={`text-xs font-mono leading-tight ${row.status === 'critical' ? 'text-red-400' : row.status === 'warn' ? 'text-yellow-400' : 'text-green-300'}`}>
+          {row.value}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OPSPanel({ targetUrl, onClose }: { targetUrl: string; onClose: () => void }) {
+  const [scanResults, setScanResults]   = useState<OpsScanResult[]>([])
+  const [scanning,    setScanning]      = useState(false)
+  const [scanDone,    setScanDone]      = useState(false)
+  const [revealedRows, setRevealedRows] = useState<boolean[]>([])
+
+  async function runScan() {
+    if (scanning) return
+    setScanning(true); setScanDone(false); setScanResults([]); setRevealedRows([])
+    const results = _opsGenerateScan(targetUrl)
+    setScanResults(results)
+    for (let i = 0; i < results.length; i++) {
+      await new Promise(r => setTimeout(r, 220 + Math.random() * 180))
+      setRevealedRows(prev => { const n = [...prev]; n[i] = true; return n })
+    }
+    setScanDone(true); setScanning(false)
+  }
+
+  useEffect(() => {
+    setScanResults([]); setScanDone(false); setRevealedRows([])
+    runScan()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetUrl])
+
+  return (
+    <div className="absolute top-0 right-0 h-full w-72 z-50 bg-zinc-950 border-l border-green-900/40 shadow-2xl flex flex-col font-mono text-xs select-none">
+      <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-900 flex items-center gap-2 shrink-0">
+        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+        <span className="text-xs font-black text-red-400 tracking-widest">OPS</span>
+        <span className="text-zinc-700">|</span>
+        <span className="text-xs text-zinc-500 truncate flex-1">{targetUrl}</span>
+        <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300 transition-colors text-base leading-none px-1 shrink-0">×</button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {scanning && (
+          <div className="flex items-center gap-2 text-xs text-green-700 py-1">
+            <span className="animate-pulse">◉</span>
+            <span className="animate-pulse">Scanning {targetUrl}…</span>
+          </div>
+        )}
+        {scanResults.length > 0 && (
+          <div className="border border-green-950/40 rounded bg-green-950/5 px-3 py-1">
+            {scanResults.map((row, i) => (
+              <OpsScanRow key={i} row={row} reveal={!!revealedRows[i]} />
+            ))}
+          </div>
+        )}
+        {scanDone && (
+          <button
+            onClick={runScan}
+            className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-green-600 hover:border-green-900 transition-colors"
+          >
+            ↺ RE-SCAN
+          </button>
+        )}
+      </div>
+
+      <div className="px-3 py-1.5 border-t border-zinc-800 bg-zinc-900/80 flex items-center justify-between shrink-0">
+        <span className="text-xs text-zinc-700">OPS // unregistered</span>
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+          <span className="text-xs text-red-900">DARK</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ── theme config ──────────────────────────────────────────────────────────
@@ -1143,8 +1279,9 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
 
 // ── main component ────────────────────────────────────────────────────────
 export default function GridBrowser() {
-  const [url, setUrl] = useState('gridos.corp')
+  const [url, setUrl]         = useState('gridos.corp')
   const [inputUrl, setInputUrl] = useState('gridos.corp')
+  const [opsOpen, setOpsOpen] = useState(false)
   const { compliance, shadow, applyEvent } = useRepStore()
 
   const { data: liveData, isLive } = useSite(url)
@@ -1178,6 +1315,11 @@ export default function GridBrowser() {
   }, [page.gate, compliance, shadow])
 
   function navigate(target: string) {
+    if (!isValidGridUrl(target)) {
+      setUrl('__not_found__')
+      setInputUrl(target)
+      return
+    }
     setUrl(target)
     setInputUrl(target)
   }
@@ -1210,15 +1352,30 @@ export default function GridBrowser() {
             <span className="text-xs text-neutral-500">live</span>
           </div>
         )}
+        <button
+          onClick={() => setOpsOpen(o => !o)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono border transition-colors shrink-0 ${
+            opsOpen
+              ? 'bg-green-950/40 text-green-400 border-green-700'
+              : 'bg-zinc-900 text-green-600 border-green-900/50 hover:border-green-600 hover:text-green-400'
+          }`}
+          title="OPS — Operational Penetration Suite"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          OPS
+        </button>
       </div>
 
-      {/* Page content */}
-      {t.layout === 'corp'    && <LayoutCorp    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
-      {t.layout === 'news'    && <LayoutNews    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
-      {t.layout === 'blog'    && <LayoutBlog    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
-      {t.layout === 'archive' && <LayoutArchive page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
-      {t.layout === 'void'    && <LayoutVoid    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
-      {t.layout === 'forum'   && <LayoutForum   page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+      {/* Page content + OPS overlay */}
+      <div className="relative flex-1 overflow-hidden flex flex-col">
+        {t.layout === 'corp'    && <LayoutCorp    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+        {t.layout === 'news'    && <LayoutNews    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+        {t.layout === 'blog'    && <LayoutBlog    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+        {t.layout === 'archive' && <LayoutArchive page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+        {t.layout === 'void'    && <LayoutVoid    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+        {t.layout === 'forum'   && <LayoutForum   page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+        {opsOpen && <OPSPanel targetUrl={url} onClose={() => setOpsOpen(false)} />}
+      </div>
     </div>
   )
 }
