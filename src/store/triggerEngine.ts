@@ -254,11 +254,11 @@ function _checkM01Objective2(
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
 ) {
+  // Only require E-01 and E-02 — E-03/E-04 arrive after M-01 completes (no circular dep)
   const mail = useMailStore.getState()
-  const onboardingIds = ['E-01', 'E-02', 'E-03', 'E-04']
-  const readMails = mail.mails.filter(m => !m.unread).map(m => m.storyId ?? m.id)
-  const allRead = onboardingIds.every(id => readMails.includes(id))
-  if (allRead) {
+  const required = ['E-01', 'E-02']
+  const readIds  = mail.mails.filter(m => !m.unread).map(m => m.storyId ?? m.id)
+  if (required.every(id => readIds.includes(id))) {
     missions.setObjectiveComplete('M-01', 'M01-OBJ-2')
     _checkM01Completion(story, missions)
   }

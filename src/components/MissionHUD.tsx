@@ -1,6 +1,6 @@
 // ── MissionHUD.tsx ────────────────────────────────────────────────────────────
-// Persistent desktop overlay showing the current active mission + objectives.
-// Collapsible. Not a window — always sits on the desktop.
+// Compact inline taskbar widget. Click to expand an upward dropdown.
+// Never overlaps windows or desktop content.
 
 import { useState } from 'react'
 import { useMissionStore } from '@/store/missionStore'
@@ -8,6 +8,7 @@ import { useMissionStore } from '@/store/missionStore'
 const C = {
   bg:      '#0d0d14',
   border:  '#2a2a3a',
+  surface: '#111118',
   accent:  '#00e5ff',
   warn:    '#ffaa00',
   muted:   '#6b6b80',
@@ -17,142 +18,151 @@ const C = {
 }
 
 export default function MissionHUD() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [open, setOpen] = useState(false)
   const missions = useMissionStore(s => s.missions)
 
-  // Show the earliest active mission
-  const activeMission = Object.values(missions)
-    .filter(m => m.status === 'active')[0] ?? null
+  const active = Object.values(missions).filter(m => m.status === 'active')[0] ?? null
+  if (!active) return null
 
-  if (!activeMission) return null
-
-  const done      = activeMission.objectives.filter(o => o.complete).length
-  const total     = activeMission.objectives.length
-  const allDone   = done === total
-  const progress  = total === 0 ? 0 : Math.round((done / total) * 100)
+  const done  = active.objectives.filter(o => o.complete).length
+  const total = active.objectives.length
 
   return (
-    <div style={{
-      position:   'absolute',
-      top:        16,
-      right:      16,
-      width:      260,
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize:   11,
-      zIndex:     50,
-      userSelect: 'none',
-    }}>
-      {/* Header */}
+    <div style={{ position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
+
+      {/* Compact pill button */}
       <button
-        onClick={() => setCollapsed(v => !v)}
+        onClick={() => setOpen(v => !v)}
         style={{
-          width:          '100%',
-          display:        'flex',
-          alignItems:     'center',
-          gap:            8,
-          padding:        '6px 10px',
-          background:     C.bg,
-          border:         `1px solid ${C.border}`,
-          borderBottom:   collapsed ? `1px solid ${C.border}` : 'none',
-          borderRadius:   collapsed ? 6 : '6px 6px 0 0',
-          cursor:         'pointer',
-          color:          C.muted,
-          fontFamily:     'inherit',
-          fontSize:       10,
+          display:     'flex',
+          alignItems:  'center',
+          gap:         8,
+          padding:     '3px 10px',
+          background:  open ? C.faint : 'none',
+          border:      `1px solid ${open ? C.warn + '80' : C.border}`,
+          borderRadius: 4,
+          cursor:      'pointer',
+          fontFamily:  'inherit',
+          fontSize:    10,
+          color:       C.muted,
+          whiteSpace:  'nowrap',
         }}
       >
-        <span style={{ color: C.warn, fontWeight: 'bold', letterSpacing: 1 }}>
-          MISSION
+        <span style={{ color: C.warn, fontWeight: 'bold', letterSpacing: 1 }}>MISSION</span>
+        <span style={{ color: C.text, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {active.title}
         </span>
-        <span style={{ color: C.text, fontWeight: 'bold', flex: 1, textAlign: 'left' }}>
-          {activeMission.title}
-        </span>
-        <span style={{ color: C.muted, fontSize: 9 }}>
+        <span style={{ color: done === total ? C.success : C.warn }}>
           {done}/{total}
         </span>
-        <span style={{ color: C.muted }}>{collapsed ? '▾' : '▴'}</span>
+        <span style={{ color: C.muted, fontSize: 9 }}>{open ? '▾' : '▴'}</span>
       </button>
 
-      {/* Progress bar */}
-      {!collapsed && (
-        <div style={{ background: C.faint, height: 2 }}>
+      {/* Dropdown — opens upward from taskbar */}
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 90 }}
+            onClick={() => setOpen(false)}
+          />
           <div style={{
-            width:      `${progress}%`,
-            height:     '100%',
-            background: allDone ? C.success : C.warn,
-            transition: 'width 0.4s ease',
-          }} />
-        </div>
-      )}
-
-      {/* Body */}
-      {!collapsed && (
-        <div style={{
-          background:   C.bg,
-          border:       `1px solid ${C.border}`,
-          borderTop:    'none',
-          borderRadius: '0 0 6px 6px',
-          padding:      '8px 10px',
-        }}>
-          {/* Briefing (truncated) */}
-          {activeMission.description && (
+            position:     'absolute',
+            bottom:       '110%',
+            left:         0,
+            width:        300,
+            background:   C.bg,
+            border:       `1px solid ${C.border}`,
+            borderRadius: 6,
+            overflow:     'hidden',
+            zIndex:       200,
+            boxShadow:    '0 -4px 24px rgba(0,0,0,0.6)',
+          }}>
+            {/* Header */}
             <div style={{
-              color:        C.muted,
-              fontSize:     10,
-              lineHeight:   1.5,
-              marginBottom: 8,
-              paddingBottom:8,
-              borderBottom: `1px solid ${C.border}`,
+              padding:        '8px 12px',
+              background:     C.surface,
+              borderBottom:   `1px solid ${C.border}`,
+              display:        'flex',
+              alignItems:     'center',
+              justifyContent: 'space-between',
             }}>
-              {activeMission.description.length > 120
-                ? activeMission.description.slice(0, 117) + '…'
-                : activeMission.description}
+              <span style={{ color: C.warn, fontWeight: 'bold', fontSize: 10, letterSpacing: 1 }}>
+                MISSION
+              </span>
+              <span style={{ color: C.text, fontWeight: 'bold', fontSize: 11 }}>
+                {active.title}
+              </span>
+              <span style={{ color: C.muted, fontSize: 10 }}>{done}/{total}</span>
             </div>
-          )}
 
-          {/* Objectives */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {activeMission.objectives.map(obj => (
-              <div key={obj.id} style={{
-                display:    'flex',
-                alignItems: 'flex-start',
-                gap:        7,
-                opacity:    obj.complete ? 0.45 : 1,
+            {/* Progress bar */}
+            <div style={{ height: 2, background: C.faint }}>
+              <div style={{
+                width:      `${total ? Math.round((done / total) * 100) : 0}%`,
+                height:     '100%',
+                background: done === total ? C.success : C.warn,
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+
+            {/* Briefing */}
+            {active.description && (
+              <div style={{
+                padding:      '8px 12px',
+                fontSize:     10,
+                color:        C.muted,
+                lineHeight:   1.6,
+                borderBottom: `1px solid ${C.border}`,
               }}>
-                <span style={{
-                  color:      obj.complete ? C.success : C.warn,
-                  fontSize:   12,
-                  lineHeight: 1.2,
-                  flexShrink: 0,
-                  marginTop:  1,
-                }}>
-                  {obj.complete ? '✓' : '○'}
-                </span>
-                <span style={{
-                  color:          obj.complete ? C.muted : C.text,
-                  lineHeight:     1.4,
-                  textDecoration: obj.complete ? 'line-through' : 'none',
-                }}>
-                  {obj.label}
-                </span>
+                {active.description}
               </div>
-            ))}
-          </div>
+            )}
 
-          {/* Giver */}
-          {activeMission.giver && (
-            <div style={{
-              marginTop:  8,
-              paddingTop: 8,
-              borderTop:  `1px solid ${C.border}`,
-              color:      C.muted,
-              fontSize:   9,
-              letterSpacing: 0.5,
-            }}>
-              SOURCE: {activeMission.giver.toUpperCase()}
+            {/* Objectives */}
+            <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {active.objectives.map(obj => (
+                <div key={obj.id} style={{
+                  display:    'flex',
+                  alignItems: 'flex-start',
+                  gap:        8,
+                  opacity:    obj.complete ? 0.45 : 1,
+                }}>
+                  <span style={{
+                    color:      obj.complete ? C.success : C.warn,
+                    fontSize:   13,
+                    lineHeight: 1.2,
+                    flexShrink: 0,
+                    marginTop:  1,
+                  }}>
+                    {obj.complete ? '✓' : '○'}
+                  </span>
+                  <span style={{
+                    fontSize:       10,
+                    color:          obj.complete ? C.muted : C.text,
+                    lineHeight:     1.5,
+                    textDecoration: obj.complete ? 'line-through' : 'none',
+                  }}>
+                    {obj.label}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+
+            {/* Footer */}
+            {active.giver && (
+              <div style={{
+                padding:    '6px 12px',
+                borderTop:  `1px solid ${C.border}`,
+                fontSize:   9,
+                color:      C.muted,
+                letterSpacing: 0.5,
+              }}>
+                SOURCE: {active.giver.toUpperCase()}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

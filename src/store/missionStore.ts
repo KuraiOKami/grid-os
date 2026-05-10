@@ -83,7 +83,7 @@ const MISSION_DEFS: Record<MissionId, MissionDef> = {
       },
       {
         id:       'M01-OBJ-2',
-        label:    'Open the email client and read all onboarding emails (E-01 through E-04)',
+        label:    'Read your first two onboarding emails',
         complete: false,
       },
       {
