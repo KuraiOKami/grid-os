@@ -56,6 +56,7 @@ const APPS: AppEntry[] = [
   // ─ UNDERGROUND ─
   { id: 'shadownet',    name: 'ShadowNet',      publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Encrypted peer-to-peer communications. No metadata. No trace.',                                            price: 0, codeKey: 'SHD-??-??',    minShadow: 60 },
   { id: 'rootterm',     name: 'ROOT Terminal',  publisher: 'ROOT BLOOM',           tier: 'UNDERGROUND', desc: 'Direct access to ROOT BLOOM coordination infrastructure.',                                                 price: 0, codeKey: 'ROOT-BLOOM-??', minShadow: 80 },
+  { id: 'ops',          name: 'OPS',            publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Backdoor recon and execution overlay. Attaches to active app context. Scan, probe, and execute against live targets. No logs.',                  price: 0, minShadow: 40, unlockId: 'ops' },
 ]
 
 const TIER_ORDER: Tier[] = ['CORPORATE', 'FREELANCE', 'RESTRICTED', 'UNDERGROUND']
