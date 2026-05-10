@@ -627,15 +627,29 @@ export default function WatchApp() {
   const [viewMode,     setViewMode]     = useState<'cases' | 'monitor'>('cases')
   const [caseIndex,    setCaseIndex]    = useState(0)
   const [selected,     setSelected]     = useState<Decision | null>(null)
-  const [submitted,    setSubmitted]    = useState<Record<string, Decision>>({})
-  const [activeTab,    setActiveTab]    = useState<DataTab>('activity')
-  const [markedItems,  setMarkedItems]  = useState<Record<string, MarkedItem[]>>({})
-  const [sessionCount, setSessionCount] = useState(0)
+
+  // Persistent state — survives Watch close/reopen
+  const [submitted,    setSubmitted]    = useState<Record<string, Decision>>(() => {
+    try { return JSON.parse(localStorage.getItem('gridos_watch_submitted') ?? '{}') } catch { return {} }
+  })
+  const [markedItems,  setMarkedItems]  = useState<Record<string, MarkedItem[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('gridos_watch_marks') ?? '{}') } catch { return {} }
+  })
+  const [sessionCount, setSessionCount] = useState(() =>
+    parseInt(localStorage.getItem('gridos_watch_sessions') ?? '0', 10)
+  )
+
+  useEffect(() => { localStorage.setItem('gridos_watch_submitted', JSON.stringify(submitted)) }, [submitted])
+  useEffect(() => { localStorage.setItem('gridos_watch_marks',     JSON.stringify(markedItems)) }, [markedItems])
+  useEffect(() => { localStorage.setItem('gridos_watch_sessions',  String(sessionCount)) }, [sessionCount])
+
   const [monitorLog,   setMonitorLog]   = useState<MonitorEvent[]>(() =>
     Array.from({ length: 6 }, () => makeEvent(MONITOR_POOL))
   )
   const [expandedUrl,  setExpandedUrl]  = useState<string | null>(null)
-  const firstSubmit = useRef(true)
+
+  // Guard against re-sending the reactive mail every session
+  const reactiveMailSent = useRef(!!localStorage.getItem('gridos_watch_mail_sent'))
 
   const compliance = useRepStore(s => s.compliance)
   const shadow     = useRepStore(s => s.shadow)
@@ -707,8 +721,9 @@ export default function WatchApp() {
       setTimeout(() => credit(payout, label), 800)
     }
 
-    if (firstSubmit.current) {
-      firstSubmit.current = false
+    if (!reactiveMailSent.current) {
+      reactiveMailSent.current = true
+      localStorage.setItem('gridos_watch_mail_sent', '1')
       const isDefiant = selected === 'bury' || selected === 'no_threat'
       const tpl = isDefiant ? REACTIVE_MAIL.defiant : REACTIVE_MAIL.compliant
       setTimeout(() => sendMail({
