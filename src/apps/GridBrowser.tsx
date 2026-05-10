@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addJob } from '@/store/jobStore'
 import { useRepStore } from '@/store/reputationStore'
+import { useUnlockStore } from '@/store/unlockStore'
 import { useSite } from '@/hooks/useSite'
 import type { SiteRow, SiteContentRow, SiteTheme } from '@/lib/browserTypes'
 
@@ -1279,10 +1280,12 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
 
 // ── main component ────────────────────────────────────────────────────────
 export default function GridBrowser() {
-  const [url, setUrl]         = useState('gridos.corp')
+  const [url, setUrl]           = useState('gridos.corp')
   const [inputUrl, setInputUrl] = useState('gridos.corp')
-  const [opsOpen, setOpsOpen] = useState(false)
+  const [opsOpen, setOpsOpen]   = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const { compliance, shadow, applyEvent } = useRepStore()
+  const installed = useUnlockStore(s => s.installed)
 
   const { data: liveData, isLive } = useSite(url)
 
@@ -1336,7 +1339,7 @@ export default function GridBrowser() {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Address bar */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-neutral-200 border-b border-neutral-300 shrink-0">
+      <div className="relative flex items-center gap-2 px-3 py-2 bg-neutral-200 border-b border-neutral-300 shrink-0">
         <button onClick={() => navigate('gridos.corp')} className="text-neutral-500 hover:text-neutral-800 transition-colors text-base leading-none px-0.5">⌂</button>
         <form onSubmit={e => { e.preventDefault(); navigate(inputUrl.trim()) }} className="flex-1 flex">
           <input
@@ -1352,18 +1355,44 @@ export default function GridBrowser() {
             <span className="text-xs text-neutral-500">live</span>
           </div>
         )}
+
+        {/* Hamburger menu */}
         <button
-          onClick={() => setOpsOpen(o => !o)}
-          className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono border transition-colors shrink-0 ${
-            opsOpen
-              ? 'bg-green-950/40 text-green-400 border-green-700'
-              : 'bg-zinc-900 text-green-600 border-green-900/50 hover:border-green-600 hover:text-green-400'
-          }`}
-          title="OPS — Operational Penetration Suite"
+          onClick={() => setMenuOpen(o => !o)}
+          className={`flex flex-col justify-center gap-[3px] w-7 h-7 rounded transition-colors shrink-0 items-center ${menuOpen ? 'bg-neutral-300' : 'hover:bg-neutral-300'}`}
+          title="Browser menu"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          OPS
+          <span className="w-4 h-px bg-neutral-600 block" />
+          <span className="w-4 h-px bg-neutral-600 block" />
+          <span className="w-4 h-px bg-neutral-600 block" />
         </button>
+
+        {/* Dropdown */}
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+            <div className="absolute top-full right-0 z-50 w-56 bg-white border border-neutral-300 shadow-lg rounded-b-md text-xs overflow-hidden">
+              <div className="px-3 py-2 border-b border-neutral-200 text-xs font-semibold text-neutral-500 uppercase tracking-wider bg-neutral-50">
+                Extensions
+              </div>
+              <div className="p-2">
+                {installed.includes('ops') ? (
+                  <button
+                    onClick={() => { setOpsOpen(o => !o); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2.5 px-2 py-2 rounded hover:bg-neutral-100 transition-colors text-left"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                    <span className="font-mono font-bold text-zinc-800 text-xs">OPS</span>
+                    <span className="text-neutral-400 text-xs ml-1 flex-1">Penetration Suite</span>
+                    {opsOpen && <span className="text-green-600 text-xs font-mono shrink-0">● on</span>}
+                  </button>
+                ) : (
+                  <div className="px-2 py-4 text-center text-neutral-400">No extensions installed.</div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Page content + OPS overlay */}
