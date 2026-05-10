@@ -1128,21 +1128,26 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
           </div>
         ) : (
           <>
-            {/* OP body */}
-            {page.body.length > 0 && (
-              <div className="bg-white rounded-lg border-2 border-yellow-400 px-4 py-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
-                    <span className="text-yellow-950 text-xs font-black leading-none">OP</span>
-                  </div>
-                  <span className="text-xs font-bold text-neutral-700">Original Post</span>
-                  <span className="text-xs text-neutral-400 ml-auto">07 May · pinned</span>
+            {/* OP body — always rendered */}
+            <div className="bg-white rounded-lg border-2 border-yellow-400 px-4 py-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
+                  <span className="text-yellow-950 text-xs font-black leading-none">OP</span>
                 </div>
-                {page.body.map((line, i) => (
-                  <p key={i} className="text-xs text-neutral-600 leading-relaxed pl-8">{line}</p>
-                ))}
+                <span className="text-xs font-bold text-neutral-700">Original Post</span>
+                <span className="text-xs text-neutral-400 ml-auto">07 May · pinned</span>
               </div>
-            )}
+              {page.body.length > 0
+                ? page.body.map((line, i) => (
+                    <p key={i} className="text-xs text-neutral-600 leading-relaxed pl-8">{line}</p>
+                  ))
+                : (
+                    <p className="text-xs text-neutral-600 leading-relaxed pl-8">
+                      {page.subtitle ?? page.title}
+                    </p>
+                  )
+              }
+            </div>
 
             {/* Replies */}
             {forumPosts.length > 0 && (
