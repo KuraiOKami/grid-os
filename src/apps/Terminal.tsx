@@ -5,6 +5,8 @@
 //                 scan, connect
 // Hack session commands (when connected to a remote node):
 //                 ls, cat, exfil, disconnect, clear
+// OPS session commands (when ops <target> is running):
+//                 scan, probe [--module <name>], status, modules, exit
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react'
 import { useFSStore, pathStr, FSNode } from '@/store/fsStore'
@@ -15,6 +17,7 @@ import { HACK_NODES, HackFile } from '@/data/hackNodes'
 import { completeJob, acceptJob, getJob } from '@/store/jobStore'
 import { useMapStore } from '@/store/mapStore'
 import { getLocation } from '@/data/locations'
+import { useOpsStore, getOpsNode } from '@/store/opsStore'
 
 const C = {
   bg:      '#0a0a0f',
@@ -26,6 +29,7 @@ const C = {
   success: '#00cc88',
   violet:  '#d6a2ff',
   faint:   '#3a3a4a',
+  ops:     '#39ff14',   // OPS mode — neon green
 }
 
 type LineType = 'input' | 'output' | 'error' | 'info' | 'success' | 'warn'
@@ -45,6 +49,10 @@ interface HackSession {
   exfilled:    string[]
   jobId?:      string
   targetFile?: string
+}
+
+interface OpsSession {
+  target: string
 }
 
 let _lid = 0
@@ -82,6 +90,9 @@ const HELP_LOCAL = [
   'hacking:',
   '  scan              discover nearby nodes',
   '  connect <node-id> connect to a node',
+  '',
+  'intelligence:',
+  '  ops <target>      launch OPS recon suite against a target',
 ].join('\n')
 
 const HELP_HACK = [
@@ -91,6 +102,24 @@ const HELP_HACK = [
   '  exfil <file>      extract file to local system',
   '  disconnect        close connection and return to local shell',
   '  clear             clear terminal',
+].join('\n')
+
+const HELP_OPS = [
+  'OPS // Operational Penetration Suite',
+  '─────────────────────────────────────',
+  '  scan              run passive recon on target',
+  '  probe             run active probe (prompts for module)',
+  '  probe --module <name>',
+  '                    run specific probe module directly',
+  '  modules           list available probe modules for target',
+  '  status            show current session status',
+  '  exit              terminate OPS session',
+  '',
+  'workflow:',
+  '  1. scan           → gather passive intel',
+  '  2. probe          → extract deeper data',
+  '  3. exit           → return to local shell',
+  '  4. (use Terminal for exfil / connect operations)',
 ].join('\n')
 
 const FAKE_PROCESSES = [
@@ -110,6 +139,7 @@ export default function Terminal() {
   const [cmdHistory,  setCmdHistory]  = useState<string[]>([])
   const [histIdx,     setHistIdx]     = useState(-1)
   const [hackSession, setHackSession] = useState<HackSession | null>(null)
+  const [opsSession,  setOpsSession]  = useState<OpsSession | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef  = useRef<HTMLInputElement>(null)
@@ -117,14 +147,14 @@ export default function Terminal() {
   const fs         = useFSStore()
   const compliance = useRepStore(s => s.compliance)
 
-  // Keep a ref so timeout callbacks inside hack commands can read current session
   const sessionRef = useRef<HackSession | null>(null)
   sessionRef.current = hackSession
 
-  const prompt = () =>
-    hackSession
-      ? `${hackSession.nodeId}$ `
-      : `citizen@grid:${pathStr(fs.cwd)}$ `
+  const prompt = () => {
+    if (hackSession) return `${hackSession.nodeId}$ `
+    if (opsSession)  return `[OPS:${opsSession.target}]$ `
+    return `citizen@grid:${pathStr(fs.cwd)}$ `
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -152,7 +182,7 @@ export default function Terminal() {
   }
 
   function autocomplete() {
-    if (hackSession) return
+    if (hackSession || opsSession) return
     const parts = input.trim().split(/\s+/)
     if (parts.length < 2) return
     const partial = parts[parts.length - 1]
@@ -173,8 +203,192 @@ export default function Terminal() {
     setInput('')
     if (hackSession) {
       runHackCommand(raw, hackSession)
+    } else if (opsSession) {
+      runOpsCommand(raw, opsSession)
     } else {
       runLocalCommand(raw)
+    }
+  }
+
+  // ── OPS session commands ──────────────────────────────────────────────────
+
+  function runOpsCommand(raw: string, session: OpsSession) {
+    // Parse flags like --module
+    const parts  = raw.split(/\s+/)
+    const cmd    = parts[0]
+    const modIdx = parts.indexOf('--module')
+    const modArg = modIdx !== -1 ? parts[modIdx + 1] : null
+    const arg    = parts[1] && !parts[1].startsWith('--') ? parts[1] : null
+
+    const ops     = useOpsStore.getState()
+    const nodeData = getOpsNode(session.target)
+
+    switch (cmd) {
+
+      case 'help':
+        push(mkLine('output', HELP_OPS))
+        break
+
+      case 'clear':
+        setLines([])
+        break
+
+      case 'status': {
+        const sr = ops.scanResult
+        if (!sr) {
+          push(mkLine('warn', '[OPS] No scan data yet. Run `scan` first.'))
+          break
+        }
+        push(mkLine('output', [
+          `TARGET       : ${sr.target}`,
+          `PHASE        : ${ops.phase.toUpperCase()}`,
+          `RESOLVED IP  : ${sr.resolvedIP}`,
+          `NODE OWNER   : ${sr.nodeOwner}`,
+          `FIREWALL     : ${sr.firewallGrade}`,
+          `COMPLIANCE   : ${sr.compliance}`,
+          `GHOST TRAFFIC: ${sr.ghostTraffic}%`,
+          `PROBES RUN   : ${ops.probeResults.length}`,
+        ].join('\n')))
+        break
+      }
+
+      case 'modules': {
+        if (!nodeData) {
+          push(mkLine('error', `[OPS] No probe modules found for target: ${session.target}`))
+          break
+        }
+        const mods = Object.keys(nodeData.probeModules)
+        push(mkLine('output', [
+          `Available probe modules for ${session.target}:`,
+          ...mods.map(m => `  probe --module ${m}`),
+        ].join('\n')))
+        break
+      }
+
+      case 'scan': {
+        if (!nodeData) {
+          push(
+            mkLine('warn',   `[OPS] ${session.target} — no node data on record.`),
+            mkLine('output', '[OPS] Running generic fingerprint...'),
+          )
+          setTimeout(() => {
+            const fallback = {
+              target:        session.target,
+              resolvedIP:    'UNRESOLVABLE',
+              nodeOwner:     'UNKNOWN',
+              firewallGrade: 'N/A',
+              openPorts:     'UNKNOWN',
+              compliance:    'NO DATA',
+              ghostTraffic:  0,
+              lastPing:      'TIMEOUT',
+              behaviorFlags: [],
+            }
+            ops.setScan(fallback)
+            push(
+              mkLine('warn',  '[OPS] SCAN COMPLETE — no Grid record for this target.'),
+              mkLine('info',  '[OPS] Browser panel updated.'),
+            )
+          }, 1200)
+          break
+        }
+
+        push(
+          mkLine('info',   `[OPS] Initiating passive scan on ${session.target}...`),
+          mkLine('info',    '[OPS] Routing through anonymised relay...'),
+        )
+        ops.setPhase('scanning')
+
+        setTimeout(() => {
+          push(mkLine('info', '[OPS] Probing routing tables...'))
+          setTimeout(() => {
+            const result = {
+              target:        nodeData.target,
+              resolvedIP:    nodeData.resolvedIP,
+              nodeOwner:     nodeData.nodeOwner,
+              firewallGrade: nodeData.firewallGrade,
+              openPorts:     nodeData.openPorts,
+              compliance:    nodeData.compliance,
+              ghostTraffic:  nodeData.ghostTraffic,
+              lastPing:      nodeData.lastPing,
+              behaviorFlags: nodeData.behaviorFlags,
+            }
+            ops.setScan(result)
+
+            push(
+              mkLine('success', '[OPS] SCAN COMPLETE'),
+              mkLine('output',  `  RESOLVED IP   : ${result.resolvedIP}`),
+              mkLine('output',  `  NODE OWNER    : ${result.nodeOwner}`),
+              mkLine('output',  `  FIREWALL      : ${result.firewallGrade}`),
+              mkLine('output',  `  OPEN PORTS    : ${result.openPorts}`),
+              mkLine('output',  `  COMPLIANCE    : ${result.compliance}`),
+              mkLine('output',  `  GHOST TRAFFIC : ${result.ghostTraffic}%`),
+              mkLine('output',  `  LAST PING     : ${result.lastPing}`),
+              ...result.behaviorFlags.map(f => mkLine('warn', `  FLAG          : ${f}`)),
+              mkLine('info',   '[OPS] Browser panel updated. Run `modules` for available probes.'),
+            )
+          }, 900)
+        }, 600)
+        break
+      }
+
+      case 'probe': {
+        if (!nodeData) {
+          push(mkLine('error', `[OPS] No probe data for target: ${session.target}`))
+          break
+        }
+
+        const availMods = Object.keys(nodeData.probeModules)
+
+        // If no module specified, list them and prompt
+        if (!modArg) {
+          push(
+            mkLine('warn',   '[OPS] Specify a probe module with --module <name>'),
+            mkLine('output', `  Available: ${availMods.join(', ')}`),
+            mkLine('info',   `  Example:   probe --module ${availMods[0] ?? 'whois'}`),
+          )
+          break
+        }
+
+        const modData = nodeData.probeModules[modArg]
+        if (!modData) {
+          push(mkLine('error', `[OPS] Unknown module: ${modArg}`))
+          push(mkLine('info',  `  Available: ${availMods.join(', ')}`))
+          break
+        }
+
+        push(
+          mkLine('info',  `[OPS] Probing ${session.target} — module: ${modArg}`),
+          mkLine('info',  '[OPS] Routing through relay... standing by...'),
+        )
+        ops.setPhase('probing')
+
+        setTimeout(() => {
+          ops.addProbe({ module: modArg, output: modData, ts: Date.now() })
+          push(
+            mkLine('success', `[OPS] PROBE COMPLETE — ${modArg.toUpperCase()}`),
+            ...modData.map(line => mkLine('output', `  ${line}`)),
+            mkLine('info',    '[OPS] Browser panel updated.'),
+          )
+          useCareerStore.getState().addXP('hacker', 2)
+          useRepStore.getState().applyEvent({ shadow: 1, compliance: -1 })
+        }, 800)
+        break
+      }
+
+      case 'exit': {
+        push(
+          mkLine('info',    `[OPS] Closing session against ${session.target}...`),
+          mkLine('success', '[OPS] Session terminated. Intel preserved in browser panel.'),
+        )
+        setOpsSession(null)
+        // Don't clear opsStore — browser panel keeps the last scan visible
+        break
+      }
+
+      default:
+        push(mkLine('error', `${cmd}: not a valid OPS command`))
+        push(mkLine('info',  "  Type 'help' for OPS commands, 'exit' to quit OPS."))
+        break
     }
   }
 
@@ -233,13 +447,11 @@ export default function Terminal() {
           setTimeout(() => {
             push(mkLine('output', '[*] ████████████████████ 100%'))
             setTimeout(() => {
-              // Mark file as exfilled
               setHackSession(prev => prev
                 ? { ...prev, exfilled: [...prev.exfilled, filename] }
                 : prev
               )
 
-              // Always write to local filesystem under ~/loot/
               const fs = useFSStore.getState()
               fs.mkdir(['home', 'citizen', 'loot'])
               fs.writeFile(['home', 'citizen', 'loot', filename], file.content)
@@ -250,7 +462,6 @@ export default function Terminal() {
 
               if (isTarget) {
                 const job = getJob(session.jobId!)
-                // Auto-accept if somehow not yet accepted, then complete
                 if (job && !job.accepted) acceptJob(job.id)
                 completeJob(session.jobId!)
                 useWalletStore.getState().credit(
@@ -478,6 +689,42 @@ export default function Terminal() {
         break
       }
 
+      // ── OPS launcher ───────────────────────────────────────────────────────
+
+      case 'ops': {
+        const target = args[0]
+        if (!target) {
+          push(mkLine('error', 'usage: ops <target>'))
+          push(mkLine('info',  '  example: ops gridos.corp'))
+          push(mkLine('info',  '  example: ops ghostlily.blog'))
+          break
+        }
+
+        const ops = useOpsStore.getState()
+        ops.startSession(target)
+        setOpsSession({ target })
+
+        push(
+          mkLine('info',    ''),
+          mkLine('info',    '  ██████╗ ██████╗ ███████╗'),
+          mkLine('info',    '  ██╔══██╗██╔══██╗██╔════╝'),
+          mkLine('info',    '  ██║  ██║██████╔╝███████╗'),
+          mkLine('info',    '  ██║  ██║██╔═══╝ ╚════██║'),
+          mkLine('info',    '  ██████╔╝██║     ███████║'),
+          mkLine('info',    '  ╚═════╝ ╚═╝     ╚══════╝'),
+          mkLine('info',    ''),
+          mkLine('success', `  OPS v0.9.1 — TARGET: ${target}`),
+          mkLine('warn',    '  // unregistered node // activity unlogged'),
+          mkLine('info',    ''),
+          mkLine('output',  "  Type 'scan' to run passive recon."),
+          mkLine('output',  "  Type 'help' for all commands."),
+          mkLine('output',  "  Type 'exit' to close OPS session."),
+          mkLine('info',    '  [OPS panel in browser is now live — open it to see results]'),
+          mkLine('info',    ''),
+        )
+        break
+      }
+
       // ── Hacking ────────────────────────────────────────────────────────────
 
       case 'scan': {
@@ -492,7 +739,6 @@ export default function Terminal() {
           break
         }
 
-        // Only show wifi and device signals — the hackable kinds
         const hackable = loc.signals.filter(s => s.type === 'wifi' || s.type === 'device')
         if (hackable.length === 0) {
           push(mkLine('output', '[*] No hackable networks at this location. (Phones/BT visible in City Map)'))
@@ -531,11 +777,9 @@ export default function Terminal() {
         const nodeId = args[0]
         if (!nodeId) { push(mkLine('error', 'usage: connect <node-id>')); break }
 
-        // Validate node exists in hack registry
         const node = HACK_NODES.find(n => n.id === nodeId)
         if (!node) { push(mkLine('error', `connect: unknown node identifier: ${nodeId}`)); break }
 
-        // Validate node is physically reachable from current location
         const locId = useMapStore.getState().currentLocationId
         const loc   = getLocation(locId)
         const reachable = loc?.signals.some(s => s.hackNodeId === nodeId) ?? false
@@ -557,7 +801,6 @@ export default function Terminal() {
           break
         }
 
-        // Tier 0 — unsecured, connect directly
         push(
           mkLine('info',    `[*] Initiating connection to ${node.name}...`),
           mkLine('info',    '[*] Security check: NONE — node is unsecured.'),
@@ -591,10 +834,13 @@ export default function Terminal() {
       case 'info':    return C.muted
       case 'success': return C.success
       case 'warn':    return C.warn
-      case 'input':   return C.accent
+      case 'input':   return opsSession ? C.ops : C.accent
       default:        return C.text
     }
   }
+
+  const isOps  = !!opsSession
+  const isHack = !!hackSession
 
   return (
     <div
@@ -603,12 +849,12 @@ export default function Terminal() {
         background: C.bg, display: 'flex', flexDirection: 'column',
         fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
         overflow: 'hidden',
-        outline: hackSession ? `1px solid ${C.violet}22` : 'none',
+        outline: isHack ? `1px solid ${C.violet}22` : isOps ? `1px solid ${C.ops}18` : 'none',
       }}
       onClick={() => inputRef.current?.focus()}
     >
-      {/* Connection indicator */}
-      {hackSession && (
+      {/* Hack session indicator */}
+      {isHack && (
         <div style={{
           padding: '4px 14px', fontSize: 10, letterSpacing: '0.1em',
           background: `${C.violet}18`, borderBottom: `1px solid ${C.violet}44`,
@@ -616,10 +862,22 @@ export default function Terminal() {
           flexShrink: 0,
         }}>
           <span>● REMOTE SESSION</span>
-          <span style={{ color: C.muted }}>{hackSession.nodeName}</span>
-          <span style={{ marginLeft: 'auto', color: C.warn }}>
-            type 'disconnect' to exit
-          </span>
+          <span style={{ color: C.muted }}>{hackSession!.nodeName}</span>
+          <span style={{ marginLeft: 'auto', color: C.warn }}>type 'disconnect' to exit</span>
+        </div>
+      )}
+
+      {/* OPS session indicator */}
+      {isOps && (
+        <div style={{
+          padding: '4px 14px', fontSize: 10, letterSpacing: '0.1em',
+          background: `${C.ops}10`, borderBottom: `1px solid ${C.ops}33`,
+          color: C.ops, display: 'flex', gap: 12, alignItems: 'center',
+          flexShrink: 0,
+        }}>
+          <span>◈ OPS SESSION</span>
+          <span style={{ color: C.muted }}>TARGET: {opsSession!.target}</span>
+          <span style={{ marginLeft: 'auto', color: C.muted }}>scan · probe · modules · exit</span>
         </div>
       )}
 
@@ -629,7 +887,7 @@ export default function Terminal() {
           <div key={l.id} style={{ marginBottom: 1 }}>
             {l.prompt && (
               <span style={{
-                color: hackSession ? C.violet : C.success,
+                color: isHack ? C.violet : isOps ? C.ops : C.success,
                 userSelect: 'none',
               }}>
                 {l.prompt}
@@ -646,12 +904,14 @@ export default function Terminal() {
       {/* Input */}
       <div style={{
         display: 'flex', alignItems: 'center',
-        borderTop: `1px solid ${hackSession ? C.violet + '44' : C.faint}`,
+        borderTop: `1px solid ${
+          isHack ? C.violet + '44' : isOps ? C.ops + '33' : C.faint
+        }`,
         padding: '6px 14px', gap: 8, flexShrink: 0,
         background: '#0d0d12',
       }}>
         <span style={{
-          color: hackSession ? C.violet : C.success,
+          color: isHack ? C.violet : isOps ? C.ops : C.success,
           whiteSpace: 'nowrap', userSelect: 'none', fontSize: 12,
         }}>
           {prompt()}
@@ -667,9 +927,9 @@ export default function Terminal() {
           }}
           style={{
             flex: 1, background: 'none', border: 'none', outline: 'none',
-            color: hackSession ? C.violet : C.accent,
+            color: isHack ? C.violet : isOps ? C.ops : C.accent,
             fontFamily: 'inherit', fontSize: 12,
-            caretColor: hackSession ? C.violet : C.accent,
+            caretColor: isHack ? C.violet : isOps ? C.ops : C.accent,
           }}
           spellCheck={false}
           autoComplete="off"
