@@ -348,20 +348,20 @@ function OsWindow({ win, onClose, onFocus, onMove, onResize, onToggleMax, onMini
   )
 
   function renderBody() {
-    if (win.content)              return win.content
-    if (win.title === 'GridBrowser')  return <GridBrowser />
-    if (win.title === 'Job Board')    return <JobBoard />
-    if (win.title === 'Watch')        return <WatchApp />
-    if (win.title === 'Mail')         return <MailApp />
-    if (win.title === 'App Store')    return <AppStore />
-    if (win.title === 'NODE')         return <NodeApp />
-    if (win.title === 'Terminal')     return <Terminal />
-    if (win.title === 'File System')  return <FileSystem />
-    if (win.title === 'City Map')     return <MapApp />
-    if (win.title === 'Checkpoint')   return <CheckpointApp />
-    if (win.title === 'Data Broker')  return <DataBrokerApp />
-    if (win.title === 'Courier')      return <CourierApp />
-    if (win.title === 'OPS')          return <OpsApp />
+    if (win.content)                              return win.content
+    if (win.id === 'browser')                     return <GridBrowser />
+    if (win.id === 'jobs')                        return <JobBoard />
+    if (win.id === 'watch')                       return <WatchApp />
+    if (win.id === 'mail')                        return <MailApp />
+    if (win.id === 'appstore')                    return <AppStore />
+    if (win.id === 'node')                        return <NodeApp />
+    if (win.id === 'terminal')                    return <Terminal />
+    if (win.id === 'files')                       return <FileSystem />
+    if (win.id === 'map')                         return <MapApp />
+    if (win.id === 'checkpoint')                  return <CheckpointApp />
+    if (win.id === 'databroker')                  return <DataBrokerApp />
+    if (win.id === 'courier')                     return <CourierApp />
+    if (win.id === 'ops')                         return <OpsApp />
     return (
       <div style={{
         width: '100%', height: '100%',
