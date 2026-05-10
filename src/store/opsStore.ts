@@ -193,5 +193,9 @@ export const OPS_NODES: OpsNodeData[] = [
 ]
 
 export function getOpsNode(target: string): OpsNodeData | undefined {
-  return OPS_NODES.find(n => n.target === target || target.startsWith(n.target))
+  return OPS_NODES.find(n =>
+    n.target === target ||
+    target.startsWith(n.target) ||
+    n.resolvedIP === target
+  )
 }

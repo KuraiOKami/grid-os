@@ -4,6 +4,8 @@ import { useRepStore } from '@/store/reputationStore'
 import { useUnlockStore } from '@/store/unlockStore'
 import { useSite } from '@/hooks/useSite'
 import { KNOWN_DOMAINS, isValidGridUrl } from '@/lib/gridTargets'
+import { getOpsNode, useOpsStore } from '@/store/opsStore'
+import type { OpsNodeData } from '@/store/opsStore'
 import type { SiteRow, SiteContentRow, SiteTheme } from '@/lib/browserTypes'
 
 // ── types ────────────────────────────────────────────────────────────────
@@ -482,35 +484,46 @@ const PAGES: Record<string, PageData> = {
   },
 }
 
-// ── OPS panel (inline scan engine) ───────────────────────────────────────
-const _OPS_FIREWALL_GRADES = ['A+', 'A', 'B', 'C', 'D', 'F', 'NONE', 'UNKNOWN']
-const _OPS_NODE_OWNERS     = ['GRIDOS CORP', 'UNREGISTERED', 'PROXY-RELAY', 'CITIZEN NODE', 'DARK RELAY', 'GHOST NODE', 'GOV SECTOR 4', 'PRIVATE CORP']
-const _OPS_PORT_SETS       = ['80, 443, 8080', '22, 80, 443', '80, 443, 3306, 8443', '443 only', '21, 22, 80, 443, 8080, 9000', 'NONE VISIBLE']
-const _OPS_BEHAVIORS       = ['Logging all inbound', 'Rate-limiting suspicious IPs', 'Honeypot active on port 9001', 'Ghost traffic detected (14%)', 'No anomalies detected', 'Deep packet inspection enabled', 'Compliance beacon transmitting', 'Behavior profiling: ACTIVE']
-
+// ── OPS panel (shared data layer) ────────────────────────────────────────
 type OpsScanResult = { label: string; value: string; status: 'clean' | 'warn' | 'critical' | 'unknown' }
 
-function _opsSeedRng(seed: string) {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0
-  return () => { h ^= h << 13; h ^= h >> 7; h ^= h << 17; return (h >>> 0) / 0xFFFFFFFF }
+function _nodeDataToRows(n: OpsNodeData): OpsScanResult[] {
+  const fw = n.firewallGrade
+  const fwStatus: OpsScanResult['status'] = ['A+', 'A'].includes(fw) ? 'clean' : ['B', 'C'].includes(fw) ? 'warn' : 'critical'
+  return [
+    { label: 'RESOLVED IP',     value: n.resolvedIP,                                  status: 'unknown' },
+    { label: 'NODE OWNER',      value: n.nodeOwner,                                   status: n.nodeOwner.includes('CORP') ? 'warn' : 'clean' },
+    { label: 'FIREWALL GRADE',  value: fw,                                             status: fwStatus },
+    { label: 'OPEN PORTS',      value: n.openPorts,                                   status: n.openPorts === 'HIDDEN' ? 'critical' : 'clean' },
+    { label: 'GRID COMPLIANCE', value: n.compliance,                                  status: n.compliance.includes('NON') ? 'critical' : 'clean' },
+    { label: 'BEHAVIOR FLAGS',  value: n.behaviorFlags[0] ?? 'No anomalies detected', status: n.behaviorFlags.length > 0 ? 'warn' : 'clean' },
+    { label: 'GHOST TRAFFIC',   value: `${n.ghostTraffic}%`,                          status: n.ghostTraffic > 50 ? 'critical' : n.ghostTraffic > 20 ? 'warn' : 'clean' },
+    { label: 'LAST PING',       value: n.lastPing,                                    status: 'unknown' },
+  ]
 }
 
-function _opsGenerateScan(target: string): OpsScanResult[] {
-  const rng = _opsSeedRng(target || 'null')
+// Seeded RNG fallback for targets with no OPS_NODES entry
+function _opsRngScan(target: string): OpsScanResult[] {
+  const FW    = ['A+', 'A', 'B', 'C', 'D', 'F', 'NONE', 'UNKNOWN']
+  const OWN   = ['GRIDOS CORP', 'UNREGISTERED', 'PROXY-RELAY', 'CITIZEN NODE', 'DARK RELAY', 'GHOST NODE', 'GOV SECTOR 4', 'PRIVATE CORP']
+  const PORTS = ['80, 443, 8080', '22, 80, 443', '80, 443, 3306, 8443', '443 only', '21, 22, 80, 443, 8080, 9000', 'NONE VISIBLE']
+  const BEHAV = ['Logging all inbound', 'Rate-limiting suspicious IPs', 'Honeypot active on port 9001', 'Ghost traffic detected (14%)', 'No anomalies detected', 'Deep packet inspection enabled', 'Compliance beacon transmitting', 'Behavior profiling: ACTIVE']
+  let h = 0
+  for (let i = 0; i < target.length; i++) h = Math.imul(31, h) + target.charCodeAt(i) | 0
+  const rng  = () => { h ^= h << 13; h ^= h >> 7; h ^= h << 17; return (h >>> 0) / 0xFFFFFFFF }
   const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)]
-  const fw = pick(_OPS_FIREWALL_GRADES)
-  const fwStatus: OpsScanResult['status'] = ['A+', 'A'].includes(fw) ? 'clean' : ['B', 'C'].includes(fw) ? 'warn' : 'critical'
-  const ip = `${Math.floor(rng()*223)+1}.${Math.floor(rng()*254)+1}.${Math.floor(rng()*254)+1}.${Math.floor(rng()*254)+1}`
+  const fw   = pick(FW)
+  const fwSt: OpsScanResult['status'] = ['A+', 'A'].includes(fw) ? 'clean' : ['B', 'C'].includes(fw) ? 'warn' : 'critical'
+  const ip   = `${Math.floor(rng()*223)+1}.${Math.floor(rng()*254)+1}.${Math.floor(rng()*254)+1}.${Math.floor(rng()*254)+1}`
   return [
-    { label: 'RESOLVED IP',     value: ip,                                                              status: 'unknown' },
-    { label: 'NODE OWNER',      value: pick(_OPS_NODE_OWNERS),                                          status: rng() > 0.5 ? 'warn' : 'clean' },
-    { label: 'FIREWALL GRADE',  value: fw,                                                              status: fwStatus },
-    { label: 'OPEN PORTS',      value: pick(_OPS_PORT_SETS),                                            status: rng() > 0.6 ? 'warn' : 'clean' },
-    { label: 'GRID COMPLIANCE', value: rng() > 0.5 ? 'COMPLIANT' : 'NON-COMPLIANT',                    status: rng() > 0.5 ? 'clean' : 'critical' },
-    { label: 'BEHAVIOR FLAGS',  value: pick(_OPS_BEHAVIORS),                                            status: rng() > 0.7 ? 'warn' : 'clean' },
-    { label: 'GHOST TRAFFIC',   value: `${Math.floor(rng() * 40)}%`,                                   status: rng() > 0.6 ? 'critical' : 'clean' },
-    { label: 'LAST PING',       value: `${Math.floor(rng() * 800) + 12}ms`,                            status: 'unknown' },
+    { label: 'RESOLVED IP',     value: ip,                                                           status: 'unknown' },
+    { label: 'NODE OWNER',      value: pick(OWN),                                                    status: rng() > 0.5 ? 'warn' : 'clean' },
+    { label: 'FIREWALL GRADE',  value: fw,                                                            status: fwSt },
+    { label: 'OPEN PORTS',      value: pick(PORTS),                                                  status: rng() > 0.6 ? 'warn' : 'clean' },
+    { label: 'GRID COMPLIANCE', value: rng() > 0.5 ? 'COMPLIANT' : 'NON-COMPLIANT',                 status: rng() > 0.5 ? 'clean' : 'critical' },
+    { label: 'BEHAVIOR FLAGS',  value: pick(BEHAV),                                                  status: rng() > 0.7 ? 'warn' : 'clean' },
+    { label: 'GHOST TRAFFIC',   value: `${Math.floor(rng() * 40)}%`,                                status: rng() > 0.6 ? 'critical' : 'clean' },
+    { label: 'LAST PING',       value: `${Math.floor(rng() * 800) + 12}ms`,                         status: 'unknown' },
   ]
 }
 
@@ -538,7 +551,25 @@ function OPSPanel({ targetUrl, onClose }: { targetUrl: string; onClose: () => vo
   async function runScan() {
     if (scanning) return
     setScanning(true); setScanDone(false); setScanResults([]); setRevealedRows([])
-    const results = _opsGenerateScan(targetUrl)
+
+    const nodeData = getOpsNode(targetUrl)
+    const results  = nodeData ? _nodeDataToRows(nodeData) : _opsRngScan(targetUrl)
+
+    // Sync to shared opsStore so standalone OPS app sees same data
+    if (nodeData) {
+      useOpsStore.getState().setScan({
+        target:        nodeData.target,
+        resolvedIP:    nodeData.resolvedIP,
+        nodeOwner:     nodeData.nodeOwner,
+        firewallGrade: nodeData.firewallGrade,
+        openPorts:     nodeData.openPorts,
+        compliance:    nodeData.compliance,
+        ghostTraffic:  nodeData.ghostTraffic,
+        lastPing:      nodeData.lastPing,
+        behaviorFlags: nodeData.behaviorFlags,
+      })
+    }
+
     setScanResults(results)
     for (let i = 0; i < results.length; i++) {
       await new Promise(r => setTimeout(r, 220 + Math.random() * 180))
