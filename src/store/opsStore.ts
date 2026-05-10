@@ -25,27 +25,30 @@ export interface ProbeResult {
 }
 
 export interface OpsState {
-  phase:        OpsPhase
-  target:       string | null
-  scanResult:   ScanResult | null
-  probeResults: ProbeResult[]
-  sessionLog:   string[]
+  phase:         OpsPhase
+  target:        string | null
+  scanResult:    ScanResult | null
+  probeResults:  ProbeResult[]
+  sessionLog:    string[]
+  pendingTarget: string | null   // set by OPS panel; Terminal picks this up on open
 
   // actions
-  startSession:  (target: string) => void
-  setScan:       (result: ScanResult) => void
-  addProbe:      (result: ProbeResult) => void
-  log:           (line: string) => void
-  setPhase:      (phase: OpsPhase) => void
-  clearSession:  () => void
+  startSession:    (target: string) => void
+  setScan:         (result: ScanResult) => void
+  addProbe:        (result: ProbeResult) => void
+  log:             (line: string) => void
+  setPhase:        (phase: OpsPhase) => void
+  clearSession:    () => void
+  setPendingTarget:(target: string | null) => void
 }
 
 export const useOpsStore = create<OpsState>((set) => ({
-  phase:        'idle',
-  target:       null,
-  scanResult:   null,
-  probeResults: [],
-  sessionLog:   [],
+  phase:         'idle',
+  target:        null,
+  scanResult:    null,
+  probeResults:  [],
+  sessionLog:    [],
+  pendingTarget: null,
 
   startSession: (target) => set({
     target,
@@ -78,6 +81,8 @@ export const useOpsStore = create<OpsState>((set) => ({
     probeResults: [],
     sessionLog:   [],
   }),
+
+  setPendingTarget: (target) => set({ pendingTarget: target }),
 }))
 
 // ── OPS node database ─────────────────────────────────────────────────────

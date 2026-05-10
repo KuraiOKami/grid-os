@@ -156,6 +156,20 @@ export default function Terminal() {
     return `citizen@grid:${pathStr(fs.cwd)}$ `
   }
 
+  // Pick up target handed off from OPS panel
+  useEffect(() => {
+    const pending = useOpsStore.getState().pendingTarget
+    if (pending) {
+      useOpsStore.getState().setPendingTarget(null)
+      setOpsSession({ target: pending })
+      setLines(prev => [...prev,
+        mkLine('info',    `[OPS] Session received — target: ${pending}`),
+        mkLine('info',     '[OPS] Scan intel loaded. Run \'status\' to review.'),
+        mkLine('info',     '[OPS] Run \'modules\' to see available probes. \'exit\' to return to local shell.'),
+      ])
+    }
+  }, [])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [lines])
