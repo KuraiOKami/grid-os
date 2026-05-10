@@ -2,10 +2,12 @@
 // Overlay recon & execution suite. Attaches to active app context.
 
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useOpsScanStore, type ScanRecord } from '@/store/opsScanStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-type OpsPanel = 'scan' | 'probe' | 'exec'
+type OpsPanel = 'scan' | 'probe' | 'exec' | 'history'
 
 interface ScanResult {
   label: string
@@ -26,22 +28,7 @@ interface ExecLog {
   ok: boolean
 }
 
-// ─── Fake intel generators (fiction-layer) ────────────────────────────────
-
-const FIREWALL_GRADES = ['A+', 'A', 'B', 'C', 'D', 'F', 'NONE', 'UNKNOWN']
-const NODE_OWNERS = [
-  'GRIDOS CORP', 'UNREGISTERED', 'PROXY-RELAY', 'CITIZEN NODE',
-  'DARK RELAY', 'GHOST NODE', 'GOV SECTOR 4', 'PRIVATE CORP'
-]
-const PORT_SETS = [
-  '80, 443, 8080', '22, 80, 443', '80, 443, 3306, 8443',
-  '443 only', '21, 22, 80, 443, 8080, 9000', 'NONE VISIBLE'
-]
-const BEHAVIORS = [
-  'Logging all inbound', 'Rate-limiting suspicious IPs', 'Honeypot active on port 9001',
-  'Ghost traffic detected (14%)', 'No anomalies detected', 'Deep packet inspection enabled',
-  'Compliance beacon transmitting', 'Behavior profiling: ACTIVE'
-]
+// ─── Fake probe/exec generators (unchanged — fiction layer) ───────────────
 
 function seedRng(seed: string) {
   let h = 0
@@ -51,24 +38,6 @@ function seedRng(seed: string) {
 
 function fakeIp(rng: () => number) {
   return `${Math.floor(rng() * 223) + 1}.${Math.floor(rng() * 254) + 1}.${Math.floor(rng() * 254) + 1}.${Math.floor(rng() * 254) + 1}`
-}
-
-function generateScan(target: string): ScanResult[] {
-  const rng = seedRng(target || 'null')
-  const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)]
-  const fw = pick(FIREWALL_GRADES)
-  const fwStatus = ['A+', 'A'].includes(fw) ? 'clean' : ['B', 'C'].includes(fw) ? 'warn' : 'critical'
-
-  return [
-    { label: 'RESOLVED IP', value: fakeIp(rng), status: 'unknown' },
-    { label: 'NODE OWNER', value: pick(NODE_OWNERS), status: rng() > 0.5 ? 'warn' : 'clean' },
-    { label: 'FIREWALL GRADE', value: fw, status: fwStatus },
-    { label: 'OPEN PORTS', value: pick(PORT_SETS), status: rng() > 0.6 ? 'warn' : 'clean' },
-    { label: 'GRID COMPLIANCE', value: rng() > 0.5 ? 'COMPLIANT' : 'NON-COMPLIANT', status: rng() > 0.5 ? 'clean' : 'critical' },
-    { label: 'BEHAVIOR FLAGS', value: pick(BEHAVIORS), status: rng() > 0.7 ? 'warn' : 'clean' },
-    { label: 'GHOST TRAFFIC', value: `${Math.floor(rng() * 40)}%`, status: rng() > 0.6 ? 'critical' : 'clean' },
-    { label: 'LAST PING', value: `${Math.floor(rng() * 800) + 12}ms`, status: 'unknown' },
-  ]
 }
 
 function generateProbe(target: string): ProbeEntry[] {
@@ -93,7 +62,7 @@ interface ExecCommand {
   label: string
   desc: string
   risk: 'low' | 'medium' | 'high' | 'critical'
-  args?: string   // placeholder hint
+  args?: string
 }
 
 const EXEC_COMMANDS: ExecCommand[] = [
@@ -103,68 +72,32 @@ const EXEC_COMMANDS: ExecCommand[] = [
   { id: 'bypass',  label: 'BYPASS',  risk: 'high',     desc: 'Attempt to route around target firewall via proxy chain.' },
   { id: 'exfil',   label: 'EXFIL',   risk: 'high',     desc: 'Extract cached node data from target before next refresh.', args: 'data_key' },
   { id: 'flood',   label: 'FLOOD',   risk: 'high',     desc: 'Saturate target relay with synthetic requests. Noisy.' },
-  { id: 'inject',  label: 'INJECT',  risk: 'critical',  desc: 'Push a payload into unprotected node input field.', args: 'payload' },
-  { id: 'wipe',    label: 'WIPE',    risk: 'critical',  desc: 'Erase OPS trace logs from current session. Irreversible.' },
+  { id: 'inject',  label: 'INJECT',  risk: 'critical', desc: 'Push a payload into unprotected node input field.', args: 'payload' },
+  { id: 'wipe',    label: 'WIPE',    risk: 'critical', desc: 'Erase OPS trace logs from current session. Irreversible.' },
 ]
 
 function riskColor(risk: ExecCommand['risk']) {
-  return {
-    low: 'text-green-400',
-    medium: 'text-yellow-400',
-    high: 'text-orange-400',
-    critical: 'text-red-500',
-  }[risk]
+  return { low: 'text-green-400', medium: 'text-yellow-400', high: 'text-orange-400', critical: 'text-red-500' }[risk]
 }
-
 function riskBorder(risk: ExecCommand['risk']) {
-  return {
-    low: 'border-green-900/40',
-    medium: 'border-yellow-900/40',
-    high: 'border-orange-900/40',
-    critical: 'border-red-900/60',
-  }[risk]
+  return { low: 'border-green-900/40', medium: 'border-yellow-900/40', high: 'border-orange-900/40', critical: 'border-red-900/60' }[risk]
 }
 
 function fakeExecOutput(cmd: ExecCommand, args: string, target: string): { output: string; ok: boolean } {
   const rng = seedRng(cmd.id + target + args)
   const roll = rng()
   const outcomes: Record<string, string[]> = {
-    trace: [
-      `TRACE OK: ${target}\n  → relay.g.net (12ms)\n  → node-441c (38ms)\n  → ${target} (71ms)\nHops: 3  Total: 121ms`,
-      `TRACE PARTIAL: relay timeout at hop 2. Path incomplete.`,
-    ],
-    ghost: [
-      `GHOST ACTIVE: Node address masked.\n  Alias: 192.168.${Math.floor(rng()*200)+10}.${Math.floor(rng()*200)+10}\n  TTL: 300s`,
-      `GHOST FAILED: GridOS compliance beacon still transmitting. Cover blown.`,
-    ],
-    spoof: [
-      `SPOOF OK: Identity header injected → "${args || 'citizen_0000'}"\n  Active for next 5 requests.`,
-      `SPOOF REJECTED: Target validates headers server-side. No effect.`,
-    ],
-    bypass: [
-      `BYPASS CHAIN: ${target}\n  Pivot 1: relay.dark.net ✓\n  Pivot 2: exit-node-9 ✓\n  FIREWALL: BYPASSED`,
-      `BYPASS FAILED: Target firewall grade too high. No viable proxy found.`,
-    ],
-    exfil: [
-      `EXFIL: 3 cache entries extracted for key "${args || '*'}"\n  /nav/links [12 items]\n  /meta/owner [1 item]\n  /log/behavior [47 items]\n  Saved to /ops/dump/${Date.now()}.log`,
-      `EXFIL FAILED: Node cache encrypted. Key "${args || '*'}" not accessible.`,
-    ],
-    flood: [
-      `FLOOD RUNNING: ${target}\n  Packets sent: 14,400\n  Target response rate: 3%\n  Status: DEGRADED`,
-      `FLOOD BLOCKED: Target rate-limiting detected after 200 requests. Aborted.`,
-    ],
-    inject: [
-      `INJECT: Payload delivered to open input.\n  Response: 500 Internal Error (likely hit)\n  Payload: "${args || '<script>ops()</script>'}"\n  Flag logged.`,
-      `INJECT BLOCKED: WAF intercepted payload. No effect.`,
-    ],
-    wipe: [
-      `WIPE COMPLETE: Session trace logs cleared.\n  Entries removed: ${Math.floor(rng() * 80) + 5}\n  Grid audit trail: UNAFFECTED (off-device)`,
-      `WIPE PARTIAL: 2 of 3 log stores cleared. Remote backup may persist.`,
-    ],
+    trace:  [`TRACE OK: ${target}\n  → relay.g.net (12ms)\n  → node-441c (38ms)\n  → ${target} (71ms)\nHops: 3  Total: 121ms`, `TRACE PARTIAL: relay timeout at hop 2. Path incomplete.`],
+    ghost:  [`GHOST ACTIVE: Node address masked.\n  Alias: 192.168.${Math.floor(rng()*200)+10}.${Math.floor(rng()*200)+10}\n  TTL: 300s`, `GHOST FAILED: GridOS compliance beacon still transmitting. Cover blown.`],
+    spoof:  [`SPOOF OK: Identity header injected → "${args || 'citizen_0000'}"\n  Active for next 5 requests.`, `SPOOF REJECTED: Target validates headers server-side. No effect.`],
+    bypass: [`BYPASS CHAIN: ${target}\n  Pivot 1: relay.dark.net ✓\n  Pivot 2: exit-node-9 ✓\n  FIREWALL: BYPASSED`, `BYPASS FAILED: Target firewall grade too high. No viable proxy found.`],
+    exfil:  [`EXFIL: 3 cache entries extracted for key "${args || '*'}"\n  /nav/links [12 items]\n  /meta/owner [1 item]\n  /log/behavior [47 items]\n  Saved to /ops/dump/${Date.now()}.log`, `EXFIL FAILED: Node cache encrypted. Key "${args || '*'}" not accessible.`],
+    flood:  [`FLOOD RUNNING: ${target}\n  Packets sent: 14,400\n  Target response rate: 3%\n  Status: DEGRADED`, `FLOOD BLOCKED: Target rate-limiting detected after 200 requests. Aborted.`],
+    inject: [`INJECT: Payload delivered to open input.\n  Response: 500 Internal Error (likely hit)\n  Payload: "${args || '<script>ops()</script>'}"\n  Flag logged.`, `INJECT BLOCKED: WAF intercepted payload. No effect.`],
+    wipe:   [`WIPE COMPLETE: Session trace logs cleared.\n  Entries removed: ${Math.floor(rng() * 80) + 5}\n  Grid audit trail: UNAFFECTED (off-device)`, `WIPE PARTIAL: 2 of 3 log stores cleared. Remote backup may persist.`],
   }
   const pool = outcomes[cmd.id] ?? [`${cmd.id.toUpperCase()} OK.`]
-  const ok = roll > 0.35
-  return { output: ok ? pool[0] : pool[1], ok }
+  return { output: roll > 0.35 ? pool[0] : pool[1], ok: roll > 0.35 }
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -188,14 +121,96 @@ function ScanRow({ row, reveal }: { row: ScanResult; reveal: boolean }) {
   )
 }
 
+function kindBadge(kind: ScanRecord['kind']) {
+  if (kind === 'site')      return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 font-mono">SITE</span>
+  if (kind === 'player')    return <span className="text-xs px-1.5 py-0.5 rounded bg-purple-950 text-purple-400 font-mono">PLAYER</span>
+  return                           <span className="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 font-mono">404</span>
+}
+
+// ─── Real Supabase scan ────────────────────────────────────────────────────
+
+async function runSupabaseScan(target: string): Promise<{ results: ScanResult[]; record: ScanRecord }> {
+  const rng = seedRng(target)
+  const fakeIpVal = fakeIp(rng)
+
+  // Try sites table first
+  const { data: siteData } = await supabase
+    .from('sites')
+    .select('*')
+    .ilike('slug', target)
+    .single()
+
+  if (siteData) {
+    const results: ScanResult[] = [
+      { label: 'MATCH TYPE',    value: 'SITE RECORD',                              status: 'clean' },
+      { label: 'SLUG',          value: siteData.slug ?? target,                    status: 'unknown' },
+      { label: 'TITLE',         value: siteData.title ?? '—',                      status: 'unknown' },
+      { label: 'THEME',         value: (siteData.theme ?? 'unknown').toUpperCase(), status: 'unknown' },
+      { label: 'GATE TYPE',     value: siteData.gate_type ? siteData.gate_type.toUpperCase() : 'NONE', status: siteData.gate_type ? 'warn' : 'clean' },
+      { label: 'GATE MIN',      value: siteData.gate_min != null ? String(siteData.gate_min) : '—',    status: siteData.gate_min ? 'warn' : 'clean' },
+      { label: 'REP COMPLIANCE',value: siteData.rep_compliance != null ? String(siteData.rep_compliance) : '0', status: (siteData.rep_compliance ?? 0) > 0 ? 'warn' : 'clean' },
+      { label: 'REP SHADOW',    value: siteData.rep_shadow != null ? String(siteData.rep_shadow) : '0',        status: (siteData.rep_shadow ?? 0) > 0 ? 'warn' : 'clean' },
+      { label: 'RESOLVED IP',   value: fakeIpVal,                                  status: 'unknown' },
+    ]
+    const record: ScanRecord = {
+      target,
+      scannedAt: new Date().toISOString(),
+      kind: 'site',
+      data: { slug: siteData.slug, title: siteData.title, theme: siteData.theme },
+    }
+    return { results, record }
+  }
+
+  // Try players table
+  const { data: playerData } = await supabase
+    .from('players')
+    .select('*')
+    .ilike('username', target)
+    .single()
+
+  if (playerData) {
+    const results: ScanResult[] = [
+      { label: 'MATCH TYPE',  value: 'PLAYER RECORD',                                         status: 'clean' },
+      { label: 'USERNAME',    value: playerData.username ?? target,                            status: 'unknown' },
+      { label: 'COMPLIANCE',  value: String(playerData.compliance ?? '?'),                    status: (playerData.compliance ?? 50) >= 60 ? 'clean' : 'critical' },
+      { label: 'SHADOW',      value: String(playerData.shadow ?? '?'),                        status: (playerData.shadow ?? 50) >= 60 ? 'warn' : 'clean' },
+      { label: 'CREDITS',     value: playerData.credits != null ? `₳ ${playerData.credits}` : '—', status: 'unknown' },
+      { label: 'RESOLVED IP', value: fakeIpVal,                                               status: 'unknown' },
+    ]
+    const record: ScanRecord = {
+      target,
+      scannedAt: new Date().toISOString(),
+      kind: 'player',
+      data: { username: playerData.username, compliance: String(playerData.compliance), shadow: String(playerData.shadow) },
+    }
+    return { results, record }
+  }
+
+  // Not found
+  const results: ScanResult[] = [
+    { label: 'MATCH TYPE', value: 'NOT FOUND', status: 'critical' },
+    { label: 'TARGET',     value: target,       status: 'unknown' },
+    { label: 'SITES DB',   value: 'NO MATCH',   status: 'critical' },
+    { label: 'PLAYERS DB', value: 'NO MATCH',   status: 'critical' },
+    { label: 'RESOLVED IP',value: fakeIpVal,    status: 'unknown' },
+  ]
+  const record: ScanRecord = {
+    target,
+    scannedAt: new Date().toISOString(),
+    kind: 'not_found',
+    data: {},
+  }
+  return { results, record }
+}
+
 // ─── Main App ──────────────────────────────────────────────────────────────
 
 interface OpsAppProps {
-  // Injected by the OS shell — the current active app's context string
   activeTarget?: string
+  compact?: boolean
 }
 
-export default function OpsApp({ activeTarget }: OpsAppProps) {
+export default function OpsApp({ activeTarget, compact = false }: OpsAppProps) {
   const [panel, setPanel] = useState<OpsPanel>('scan')
   const [target, setTarget] = useState(activeTarget ?? '')
   const [inputTarget, setInputTarget] = useState(activeTarget ?? '')
@@ -215,16 +230,14 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
   const [selectedCmd, setSelectedCmd] = useState<ExecCommand | null>(null)
   const [execArgs, setExecArgs] = useState('')
   const [execLog, setExecLog] = useState<ExecLog[]>([])
-  const [confirming, setConfirming] = useState(false)
   const [running, setRunning] = useState(false)
   const logEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll exec log
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [execLog])
+  // History store
+  const { history, addRecord, clearHistory } = useOpsScanStore()
 
-  // Sync if OS pushes a new active target
+  useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [execLog])
+
   useEffect(() => {
     if (activeTarget && activeTarget !== target) {
       setTarget(activeTarget)
@@ -236,7 +249,7 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
   function resetAll() {
     setScanResults([]); setScanDone(false); setScanning(false); setRevealedRows([])
     setProbeResults([]); setProbeDone(false); setProbing(false)
-    setSelectedCmd(null); setConfirming(false); setRunning(false)
+    setSelectedCmd(null); setRunning(false)
   }
 
   function applyTarget() {
@@ -245,22 +258,24 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
     resetAll()
   }
 
-  // ── SCAN ─────────────────────────────────────────────────────────────────
+  // ── SCAN (real Supabase) ──────────────────────────────────────────────────
 
   async function runScan() {
     if (!target || scanning) return
     setScanning(true); setScanDone(false); setScanResults([]); setRevealedRows([])
-    const results = generateScan(target)
+
+    const { results, record } = await runSupabaseScan(target)
+    addRecord(record)
     setScanResults(results)
-    // Reveal rows one by one with staggered delay
+
     for (let i = 0; i < results.length; i++) {
-      await new Promise(r => setTimeout(r, 220 + Math.random() * 180))
+      await new Promise(r => setTimeout(r, 180 + Math.random() * 160))
       setRevealedRows(prev => { const n = [...prev]; n[i] = true; return n })
     }
     setScanDone(true); setScanning(false)
   }
 
-  // ── PROBE ────────────────────────────────────────────────────────────────
+  // ── PROBE ─────────────────────────────────────────────────────────────────
 
   async function runProbe() {
     if (!target || probing) return
@@ -274,26 +289,73 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
 
   async function runExec() {
     if (!selectedCmd || running) return
-    setRunning(true); setConfirming(false)
+    setRunning(true)
     await new Promise(r => setTimeout(r, 800 + Math.random() * 1200))
     const { output, ok } = fakeExecOutput(selectedCmd, execArgs, target)
-    const entry: ExecLog = {
-      timestamp: new Date().toLocaleTimeString(),
-      cmd: selectedCmd.id,
-      args: execArgs,
-      output,
-      ok,
-    }
-    setExecLog(prev => [...prev, entry])
+    setExecLog(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), cmd: selectedCmd!.id, args: execArgs, output, ok }])
     setRunning(false); setSelectedCmd(null); setExecArgs('')
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Compact mode (slide-in panel from GridBrowser) ──────────────────────
+
+  if (compact) {
+    return (
+      <div className="flex flex-col h-full bg-zinc-950 text-zinc-200 font-mono text-xs select-none overflow-hidden">
+        <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-900 flex items-center gap-2 shrink-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-black text-red-400 tracking-widest uppercase">OPS</span>
+          <span className="text-zinc-700 text-xs">|</span>
+          <span className="text-xs text-zinc-500 truncate">{target || 'no target'}</span>
+        </div>
+
+        <div className="px-2 py-2 border-b border-zinc-800 flex gap-1 shrink-0">
+          <input
+            value={inputTarget}
+            onChange={e => setInputTarget(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && applyTarget()}
+            placeholder="target…"
+            className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-green-300 placeholder-zinc-600 focus:outline-none focus:border-green-700 min-w-0"
+          />
+          <button onClick={applyTarget} className="text-xs px-2 py-1 border border-zinc-700 rounded text-zinc-400 hover:border-green-700 hover:text-green-400 transition-colors">
+            SET
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          {!target && <div className="text-xs text-zinc-600 py-4 text-center">Set a target to scan.</div>}
+
+          {target && !scanDone && !scanning && (
+            <button onClick={runScan} className="w-full py-2 border border-green-900/50 rounded text-xs text-green-500 hover:border-green-600 hover:bg-green-950/20 transition-colors font-bold tracking-wider uppercase">
+              ▶ SCAN
+            </button>
+          )}
+
+          {scanning && <div className="flex items-center gap-2 text-xs text-green-700 py-1"><span className="animate-pulse">◉</span><span className="animate-pulse">Scanning…</span></div>}
+
+          {scanResults.length > 0 && (
+            <div className="border border-green-950/40 rounded bg-green-950/5 px-2 py-1 divide-y divide-green-950/20">
+              {scanResults.map((row, i) => <ScanRow key={i} row={row} reveal={!!revealedRows[i]} />)}
+            </div>
+          )}
+
+          {scanDone && (
+            <button onClick={runScan} className="w-full py-1 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-green-600 hover:border-green-900 transition-colors">
+              ↺ RE-SCAN
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Full window mode ──────────────────────────────────────────────────────
+
+  const allPanels: OpsPanel[] = ['scan', 'probe', 'exec', 'history']
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 text-zinc-200 font-mono text-xs select-none overflow-hidden">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-900 flex items-center gap-2 shrink-0">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -304,7 +366,7 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
         <div className="ml-auto text-xs text-zinc-700">v0.9.1-unregistered</div>
       </div>
 
-      {/* ── Target bar ── */}
+      {/* Target bar */}
       <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-900/60 flex items-center gap-2 shrink-0">
         <span className="text-xs text-zinc-600 uppercase tracking-widest shrink-0">TARGET</span>
         <input
@@ -314,10 +376,7 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
           placeholder="gridos.corp / user_handle / IP"
           className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-green-300 placeholder-zinc-600 focus:outline-none focus:border-green-700 min-w-0"
         />
-        <button
-          onClick={applyTarget}
-          className="text-xs px-2 py-1 border border-zinc-700 rounded text-zinc-400 hover:border-green-700 hover:text-green-400 transition-colors"
-        >
+        <button onClick={applyTarget} className="text-xs px-2 py-1 border border-zinc-700 rounded text-zinc-400 hover:border-green-700 hover:text-green-400 transition-colors">
           LOCK
         </button>
         {target && (
@@ -327,40 +386,36 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
         )}
       </div>
 
-      {/* ── Panel tabs ── */}
+      {/* Panel tabs */}
       <div className="flex border-b border-zinc-800 shrink-0">
-        {(['scan', 'probe', 'exec'] as OpsPanel[]).map(p => (
+        {allPanels.map(p => (
           <button
             key={p}
             onClick={() => setPanel(p)}
             className={`flex-1 py-1.5 text-xs uppercase tracking-widest font-bold transition-colors border-b-2 ${
               panel === p
-                ? p === 'scan' ? 'border-green-500 text-green-400 bg-green-950/10'
-                  : p === 'probe' ? 'border-yellow-500 text-yellow-400 bg-yellow-950/10'
-                  : 'border-red-500 text-red-400 bg-red-950/10'
+                ? p === 'scan'    ? 'border-green-500 text-green-400 bg-green-950/10'
+                : p === 'probe'   ? 'border-yellow-500 text-yellow-400 bg-yellow-950/10'
+                : p === 'exec'    ? 'border-red-500 text-red-400 bg-red-950/10'
+                :                   'border-zinc-500 text-zinc-300 bg-zinc-800/20'
                 : 'border-transparent text-zinc-600 hover:text-zinc-400'
             }`}
           >
-            {p}
+            {p}{p === 'history' && history.length > 0 ? ` (${history.length})` : ''}
           </button>
         ))}
       </div>
 
-      {/* ── Panel body ── */}
+      {/* Panel body */}
       <div className="flex-1 overflow-y-auto">
 
         {/* ═══ SCAN PANEL ═══ */}
         {panel === 'scan' && (
           <div className="p-3 space-y-3">
-            {!target && (
-              <div className="text-xs text-zinc-600 py-4 text-center">Lock a target above to begin scan.</div>
-            )}
+            {!target && <div className="text-xs text-zinc-600 py-4 text-center">Lock a target above to begin scan.</div>}
 
             {target && !scanDone && !scanning && (
-              <button
-                onClick={runScan}
-                className="w-full py-2 border border-green-900/50 rounded text-xs text-green-500 hover:border-green-600 hover:bg-green-950/20 transition-colors font-bold tracking-wider uppercase"
-              >
+              <button onClick={runScan} className="w-full py-2 border border-green-900/50 rounded text-xs text-green-500 hover:border-green-600 hover:bg-green-950/20 transition-colors font-bold tracking-wider uppercase">
                 ▶ INITIATE SCAN
               </button>
             )}
@@ -368,23 +423,18 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
             {scanning && (
               <div className="flex items-center gap-2 text-xs text-green-700 py-1">
                 <span className="animate-pulse">◉</span>
-                <span className="animate-pulse">Scanning {target}…</span>
+                <span className="animate-pulse">Querying DB for {target}…</span>
               </div>
             )}
 
             {scanResults.length > 0 && (
               <div className="border border-green-950/40 rounded bg-green-950/5 px-3 py-1 divide-y divide-green-950/20">
-                {scanResults.map((row, i) => (
-                  <ScanRow key={i} row={row} reveal={!!revealedRows[i]} />
-                ))}
+                {scanResults.map((row, i) => <ScanRow key={i} row={row} reveal={!!revealedRows[i]} />)}
               </div>
             )}
 
             {scanDone && (
-              <button
-                onClick={runScan}
-                className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-green-600 hover:border-green-900 transition-colors"
-              >
+              <button onClick={runScan} className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-green-600 hover:border-green-900 transition-colors">
                 ↺ RE-SCAN
               </button>
             )}
@@ -394,48 +444,30 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
         {/* ═══ PROBE PANEL ═══ */}
         {panel === 'probe' && (
           <div className="p-3 space-y-3">
-            {!target && (
-              <div className="text-xs text-zinc-600 py-4 text-center">Lock a target above to probe.</div>
-            )}
+            {!target && <div className="text-xs text-zinc-600 py-4 text-center">Lock a target above to probe.</div>}
 
             {target && !probeDone && !probing && (
-              <button
-                onClick={runProbe}
-                className="w-full py-2 border border-yellow-900/50 rounded text-xs text-yellow-500 hover:border-yellow-600 hover:bg-yellow-950/20 transition-colors font-bold tracking-wider uppercase"
-              >
+              <button onClick={runProbe} className="w-full py-2 border border-yellow-900/50 rounded text-xs text-yellow-500 hover:border-yellow-600 hover:bg-yellow-950/20 transition-colors font-bold tracking-wider uppercase">
                 ▶ DEEP PROBE
               </button>
             )}
 
-            {probing && (
-              <div className="text-xs text-yellow-700 animate-pulse py-2 text-center">
-                ◉ Probing {target}… fingerprinting in progress
-              </div>
-            )}
+            {probing && <div className="text-xs text-yellow-700 animate-pulse py-2 text-center">◉ Probing {target}… fingerprinting in progress</div>}
 
             {probeDone && probeResults.length > 0 && (
               <>
                 <div className="border border-yellow-900/30 rounded bg-yellow-950/5">
-                  <div className="px-3 py-1.5 border-b border-yellow-900/20 text-xs text-yellow-700/50 uppercase tracking-widest">
-                    Node Intelligence Report
-                  </div>
+                  <div className="px-3 py-1.5 border-b border-yellow-900/20 text-xs text-yellow-700/50 uppercase tracking-widest">Node Intelligence Report</div>
                   <div className="divide-y divide-yellow-900/10">
                     {probeResults.map((entry, i) => (
                       <div key={i} className="flex gap-3 px-3 py-2">
                         <span className="text-yellow-900/60 shrink-0 w-28 uppercase tracking-wide">{entry.key}</span>
-                        <span className={`text-xs flex-1 break-all ${entry.value.includes('EXPIRED') || entry.value.includes('true') ? 'text-red-400' : 'text-yellow-300'}`}>
-                          {entry.value}
-                        </span>
+                        <span className={`text-xs flex-1 break-all ${entry.value.includes('EXPIRED') || entry.value.includes('true') ? 'text-red-400' : 'text-yellow-300'}`}>{entry.value}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={runProbe}
-                  className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-yellow-600 hover:border-yellow-900 transition-colors"
-                >
-                  ↺ RE-PROBE
-                </button>
+                <button onClick={runProbe} className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-yellow-600 hover:border-yellow-900 transition-colors">↺ RE-PROBE</button>
               </>
             )}
           </div>
@@ -444,14 +476,13 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
         {/* ═══ EXEC PANEL ═══ */}
         {panel === 'exec' && (
           <div className="p-3 space-y-3">
-            {/* Command list */}
-            {!selectedCmd && !confirming && (
+            {!selectedCmd && !running && (
               <div className="space-y-1.5">
                 <div className="text-xs text-zinc-700 uppercase tracking-widest mb-2">Select Operation</div>
                 {EXEC_COMMANDS.map(cmd => (
                   <button
                     key={cmd.id}
-                    onClick={() => { setSelectedCmd(cmd); setExecArgs(''); setConfirming(false) }}
+                    onClick={() => { setSelectedCmd(cmd); setExecArgs('') }}
                     className={`w-full text-left flex items-start gap-3 px-3 py-2 border rounded transition-colors ${riskBorder(cmd.risk)} bg-zinc-900/50 hover:bg-zinc-800/50`}
                   >
                     <span className={`text-xs font-black w-14 shrink-0 ${riskColor(cmd.risk)}`}>{cmd.label}</span>
@@ -465,7 +496,6 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
               </div>
             )}
 
-            {/* Confirm screen */}
             {selectedCmd && !running && (
               <div className={`border rounded px-3 py-3 space-y-3 ${riskBorder(selectedCmd.risk)} bg-zinc-900/60`}>
                 <div className="flex items-center justify-between">
@@ -484,37 +514,18 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
                     />
                   </div>
                 )}
-                <div className="text-xs text-zinc-600">
-                  Target: <span className="text-zinc-400">{target || '(none)'}</span>
-                </div>
+                <div className="text-xs text-zinc-600">Target: <span className="text-zinc-400">{target || '(none)'}</span></div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={runExec}
-                    className={`flex-1 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors ${
-                      selectedCmd.risk === 'critical'
-                        ? 'border border-red-800 text-red-400 hover:bg-red-950/30'
-                        : 'border border-zinc-700 text-zinc-300 hover:bg-zinc-800'
-                    }`}
-                  >
-                    ▶ EXECUTE
-                  </button>
-                  <button
-                    onClick={() => { setSelectedCmd(null); setExecArgs('') }}
-                    className="px-3 py-1.5 rounded border border-zinc-800 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-                  >
-                    CANCEL
-                  </button>
+                  <button onClick={runExec} className={`flex-1 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors ${
+                    selectedCmd.risk === 'critical' ? 'border border-red-800 text-red-400 hover:bg-red-950/30' : 'border border-zinc-700 text-zinc-300 hover:bg-zinc-800'
+                  }`}>▶ EXECUTE</button>
+                  <button onClick={() => { setSelectedCmd(null); setExecArgs('') }} className="px-3 py-1.5 rounded border border-zinc-800 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">CANCEL</button>
                 </div>
               </div>
             )}
 
-            {running && (
-              <div className="text-xs text-red-600 animate-pulse py-2 text-center">
-                ◉ Executing {selectedCmd?.label}…
-              </div>
-            )}
+            {running && <div className="text-xs text-red-600 animate-pulse py-2 text-center">◉ Executing {selectedCmd?.label}…</div>}
 
-            {/* Exec log */}
             {execLog.length > 0 && (
               <div className="space-y-1.5">
                 <div className="text-xs text-zinc-700 uppercase tracking-widest">Session Log</div>
@@ -522,9 +533,7 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
                   {execLog.map((entry, i) => (
                     <div key={i} className="px-3 py-2 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold ${entry.ok ? 'text-green-500' : 'text-red-500'}`}>
-                          {entry.ok ? '✓' : '✗'}
-                        </span>
+                        <span className={`text-xs font-bold ${entry.ok ? 'text-green-500' : 'text-red-500'}`}>{entry.ok ? '✓' : '✗'}</span>
                         <span className={`text-xs font-bold uppercase tracking-wider ${entry.ok ? 'text-green-400' : 'text-red-400'}`}>{entry.cmd}</span>
                         {entry.args && <span className="text-xs text-zinc-600">{entry.args}</span>}
                         <span className="ml-auto text-xs text-zinc-700">{entry.timestamp}</span>
@@ -534,19 +543,52 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
                   ))}
                   <div ref={logEndRef} />
                 </div>
-                <button
-                  onClick={() => { setSelectedCmd(null); setExecArgs('') }}
-                  className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-red-600 hover:border-red-900 transition-colors"
-                >
+                <button onClick={() => { setSelectedCmd(null); setExecArgs('') }} className="w-full py-1.5 border border-zinc-800 rounded text-xs text-zinc-600 hover:text-red-600 hover:border-red-900 transition-colors">
                   + NEW OPERATION
                 </button>
               </div>
             )}
           </div>
         )}
+
+        {/* ═══ HISTORY PANEL ═══ */}
+        {panel === 'history' && (
+          <div className="p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-600 uppercase tracking-widest">Scan Library ({history.length})</span>
+              {history.length > 0 && (
+                <button onClick={clearHistory} className="text-xs text-zinc-700 hover:text-red-500 transition-colors">CLEAR ALL</button>
+              )}
+            </div>
+
+            {history.length === 0 && (
+              <div className="text-xs text-zinc-700 py-6 text-center">No scans recorded yet.</div>
+            )}
+
+            {history.map((rec, i) => (
+              <button
+                key={i}
+                onClick={() => { setInputTarget(rec.target); setTarget(rec.target); resetAll(); setPanel('scan') }}
+                className="w-full text-left border border-zinc-800 rounded px-3 py-2.5 space-y-1.5 bg-zinc-900/50 hover:border-zinc-600 hover:bg-zinc-800/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  {kindBadge(rec.kind)}
+                  <span className="text-xs text-zinc-300 font-mono truncate">{rec.target}</span>
+                  <span className="ml-auto text-xs text-zinc-700 shrink-0">{new Date(rec.scannedAt).toLocaleTimeString()}</span>
+                </div>
+                {Object.entries(rec.data).slice(0, 2).map(([k, v]) => (
+                  <div key={k} className="flex gap-2 pl-1">
+                    <span className="text-xs text-zinc-700 uppercase w-20 shrink-0">{k}</span>
+                    <span className="text-xs text-zinc-500 truncate">{v}</span>
+                  </div>
+                ))}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div className="px-3 py-1.5 border-t border-zinc-800 bg-zinc-900/80 flex items-center justify-between shrink-0">
         <span className="text-xs text-zinc-700">OPS // unregistered node // activity unlogged</span>
         <div className="flex items-center gap-1">
