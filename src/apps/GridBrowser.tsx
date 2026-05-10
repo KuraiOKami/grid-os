@@ -619,23 +619,23 @@ function VoidContractCard({ job, url }: { job: JobOffer; url: string }) {
 }
 
 // ── LAYOUT: CORP ──────────────────────────────────────────────────────────
-// Enterprise website. White surfaces, blue hero banner, card-based content, top nav.
+// Polished enterprise site. White top nav, blue gradient hero, numbered body cards.
 function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-white text-slate-800 font-sans text-sm flex flex-col">
 
-      {/* ── Top nav ── */}
-      <nav className="bg-white border-b border-slate-200 px-4 py-0 flex items-center shrink-0" style={{ height: '44px' }}>
+      {/* Top nav */}
+      <nav className="bg-white border-b border-slate-200 px-4 flex items-center shrink-0" style={{ height: '44px' }}>
         <div className="flex items-center gap-2 mr-6">
           <div className="w-6 h-6 rounded bg-blue-700 flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-black leading-none">G</span>
           </div>
           <span className="text-xs font-bold text-slate-800 tracking-tight whitespace-nowrap">{page.site}</span>
         </div>
-        <div className="flex items-center gap-1 flex-1 overflow-hidden">
+        <div className="flex items-center gap-0.5 flex-1 overflow-hidden">
           {page.links.slice(0, 4).map((lnk, i) => (
             <button key={i} onClick={() => navigate(lnk.url)}
-              className="text-xs text-slate-500 hover:text-slate-900 px-2.5 py-1 rounded hover:bg-slate-100 transition-colors whitespace-nowrap truncate max-w-[120px]">
+              className="text-xs text-slate-500 hover:text-slate-900 px-2.5 py-1 rounded hover:bg-slate-100 transition-colors whitespace-nowrap truncate max-w-[130px]">
               {lnk.label}
             </button>
           ))}
@@ -648,17 +648,17 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         )}
       </nav>
 
-      {/* ── Hero banner ── */}
-      <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-6 py-7 text-white shrink-0">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-6 py-8 text-white shrink-0">
         <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0" />
           <span className="text-xs text-blue-200 uppercase tracking-wider font-medium">Official Communication</span>
         </div>
         <h1 className="text-xl font-extrabold text-white leading-tight">{page.title}</h1>
-        {page.subtitle && <p className="text-sm text-blue-200 mt-1.5 leading-relaxed max-w-sm">{page.subtitle}</p>}
+        {page.subtitle && <p className="text-sm text-blue-200 mt-1.5 max-w-sm leading-relaxed">{page.subtitle}</p>}
       </div>
 
-      {/* ── Body ── */}
+      {/* Body */}
       <div className="px-5 py-5 space-y-5 flex-1 bg-slate-50">
         {gateBlocked ? (
           <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex gap-3 items-start">
@@ -712,7 +712,7 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         )}
       </div>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div className="px-5 py-2.5 border-t border-slate-200 bg-white shrink-0">
         <p className="text-xs text-slate-400">© GridOS Corp. All activity monitored under the Unified Access Compact.</p>
       </div>
@@ -721,12 +721,12 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: NEWS ──────────────────────────────────────────────────────────
-// Newspaper / wire service. Dark masthead, byline strip, pull quotes, article layout.
+// Newspaper / wire service. Near-black masthead, byline strip, pull-quote, article layout.
 function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-white text-neutral-900 font-sans text-sm flex flex-col">
 
-      {/* ── Masthead ── */}
+      {/* Masthead */}
       <div className="bg-neutral-950 px-4 py-2.5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 bg-amber-500 rounded-sm flex items-center justify-center shrink-0">
@@ -744,12 +744,11 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         </div>
       </div>
 
-      {/* ── Category + Headline ── */}
+      {/* Headline */}
       <div className="bg-white border-b-2 border-neutral-950 px-5 pt-4 pb-4 shrink-0">
         <div className="flex items-center gap-2 mb-2.5">
           <span className="text-xs bg-amber-500 text-white px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">Markets</span>
-          <span className="text-xs text-neutral-400">·</span>
-          <span className="text-xs text-neutral-500">07 May 2026</span>
+          <span className="text-xs text-neutral-400">· 07 May 2026</span>
         </div>
         <h1 className="text-xl font-black text-neutral-950 leading-tight tracking-tight">{page.title}</h1>
         {page.subtitle && (
@@ -757,14 +756,14 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         )}
       </div>
 
-      {/* ── Byline ── */}
+      {/* Byline */}
       <div className="px-5 py-2 bg-neutral-100 border-b border-neutral-200 shrink-0 flex items-center gap-3">
         <p className="text-xs text-neutral-500">By <span className="font-semibold text-neutral-700">{page.site} Staff</span></p>
         <span className="text-neutral-300">·</span>
         <p className="text-xs text-neutral-400">Automated wire feed</p>
       </div>
 
-      {/* ── Article ── */}
+      {/* Article */}
       <div className="px-5 py-5 space-y-5 flex-1">
         {gateBlocked ? (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 items-start">
@@ -824,7 +823,7 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: BLOG ──────────────────────────────────────────────────────────
-// Personal blog. Minimal chrome, editorial feel, author avatar, warm stone palette.
+// Personal blog. Warm stone palette, author avatar, word count, intimate editorial feel.
 function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   const author = page.site.replace(/\.(blog|dev|net|com)$/, '')
   const wordCount = page.body.reduce((n, l) => n + l.split(' ').length, 0)
@@ -832,7 +831,7 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
   return (
     <div className="flex-1 overflow-y-auto bg-stone-50 text-stone-800 font-sans text-sm flex flex-col">
 
-      {/* ── Minimal header ── */}
+      {/* Header */}
       <div className="bg-white border-b border-stone-200 px-5 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-stone-800 flex items-center justify-center shrink-0">
@@ -851,7 +850,7 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         )}
       </div>
 
-      {/* ── Post header ── */}
+      {/* Post header */}
       <div className="bg-white px-6 pt-6 pb-5 border-b border-stone-200 shrink-0">
         <h1 className="text-lg font-bold text-stone-900 leading-snug">{page.title}</h1>
         {page.subtitle && <p className="text-sm text-stone-400 italic mt-1.5">{page.subtitle}</p>}
@@ -864,7 +863,7 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         <div className="w-10 h-0.5 bg-stone-800 mt-4" />
       </div>
 
-      {/* ── Post body ── */}
+      {/* Body */}
       <div className="px-6 py-6 space-y-5 flex-1">
         {gateBlocked ? (
           <div className="bg-stone-100 border border-stone-300 rounded-lg p-4 flex gap-3 items-start">
@@ -916,12 +915,12 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: ARCHIVE ───────────────────────────────────────────────────────
-// Classified civic document dump. Dark mono, record IDs, dashed borders, cyan tones.
+// Civic document dump. Dark mono, record IDs, dashed borders, cyan-on-zinc.
 function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-zinc-950 text-zinc-300 font-mono text-xs flex flex-col">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="px-4 py-3 border-b border-cyan-900/30 bg-zinc-900 shrink-0">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
@@ -948,7 +947,7 @@ function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* Content */}
       <div className="px-4 py-4 space-y-5 flex-1">
         {gateBlocked ? (
           <div className="border border-red-900/50 rounded px-3 py-2.5 bg-red-950/20">
@@ -1004,12 +1003,12 @@ function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts
 }
 
 // ── LAYOUT: VOID ──────────────────────────────────────────────────────────
-// Dark-net grey market terminal. Pure black, red tones, hostile sparse mono.
+// Dark-net grey market terminal. Pure black, red, hostile sparse mono.
 function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-black text-red-200 font-mono text-xs flex flex-col">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="px-4 pt-3 pb-2.5 border-b border-red-900/30 bg-zinc-950 shrink-0">
         <div className="text-xs text-red-900/60 uppercase tracking-widest mb-2 animate-pulse">
           !! UNREGISTERED NODE !! GRID ROUTING DISABLED !!
@@ -1030,7 +1029,7 @@ function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* Content */}
       <div className="px-4 py-3 space-y-4 flex-1">
         {gateBlocked ? (
           <div className="border border-red-900/40 px-3 py-2.5 rounded">
@@ -1070,211 +1069,11 @@ function LayoutVoid({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
 }
 
 // ── LAYOUT: FORUM ─────────────────────────────────────────────────────────
-// Community board. Yellow top bar, upvote header, reply cards with colour-coded avatars.
+// Community board. Yellow top bar, upvote header, colour-coded avatar reply cards.
 function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }: LayoutProps) {
   const replyCount = forumPosts.length > 0 ? forumPosts.length : page.body.length
 
   return (
     <div className="flex-1 overflow-y-auto bg-neutral-100 text-neutral-800 font-sans text-sm flex flex-col">
 
-      {/* ── Board nav ── */}
-      <div className="bg-yellow-500 px-4 py-2.5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 bg-yellow-900/20 rounded flex items-center justify-center shrink-0">
-            <span className="text-yellow-900 text-xs font-black leading-none">Y</span>
-          </div>
-          <span className="text-xs font-black text-yellow-950 uppercase tracking-wider">{page.site}</span>
-        </div>
-        {isLive && (
-          <div className="flex items-center gap-1.5 bg-yellow-600/30 px-2 py-0.5 rounded-full">
-            <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-            <span className="text-xs text-yellow-950 font-bold">LIVE</span>
-          </div>
-        )}
-      </div>
-
-      {/* ── Thread header ── */}
-      <div className="bg-white border-b border-neutral-200 px-4 py-4 shrink-0">
-        <div className="flex items-start gap-3">
-          <div className="flex flex-col items-center gap-0.5 shrink-0 mt-0.5">
-            <button className="text-neutral-300 hover:text-amber-500 transition-colors text-base leading-none">▲</button>
-            <span className="text-xs font-bold text-neutral-600 tabular-nums">42</span>
-            <button className="text-neutral-300 hover:text-blue-500 transition-colors text-base leading-none">▼</button>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold text-neutral-900 leading-snug">{page.title}</h1>
-            {page.subtitle && <p className="text-xs text-neutral-400 italic mt-0.5">{page.subtitle}</p>}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs text-neutral-400">
-              <span className="font-medium">{replyCount} replies</span>
-              <span>·</span>
-              <span>07 May 2026</span>
-              {page.links.length > 0 && (
-                <>
-                  <span>·</span>
-                  <span className="text-neutral-500 font-mono truncate max-w-[140px]">{url}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Posts ── */}
-      <div className="px-4 py-3 space-y-2 flex-1">
-        {gateBlocked ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm font-semibold text-red-700">⛔ Access Restricted</p>
-            <p className="text-xs text-red-500 mt-1">{page.gateHint ?? 'You need more standing to view this thread.'}</p>
-          </div>
-        ) : (
-          <>
-            {/* OP body — always rendered */}
-            <div className="bg-white rounded-lg border-2 border-yellow-400 px-4 py-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center shrink-0">
-                  <span className="text-yellow-950 text-xs font-black leading-none">OP</span>
-                </div>
-                <span className="text-xs font-bold text-neutral-700">Original Post</span>
-                <span className="text-xs text-neutral-400 ml-auto">07 May · pinned</span>
-              </div>
-              {page.body.length > 0
-                ? page.body.map((line, i) => (
-                    <p key={i} className="text-xs text-neutral-600 leading-relaxed pl-8">{line}</p>
-                  ))
-                : (
-                    <p className="text-xs text-neutral-600 leading-relaxed pl-8">
-                      {page.subtitle ?? page.title}
-                    </p>
-                  )
-              }
-            </div>
-
-            {/* Replies */}
-            {forumPosts.length > 0 && (
-              <div className="space-y-1.5">
-                {forumPosts.map(p => (
-                  <ForumPost key={p.id} row={p} t={t} />
-                ))}
-              </div>
-            )}
-
-            {page.job && <ContractCard job={page.job} url={url} t={t} />}
-
-            {page.links.length > 0 && (
-              <div className="bg-white rounded-lg border border-neutral-200 px-4 py-3">
-                <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Related Threads</p>
-                <div className="space-y-1.5">
-                  {page.links.map((lnk, i) => (
-                    <button key={i} onClick={() => navigate(lnk.url)}
-                      className="flex items-center gap-1.5 text-xs text-yellow-700 hover:text-yellow-900 transition-colors group">
-                      <span className="shrink-0 group-hover:translate-x-0.5 transition-transform">▸</span>
-                      <span className="underline underline-offset-2 decoration-yellow-300 group-hover:decoration-yellow-600">{lnk.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── main component ────────────────────────────────────────────────────────
-export default function GridBrowser() {
-  const [url, setUrl]     = useState('gridos.corp')
-  const [input, setInput] = useState('gridos.corp')
-  const { compliance, shadow, adjust } = useRepStore()
-  const { unlocks } = useRepStore() as any
-
-  const supaResult = useSite(url)
-
-  const page = useMemo<PageData | null>(() => {
-    if (supaResult.status === 'ok') return siteRowToPageData(supaResult.site)
-    return PAGES[url] ?? null
-  }, [supaResult, url])
-
-  const isLoadingFromDB = supaResult.status === 'loading' && !PAGES[url]
-  const t = THEME_STYLES[page?.theme ?? 'corp']
-
-  const gateBlocked = useMemo(() => {
-    if (!page?.gate) return false
-    const g = page.gate
-    if (g.type === 'compliance') return compliance < g.min
-    if (g.type === 'shadow')     return shadow < g.min
-    if (g.type === 'unlocked')   return !(unlocks as Set<string>)?.has(g.key)
-    return false
-  }, [page, compliance, shadow, unlocks])
-
-  const [lastApplied, setLastApplied] = useState('')
-  useEffect(() => {
-    if (!page || gateBlocked) return
-    if (url === lastApplied) return
-    setLastApplied(url)
-    if (page.repEffect?.compliance) adjust('compliance', page.repEffect.compliance)
-    if (page.repEffect?.shadow)     adjust('shadow',     page.repEffect.shadow)
-  }, [url, page, gateBlocked]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function navigate(target: string) {
-    const clean = target.trim().toLowerCase().replace(/^https?:\/\//, '')
-    setUrl(clean)
-    setInput(clean)
-  }
-
-  const isLive = supaResult.status === 'ok'
-  const forumPosts = supaResult.status === 'ok'
-    ? (supaResult.site.content ?? []).filter(c => c.kind === 'forum_post').sort((a, b) => a.sort_order - b.sort_order)
-    : []
-
-  const layoutProps: LayoutProps = { page: page!, t, url, navigate, gateBlocked, isLive, forumPosts }
-
-  return (
-    <div className="flex flex-col h-full bg-slate-900 font-mono text-sm">
-
-      {/* ── address bar ── */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700 bg-slate-900 shrink-0">
-        <span className="text-xs text-slate-500 select-none">GRID://</span>
-        <input
-          className="flex-1 bg-transparent outline-none text-xs tracking-wide text-slate-200 caret-slate-400 placeholder-slate-600"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && navigate(input)}
-          spellCheck={false}
-        />
-        <button
-          onClick={() => navigate(input)}
-          className="text-xs px-2 py-0.5 rounded border border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors"
-        >
-          GO
-        </button>
-      </div>
-
-      {/* ── status strips ── */}
-      {isLoadingFromDB && (
-        <div className="px-4 py-2 opacity-40 text-xs animate-pulse text-slate-400 bg-slate-900">connecting to grid node…</div>
-      )}
-      {supaResult.status === 'error' && (
-        <div className="px-4 py-1.5 text-xs opacity-30 italic border-b border-slate-700 text-slate-400 bg-slate-900">
-          ⚠ remote sync degraded — serving cached data
-        </div>
-      )}
-
-      {/* ── 404 ── */}
-      {!page && !isLoadingFromDB && (
-        <div className="px-4 py-4 space-y-1 flex-1 bg-slate-900 text-slate-400">
-          <p className="text-red-400">404 — node not found</p>
-          <p className="opacity-40 text-xs">{url} is not responding or does not exist.</p>
-        </div>
-      )}
-
-      {/* ── routed layout ── */}
-      {page && t.layout === 'corp'    && <LayoutCorp    {...layoutProps} />}
-      {page && t.layout === 'news'    && <LayoutNews    {...layoutProps} />}
-      {page && t.layout === 'blog'    && <LayoutBlog    {...layoutProps} />}
-      {page && t.layout === 'archive' && <LayoutArchive {...layoutProps} />}
-      {page && t.layout === 'void'    && <LayoutVoid    {...layoutProps} />}
-      {page && t.layout === 'forum'   && <LayoutForum   {...layoutProps} />}
-    </div>
-  )
-}
+ 
