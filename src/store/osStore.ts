@@ -47,6 +47,9 @@ const APP_DEFAULTS: Record<string, { title: string; icon: string; width: number;
   databroker: { title: 'Data Broker', icon: '[$]',  width: 820, height: 540 },
   courier:    { title: 'Courier',     icon: '[>>]', width: 860, height: 560 },
   ops:        { title: 'OPS',         icon: '[!]',  width: 760, height: 520 },
+  cipher:     { title: 'CIPHER',      icon: '[C]',  width: 680, height: 520 },
+  relay:      { title: 'RELAY',       icon: '[R]',  width: 700, height: 540 },
+  socket:     { title: 'SOCKET',      icon: '[S]',  width: 760, height: 520 },
 }
 
 function getDesktopSize(desktopRef: HTMLElement | null) {

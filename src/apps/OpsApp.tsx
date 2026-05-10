@@ -9,9 +9,12 @@ import { useOSStore } from '@/store/osStore'
 
 const KNOWN_HANDLES = new Set(NPC_ACCOUNTS.map(a => a.handle.toLowerCase()))
 
+const IP_RE = /^(\d{1,3}\.){3}\d{1,3}$/
+
 function isValidOpsTarget(raw: string): boolean {
   const t = raw.toLowerCase().trim()
   if (!t) return false
+  if (IP_RE.test(t)) return true
   const domain = t.split('/')[0]
   if (KNOWN_DOMAINS.has(domain)) return true
   if (KNOWN_HANDLES.has(t)) return true
