@@ -483,9 +483,12 @@ function ShopCard({ item, canAfford, alreadyOwned, justBought, onBuy }: {
         justifyContent:'space-between', gap:10 }}>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
-            <span style={{ fontSize:12, color:tierColor, border:`1px solid ${tierColor}44`,
-              borderRadius:4, padding:'1px 6px', fontSize:9,
-              letterSpacing:'0.08em' }}>
+            <span style={{
+              fontSize: 9, color: tierColor,
+              border: `1px solid ${tierColor}44`,
+              borderRadius: 4, padding: '1px 6px',
+              letterSpacing: '0.08em',
+            }}>
               {item.tier === 'underground' ? '⚠ VOID' : 'LEGAL'}
             </span>
             {item.relatedCareer && (
