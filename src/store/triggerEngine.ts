@@ -81,6 +81,61 @@ function _onGameStart(
     deliverAt: Date.now(),
     mail:      { ...BOOT_EMAILS['E-01'], storyId: 'E-01' } as any,
   })
+
+  // Timed flavor/lore mails — arrive gradually to drive notification UX
+  queue.queueEmail({
+    deliverAt: Date.now() + 3 * MINUTE,
+    mail: {
+      tag: 'LORE', from: 'no-reply@pulse.news',
+      subject: 'Your daily digest is ready', dot: undefined,
+      body: `PULSE NETWORK  //  MORNING DIGEST
+──────────────────────────────────────
+ROOT BLOOM NETWORK — third cell disrupted this week. GridOS officials say containment is "proceeding as scheduled." Anonymous sources say otherwise.
+
+CIVIC ARCHIVE — access suspended pending routine maintenance. Estimated downtime: indefinite.
+
+GRIDMART EXPANSION — three new fulfillment nodes brought online in Sector 9. Workforce integration underway.
+
+ANONYMOUS COURIER GUILD — two members listed as inactive. No further details provided.
+──────────────────────────────────────
+Stay informed. Stay compliant.
+— Pulse Network`,
+    },
+  })
+
+  queue.queueEmail({
+    deliverAt: Date.now() + 18 * MINUTE,
+    mail: {
+      tag: 'NPC', from: 'anon@void.null',
+      subject: 're: you were asking about the archive...', dot: undefined,
+      body: `You didn't ask. But you would have eventually.
+
+The civic archive is still partially accessible. Not through the front door.
+
+Some apps on the official store aren't the only ones that exist.
+
+That's all I'm saying.
+
+— [sender scrubbed]`,
+    },
+  })
+
+  queue.queueEmail({
+    deliverAt: Date.now() + 35 * MINUTE,
+    mail: {
+      tag: 'THREAT', from: 'system@gridos.corp', dot: '#ff3b5c',
+      subject: '[AUTOMATED] Suspicious activity detected on your node',
+      body: `[AUTOMATED SECURITY NOTICE]
+
+Unusual access patterns have been detected on your terminal.
+
+This notice has been logged.
+
+If you believe this is an error, no action is required. Your compliance record will reflect this event regardless.
+
+— GridOS Security Division`,
+    },
+  })
 }
 
 // ── email_read ────────────────────────────────────────────────────────────────

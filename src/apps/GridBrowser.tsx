@@ -7,6 +7,7 @@ import { KNOWN_DOMAINS, isValidGridUrl } from '@/lib/gridTargets'
 import { getOpsNode, useOpsStore } from '@/store/opsStore'
 import type { OpsNodeData } from '@/store/opsStore'
 import { checkTriggers } from '@/store/triggerEngine'
+import { useMailStore } from '@/store/mailStore'
 import type { SiteRow, SiteContentRow, SiteTheme } from '@/lib/browserTypes'
 
 // ── types ────────────────────────────────────────────────────────────────
@@ -800,6 +801,28 @@ function ForumPost({ row, t }: { row: SiteContentRow; t: ThemeConfig }) {
 }
 
 function ContractCard({ job, url, t }: { job: JobOffer; url: string; t: ThemeConfig }) {
+  const [accepted, setAccepted] = useState(false)
+
+  function handleAccept() {
+    addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay, payAmount: job.payAmount, briefing: job.briefing, source: url })
+    setAccepted(true)
+    useMailStore.getState().send({
+      tag: 'JOB', from: 'contracts@gridos.corp', dot: '#00cc88',
+      subject: `Contract accepted — ${job.title}`,
+      unread: true,
+      date: new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ' //'),
+      body: `Your application has been logged.
+
+ROLE: ${job.title}
+CLIENT: ${job.corp}
+PAY: ${job.pay}
+
+Open the Job Board to begin your shift. Submit when complete to receive payment.
+
+— GridOS Contract Services`,
+    })
+  }
+
   return (
     <div className={`border ${t.border} rounded-lg px-4 py-3 space-y-1.5 bg-white/60`}>
       <div className="text-xs text-neutral-400 uppercase tracking-wider font-medium">Available Contract</div>
@@ -808,12 +831,16 @@ function ContractCard({ job, url, t }: { job: JobOffer; url: string; t: ThemeCon
       {job.briefing && (
         <p className="text-xs text-neutral-600 leading-relaxed border-l-2 border-neutral-300 pl-2">{job.briefing}</p>
       )}
-      <button
-        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay, payAmount: job.payAmount, briefing: job.briefing, source: url })}
-        className="mt-1 text-xs px-3 py-1 rounded border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors font-medium"
-      >
-        Accept Contract
-      </button>
+      {accepted ? (
+        <div className="text-xs text-green-600 font-medium pt-1">✓ Contract accepted — check your Job Board</div>
+      ) : (
+        <button
+          onClick={handleAccept}
+          className="mt-1 text-xs px-3 py-1 rounded border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors font-medium"
+        >
+          Accept Contract
+        </button>
+      )}
     </div>
   )
 }
