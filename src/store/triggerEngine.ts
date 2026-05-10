@@ -87,29 +87,36 @@ function _onEmailRead(
   missions: ReturnType<typeof useMissionStore.getState>,
   queue:    ReturnType<typeof useEmailQueueStore.getState>,
 ) {
-  // ── Phase 0.2: E-01 read → queue E-02 after 2 min ────────────────────────
+  // ── Phase 0.2: E-01 read → queue E-02 after 2 min (once only) ───────────
   if (emailId === 'E-01') {
-    queue.queueEmail({
-      deliverAt: Date.now() + 2 * MINUTE,
-      mail:      { ...BOOT_EMAILS['E-02'], storyId: 'E-02' } as any,
-    })
+    const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-02')
+    const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-02')
+    if (!alreadySent && !alreadyQueued) {
+      queue.queueEmail({
+        deliverAt: Date.now() + 2 * MINUTE,
+        mail:      { ...BOOT_EMAILS['E-02'], storyId: 'E-02' } as any,
+      })
+    }
   }
 
-  // ── Phase 0.3: E-02 read → M-01 objective 1 + activate M-02 check ────────
+  // ── Phase 0.3: E-02 read → activate M-02 (once only) ────────────────────
   if (emailId === 'E-02') {
-    // M-02 becomes active once E-02 is read
     if (story.getMission('M-02') === 'inactive') {
       missions.setMissionStatus('M-02', 'active')
       story.setMission('M-02', 'active')
     }
   }
 
-  // ── Phase 0.5: E-03 read → queue E-04 after 5 min ────────────────────────
+  // ── Phase 0.5: E-03 read → queue E-04 after 5 min (once only) ───────────
   if (emailId === 'E-03') {
-    queue.queueEmail({
-      deliverAt: Date.now() + 5 * MINUTE,
-      mail:      { ...BOOT_EMAILS['E-04'], storyId: 'E-04' } as any,
-    })
+    const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-04')
+    const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-04')
+    if (!alreadySent && !alreadyQueued) {
+      queue.queueEmail({
+        deliverAt: Date.now() + 5 * MINUTE,
+        mail:      { ...BOOT_EMAILS['E-04'], storyId: 'E-04' } as any,
+      })
+    }
   }
 
   // ── M-01 objective 2: track onboarding emails read ───────────────────────
@@ -119,8 +126,8 @@ function _onEmailRead(
     _checkM01Objective2(story, missions)
   }
 
-  // ── Phase 2.3: E-10 read → activate M-03 ────────────────────────────────
-  if (emailId === 'E-10') {
+  // ── Phase 2.3: E-10 read → activate M-03 (once only) ───────────────────
+  if (emailId === 'E-10' && !story.hasFlag('UNDERGROUND_CONTACT_MADE')) {
     story.setFlag('UNDERGROUND_CONTACT_MADE')
     if (story.getMission('M-03') === 'inactive') {
       missions.setMissionStatus('M-03', 'active')
@@ -157,7 +164,7 @@ function _onPageVisit(
     // E-10 queued 45 min after flag set — the underground reaches out
     useEmailQueueStore.getState().queueEmail({
       deliverAt: Date.now() + 45 * MINUTE,
-      mail:      { ...BOOT_EMAILS['E-10'] },
+      mail:      { ...BOOT_EMAILS['E-10'], storyId: 'E-10' } as any,
     })
   }
 

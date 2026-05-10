@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getJobs, acceptJob, subscribe, type Job } from '@/store/jobStore'
+import { getJobs, acceptJob, completeJob, subscribe, type Job } from '@/store/jobStore'
+import { checkTriggers } from '@/store/triggerEngine'
 import { useWalletStore } from '@/store/walletStore'
 import { useCareerStore } from '@/store/careerStore'
 import { useRepStore } from '@/store/reputationStore'
@@ -266,7 +267,19 @@ function ContractsTab({ jobs }: { jobs:Job[] }) {
       {active.length > 0 && (
         <>
           <SectionLabel label="IN PROGRESS" color={C.accent} />
-          {active.map(j => <JobCard key={j.id} job={j} onAccept={() => {}} />)}
+          {active.map(j => (
+            <JobCard
+              key={j.id}
+              job={j}
+              onAccept={() => {}}
+              onSubmit={() => {
+                completeJob(j.id)
+                checkTriggers({ type: 'job_complete', jobId: j.id })
+                useWalletStore.getState().credit(j.payAmount ?? 0, j.title)
+                useRepStore.getState().applyEvent({ compliance: 1 })
+              }}
+            />
+          ))}
         </>
       )}
       {completed.length > 0 && (
@@ -287,7 +300,7 @@ function SectionLabel({ label, color }: { label:string; color:string }) {
   )
 }
 
-function JobCard({ job, onAccept }: { job:Job; onAccept:()=>void }) {
+function JobCard({ job, onAccept, onSubmit }: { job:Job; onAccept:()=>void; onSubmit?:()=>void }) {
   const corpColor = job.corp === 'GridOS' ? C.accent
     : job.corp === 'Anonymous' || job.corp.toLowerCase().includes('anon') ? C.danger
     : C.warn
@@ -352,6 +365,17 @@ function JobCard({ job, onAccept }: { job:Job; onAccept:()=>void }) {
           border:`1px solid ${C.success}66`, background:`${C.success}12`,
           color:C.success, cursor:'pointer', fontFamily:'inherit' }}>
           Accept
+        </button>
+      ) : job.type === 'hack' ? (
+        <div style={{ alignSelf:'flex-end', fontSize:11, color:C.accent, padding:'4px 0' }}>
+          ● Complete via Terminal
+        </div>
+      ) : onSubmit ? (
+        <button onClick={onSubmit} style={{
+          alignSelf:'flex-end', padding:'7px 16px', borderRadius:6, fontSize:11,
+          border:`1px solid ${C.accent}66`, background:`${C.accent}12`,
+          color:C.accent, cursor:'pointer', fontFamily:'inherit' }}>
+          Submit Work →
         </button>
       ) : (
         <div style={{ alignSelf:'flex-end', fontSize:11, color:C.accent, padding:'4px 0' }}>

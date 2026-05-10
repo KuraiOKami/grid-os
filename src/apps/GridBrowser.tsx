@@ -11,7 +11,7 @@ import type { SiteRow, SiteContentRow, SiteTheme } from '@/lib/browserTypes'
 
 // ── types ────────────────────────────────────────────────────────────────
 type LinkItem = { label: string; url: string }
-type JobOffer = { title: string; corp: string; pay: string }
+type JobOffer = { title: string; corp: string; pay: string; payAmount?: number; briefing?: string }
 
 type AccessGate =
   | { type: 'compliance'; min: number }
@@ -119,18 +119,73 @@ const PAGES: Record<string, PageData> = {
   'gridos.corp/careers': {
     site: 'GridOS Corporate',
     title: 'Careers at GridOS',
-    subtitle: 'Build the network that builds the world.',
+    subtitle: 'Open positions — Compliance & Infrastructure Division.',
     theme: 'corp',
     body: [
-      'Open roles include Content Integrity Operator, Credit Risk Verifier, Junior Behavioral Auditor, and Node Sanitation Associate.',
-      'Candidates with forensics, moderation, and systems scripting experience are strongly preferred.',
-      'All hires undergo identity mesh review and loyalty scoring.',
+      'All roles require identity verification. Compliance score minimums vary by position.',
+      'Earnings are disbursed in GridCredits upon task submission.',
+      'Select a position below to view the full brief and apply.',
     ],
     links: [
-      { label: 'Return to Home',      url: 'gridos.corp' },
-      { label: 'Read Ghostlily blog', url: 'ghostlily.blog' },
+      { label: 'Junior Behavioral Auditor — ₳ 420 / task',  url: 'gridos.corp/careers/auditor' },
+      { label: 'Node Signal Analyst — ₳ 350 / task',        url: 'gridos.corp/careers/analyst' },
+      { label: 'Records Compliance Clerk — ₳ 280 / task',   url: 'gridos.corp/careers/clerk' },
+      { label: 'Return to Home',                             url: 'gridos.corp' },
     ],
-    job: { title: 'Junior Behavioral Auditor', corp: 'GridOS', pay: '₳ 420 / task' },
+    repEffect: { compliance: +1 },
+  },
+  'gridos.corp/careers/auditor': {
+    site: 'GridOS Corporate',
+    title: 'Junior Behavioral Auditor',
+    subtitle: 'Compliance Division · ₳ 420 / task · Min. compliance: 10',
+    theme: 'corp',
+    body: [
+      'Review flagged content from the automated monitoring queue.',
+      'Assess posts, relay messages, and browser activity for dissident behavioral patterns.',
+      'Your decisions are logged and scored. False positives are penalized.',
+      'Quota: 30 reviews per session. Access requires compliance score of 10 or above.',
+    ],
+    links: [{ label: '← Back to Careers', url: 'gridos.corp/careers' }],
+    job: {
+      title: 'Junior Behavioral Auditor', corp: 'GridOS', pay: '₳ 420 / task', payAmount: 420,
+      briefing: 'Flag dissident content in the compliance queue. Quota: 30/session. False positives are penalized. Submit via Job Board when complete.',
+    },
+    repEffect: { compliance: +1 },
+  },
+  'gridos.corp/careers/analyst': {
+    site: 'GridOS Corporate',
+    title: 'Node Signal Analyst',
+    subtitle: 'Infrastructure Division · ₳ 350 / task · Min. compliance: 20',
+    theme: 'corp',
+    body: [
+      'Monitor relay node traffic for anomalous routing patterns.',
+      'Cross-reference alerts against the OVERSEER behavioral baseline.',
+      'Report confirmed anomalies to the internal compliance portal.',
+      'Minimum compliance score: 20. Remote access position.',
+    ],
+    links: [{ label: '← Back to Careers', url: 'gridos.corp/careers' }],
+    job: {
+      title: 'Node Signal Analyst', corp: 'GridOS', pay: '₳ 350 / task', payAmount: 350,
+      briefing: 'Monitor relay nodes for anomalous patterns. Cross-reference with OVERSEER baseline. Submit your report via Job Board to claim payment.',
+    },
+    repEffect: { compliance: +1 },
+  },
+  'gridos.corp/careers/clerk': {
+    site: 'GridOS Corporate',
+    title: 'Records Compliance Clerk',
+    subtitle: 'Data Services Division · ₳ 280 / task · No minimum',
+    theme: 'corp',
+    body: [
+      'Verify and archive citizen activity records from the Sector 4 data queue.',
+      'Flag incomplete or inconsistent entries for manual review.',
+      'Standard quota: 40 records per session.',
+      'Entry-level position. No minimum compliance score required.',
+    ],
+    links: [{ label: '← Back to Careers', url: 'gridos.corp/careers' }],
+    job: {
+      title: 'Records Compliance Clerk', corp: 'GridOS', pay: '₳ 280 / task', payAmount: 280,
+      briefing: 'Verify Sector 4 citizen records. Quota: 40/session. Flag inconsistencies. Submit via Job Board when complete.',
+    },
     repEffect: { compliance: +1 },
   },
   'gridos.corp/internal': {
@@ -750,8 +805,11 @@ function ContractCard({ job, url, t }: { job: JobOffer; url: string; t: ThemeCon
       <div className="text-xs text-neutral-400 uppercase tracking-wider font-medium">Available Contract</div>
       <div className="text-sm font-semibold text-neutral-800">{job.title}</div>
       <div className="text-xs text-neutral-500">{job.corp} · {job.pay}</div>
+      {job.briefing && (
+        <p className="text-xs text-neutral-600 leading-relaxed border-l-2 border-neutral-300 pl-2">{job.briefing}</p>
+      )}
       <button
-        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay })}
+        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay, payAmount: job.payAmount, briefing: job.briefing, source: url })}
         className="mt-1 text-xs px-3 py-1 rounded border border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors font-medium"
       >
         Accept Contract
@@ -766,8 +824,9 @@ function VoidContractCard({ job, url }: { job: JobOffer; url: string }) {
       <div className="text-xs text-red-900/60 uppercase tracking-wider">// contract</div>
       <div className="text-xs font-semibold text-red-300">{job.title}</div>
       <div className="text-xs text-red-900/70">{job.corp} · {job.pay}</div>
+      {job.briefing && <div className="text-xs text-red-900/50 leading-relaxed">{job.briefing}</div>}
       <button
-        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay })}
+        onClick={() => addJob({ id: url, title: job.title, corp: job.corp, pay: job.pay, payAmount: job.payAmount, briefing: job.briefing, source: url })}
         className="mt-1 text-xs px-2 py-0.5 rounded border border-red-900/40 text-red-500/70 hover:text-red-300 transition-colors"
       >
         accept
@@ -844,7 +903,7 @@ function LayoutCorp({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
                 <span className="inline-block text-xs bg-blue-700 text-white px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide">Open Role</span>
                 <p className="text-sm font-bold text-blue-900">{page.job.title}</p>
                 <p className="text-xs text-blue-600">{page.job.corp} · {page.job.pay}</p>
-                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay, payAmount: page.job!.payAmount, briefing: page.job!.briefing, source: url })}
                   className="text-xs bg-blue-700 hover:bg-blue-800 active:bg-blue-900 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold">
                   Apply Now →
                 </button>
@@ -952,7 +1011,7 @@ function LayoutNews({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
                 <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Sponsored · Job Listing</p>
                 <p className="text-sm font-semibold text-neutral-800">{page.job.title}</p>
                 <p className="text-xs text-neutral-500">{page.job.corp} · {page.job.pay}</p>
-                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay, payAmount: page.job!.payAmount, briefing: page.job!.briefing, source: url })}
                   className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded font-semibold transition-colors">
                   Learn More
                 </button>
@@ -1046,7 +1105,7 @@ function LayoutBlog({ page, t, url, navigate, gateBlocked, isLive, forumPosts }:
                 <p className="text-xs text-stone-400 uppercase tracking-wider font-medium">// dropped here</p>
                 <p className="text-sm font-semibold text-stone-800">{page.job.title}</p>
                 <p className="text-xs text-stone-500">{page.job.corp} · {page.job.pay}</p>
-                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay, payAmount: page.job!.payAmount, briefing: page.job!.briefing, source: url })}
                   className="text-xs border border-stone-400 text-stone-600 hover:bg-stone-200 px-3 py-1 rounded transition-colors">
                   Accept
                 </button>
@@ -1132,7 +1191,7 @@ function LayoutArchive({ page, t, url, navigate, gateBlocked, isLive, forumPosts
                 <div className="text-xs text-cyan-800/60 uppercase tracking-wider">// contract available</div>
                 <div className="text-xs font-semibold text-cyan-300">{page.job.title}</div>
                 <div className="text-xs text-zinc-500">{page.job.corp} · {page.job.pay}</div>
-                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay })}
+                <button onClick={() => addJob({ id: url, title: page.job!.title, corp: page.job!.corp, pay: page.job!.pay, payAmount: page.job!.payAmount, briefing: page.job!.briefing, source: url })}
                   className="mt-0.5 text-xs px-2 py-0.5 rounded border border-cyan-900/40 text-cyan-600 hover:text-cyan-300 transition-colors">
                   accept contract
                 </button>
