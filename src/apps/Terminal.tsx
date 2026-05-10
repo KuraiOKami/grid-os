@@ -18,6 +18,7 @@ import { completeJob, acceptJob, getJob } from '@/store/jobStore'
 import { useMapStore } from '@/store/mapStore'
 import { getLocation } from '@/data/locations'
 import { useOpsStore, getOpsNode } from '@/store/opsStore'
+import { checkTriggers } from '@/store/triggerEngine'
 
 const C = {
   bg:      '#0a0a0f',
@@ -478,6 +479,7 @@ export default function Terminal() {
                 const job = getJob(session.jobId!)
                 if (job && !job.accepted) acceptJob(job.id)
                 completeJob(session.jobId!)
+                checkTriggers({ type: 'job_complete', jobId: session.jobId! })
                 useWalletStore.getState().credit(
                   session.files.length > 0 ? (job?.payAmount ?? 250) : 250,
                   `Hack payout: ${job?.title ?? 'contract'}`

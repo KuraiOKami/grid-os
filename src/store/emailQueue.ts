@@ -187,8 +187,9 @@ export const useEmailQueueStore = create<EmailQueueState>((set, get) => ({
 
     return toDeliver.map(e => ({
       ...e.mail,
-      unread: true,
-      date:   new Date().toLocaleString('en-GB', {
+      storyId: (e as any).storyId ?? undefined,
+      unread:  true,
+      date:    new Date().toLocaleString('en-GB', {
         month:   '2-digit',
         day:     '2-digit',
         hour:    '2-digit',

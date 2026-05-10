@@ -17,11 +17,14 @@ import CipherApp      from '@/apps/CipherApp'
 import RelayApp       from '@/apps/RelayApp'
 import SocketApp      from '@/apps/SocketApp'
 import RepHUD         from '@/components/RepHUD'
+import MissionHUD     from '@/components/MissionHUD'
 import BootScreen     from '@/components/BootScreen'
 import StartMenu      from '@/components/StartMenu'
-import { useMailStore }   from '@/store/mailStore'
-import { useUnlockStore } from '@/store/unlockStore'
+import { useMailStore }          from '@/store/mailStore'
+import { useUnlockStore }        from '@/store/unlockStore'
 import { useOSStore, type WindowState } from '@/store/osStore'
+import { checkTriggers }         from '@/store/triggerEngine'
+import { useEmailQueueStore }    from '@/store/emailQueue'
 
 const MIN_W = 280
 const MIN_H = 180
@@ -108,6 +111,22 @@ export default function OSShell() {
       setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
     tick()
     const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Fire game_start trigger once after boot
+  useEffect(() => {
+    checkTriggers({ type: 'game_start' })
+  }, [])
+
+  // Email queue tick — delivers timed story emails every 15s
+  useEffect(() => {
+    const { tick } = useEmailQueueStore.getState()
+    const { send } = useMailStore.getState()
+    const id = setInterval(() => {
+      const delivered = tick()
+      delivered.forEach(mail => send(mail))
+    }, 15_000)
     return () => clearInterval(id)
   }, [])
 
@@ -207,6 +226,7 @@ export default function OSShell() {
             ))}
           </div>
 
+          <MissionHUD />
           <RepHUD />
 
           <div style={{ width: 1, height: 20, background: C.border }} />
@@ -431,7 +451,7 @@ function OsWindow({ win, onClose, onFocus, onMove, onResize, onToggleMax, onMini
     if (win.title === 'App Store')                return <AppStore />
     if (win.title === 'NODE')                     return <NodeApp />
     if (win.title === 'Terminal')                 return <Terminal />
-    if (win.title === 'File System')              return <FileSystem />
+    if (win.title === 'File System')              { checkTriggers({ type: 'file_read', path: '~/' }); return <FileSystem /> }
     if (win.title === 'City Map')                 return <MapApp />
     if (win.title === 'Checkpoint')               return <CheckpointApp />
     if (win.title === 'Data Broker')              return <DataBrokerApp />

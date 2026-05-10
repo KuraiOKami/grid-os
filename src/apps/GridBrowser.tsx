@@ -6,6 +6,7 @@ import { useSite } from '@/hooks/useSite'
 import { KNOWN_DOMAINS, isValidGridUrl } from '@/lib/gridTargets'
 import { getOpsNode, useOpsStore } from '@/store/opsStore'
 import type { OpsNodeData } from '@/store/opsStore'
+import { checkTriggers } from '@/store/triggerEngine'
 import type { SiteRow, SiteContentRow, SiteTheme } from '@/lib/browserTypes'
 
 // ── types ────────────────────────────────────────────────────────────────
@@ -1345,6 +1346,7 @@ export default function GridBrowser() {
     }
     setUrl(target)
     setInputUrl(target)
+    checkTriggers({ type: 'page_visit', url: target })
   }
 
   useEffect(() => {

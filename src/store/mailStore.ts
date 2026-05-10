@@ -6,15 +6,16 @@
 import { create } from 'zustand'
 
 export interface Mail {
-  id:      string
-  tag:     'SYSTEM' | 'LORE' | 'JOB' | 'NPC' | 'THREAT' | 'ANON'
-  from:    string
-  subject: string
-  date:    string
-  body:    string
-  unread:  boolean
-  dot?:    string   // accent color for the unread dot
-  watchCode?: string  // if present, mail contains a Watch access code
+  id:       string
+  storyId?: string  // e.g. 'E-01' — used by triggerEngine for objective matching
+  tag:      'SYSTEM' | 'LORE' | 'JOB' | 'NPC' | 'THREAT' | 'ANON'
+  from:     string
+  subject:  string
+  date:     string
+  body:     string
+  unread:   boolean
+  dot?:     string
+  watchCode?: string
 }
 
 const SEED_MAILS: Mail[] = [

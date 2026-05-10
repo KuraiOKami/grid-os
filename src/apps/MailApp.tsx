@@ -3,6 +3,7 @@
 // Displays unread badge, tag colours, and full message body.
 
 import { useState } from 'react'
+import { checkTriggers } from '@/store/triggerEngine'
 import { useMailStore, Mail } from '@/store/mailStore'
 
 const C = {
@@ -37,8 +38,10 @@ export default function MailApp() {
   const active = mails.find(m => m.id === activeId) ?? null
 
   function open(id: string) {
+    const mail = mails.find(m => m.id === id)
     setActiveId(id)
     markRead(id)
+    if (mail) checkTriggers({ type: 'email_read', emailId: mail.storyId ?? mail.id })
   }
 
   const unread = mails.filter(m => m.unread).length

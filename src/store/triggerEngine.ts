@@ -71,7 +71,7 @@ function _onGameStart(
   // Phase 0.1 — deliver E-01 immediately
   queue.queueEmail({
     deliverAt: Date.now(),
-    mail:      BOOT_EMAILS['E-01'],
+    mail:      { ...BOOT_EMAILS['E-01'], storyId: 'E-01' } as any,
   })
 }
 
@@ -87,7 +87,7 @@ function _onEmailRead(
   if (emailId === 'E-01') {
     queue.queueEmail({
       deliverAt: Date.now() + 2 * MINUTE,
-      mail:      { ...BOOT_EMAILS['E-02'] },
+      mail:      { ...BOOT_EMAILS['E-02'], storyId: 'E-02' } as any,
     })
   }
 
@@ -104,7 +104,7 @@ function _onEmailRead(
   if (emailId === 'E-03') {
     queue.queueEmail({
       deliverAt: Date.now() + 5 * MINUTE,
-      mail:      { ...BOOT_EMAILS['E-04'] },
+      mail:      { ...BOOT_EMAILS['E-04'], storyId: 'E-04' } as any,
     })
   }
 
@@ -122,7 +122,6 @@ function _onEmailRead(
       missions.setMissionStatus('M-03', 'active')
       story.setMission('M-03', 'active')
     }
-    // E-11 queued by triggerEngine after reply — handled in email reply action
   }
 }
 
@@ -253,9 +252,7 @@ function _checkM01Objective2(
 ) {
   const mail = useMailStore.getState()
   const onboardingIds = ['E-01', 'E-02', 'E-03', 'E-04']
-  // Check by matching from addresses since seed mails don't use E-XX ids
-  // This will be updated once mailStore uses story email IDs
-  const readMails = mail.mails.filter(m => !m.unread).map(m => m.id)
+  const readMails = mail.mails.filter(m => !m.unread).map(m => m.storyId ?? m.id)
   const allRead = onboardingIds.every(id => readMails.includes(id))
   if (allRead) {
     missions.setObjectiveComplete('M-01', 'M01-OBJ-2')
@@ -278,7 +275,7 @@ function _checkM01Completion(
   // Phase 0.4: E-03 queued immediately
   useEmailQueueStore.getState().queueEmail({
     deliverAt: Date.now(),
-    mail:      { ...BOOT_EMAILS['E-03'] },
+    mail:      { ...BOOT_EMAILS['E-03'], storyId: 'E-03' } as any,
   })
 }
 
