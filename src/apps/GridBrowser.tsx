@@ -1076,4 +1076,148 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
   return (
     <div className="flex-1 overflow-y-auto bg-neutral-100 text-neutral-800 font-sans text-sm flex flex-col">
 
- 
+      {/* Header */}
+      <div className="bg-yellow-500 border-b border-yellow-600 px-4 py-2.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-yellow-900/20 rounded flex items-center justify-center shrink-0">
+            <span className="text-yellow-900 text-xs font-black leading-none">Y</span>
+          </div>
+          <span className="text-xs font-black text-yellow-950 tracking-widest uppercase">{page.site}</span>
+        </div>
+        {isLive && (
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-900/40" />
+            <span className="text-xs text-yellow-900/60">live</span>
+          </div>
+        )}
+      </div>
+
+      {/* Thread header */}
+      <div className="bg-white border-b border-neutral-200 px-4 py-3 shrink-0">
+        <h1 className="text-sm font-bold text-neutral-900 leading-snug">{page.title}</h1>
+        {page.subtitle && <p className="text-xs text-neutral-500 mt-0.5 italic">{page.subtitle}</p>}
+        <p className="text-xs text-neutral-400 mt-1">{replyCount} {replyCount === 1 ? 'reply' : 'replies'}</p>
+      </div>
+
+      {/* Body / Posts */}
+      <div className="px-4 py-4 space-y-3 flex-1">
+        {gateBlocked ? (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3 items-start">
+            <span className="text-yellow-500 shrink-0">🔒</span>
+            <div>
+              <p className="text-sm font-semibold text-yellow-800">Members Only</p>
+              <p className="text-xs text-yellow-600 mt-0.5">{page.gateHint ?? 'This thread requires membership.'}</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {forumPosts.length > 0
+              ? forumPosts.map((row, i) => <ForumPost key={i} row={row} t={t} />)
+              : page.body.map((line, i) => (
+                  <div key={i} className="bg-white rounded-lg border border-neutral-200 px-4 py-3">
+                    <p className="text-xs text-neutral-600 leading-relaxed">{line}</p>
+                  </div>
+                ))
+            }
+
+            {page.job && <ContractCard job={page.job} url={url} t={t} />}
+
+            {page.links.length > 0 && (
+              <div className="pt-3 border-t border-neutral-200 space-y-1.5">
+                <p className="text-xs text-neutral-400 uppercase tracking-wider font-medium mb-2">Related Threads</p>
+                {page.links.map((lnk, i) => (
+                  <button key={i} onClick={() => navigate(lnk.url)}
+                    className="flex items-center gap-2 text-xs text-yellow-700 hover:text-yellow-900 transition-colors">
+                    <span className="text-yellow-500 shrink-0">›</span>
+                    <span className="underline underline-offset-2">{lnk.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── main component ────────────────────────────────────────────────────────
+export default function GridBrowser() {
+  const [url, setUrl] = useState('gridos.corp')
+  const [inputUrl, setInputUrl] = useState('gridos.corp')
+  const { compliance, shadow } = useRepStore()
+
+  const { data: liveData, isLive } = useSite(url)
+
+  const page = useMemo<PageData>(() => {
+    if (liveData) return siteRowToPageData(liveData)
+    return PAGES[url] ?? {
+      site: url,
+      title: '404 — Page Not Found',
+      subtitle: 'This address returned no content.',
+      body: ['The route you requested does not exist or has been removed from the Grid.'],
+      links: [{ label: 'Return to GridOS home', url: 'gridos.corp' }],
+    }
+  }, [url, liveData])
+
+  const forumPosts = useMemo<SiteContentRow[]>(() => {
+    if (!liveData?.content) return []
+    return liveData.content
+      .filter(c => c.kind === 'post')
+      .sort((a, b) => a.sort_order - b.sort_order)
+  }, [liveData])
+
+  const t = THEME_STYLES[page.theme ?? 'corp']
+
+  const gateBlocked = useMemo(() => {
+    if (!page.gate) return false
+    if (page.gate.type === 'compliance') return compliance < page.gate.min
+    if (page.gate.type === 'shadow')     return shadow < page.gate.min
+    if (page.gate.type === 'unlocked')   return true // always blocked unless key provided
+    return false
+  }, [page.gate, compliance, shadow])
+
+  function navigate(target: string) {
+    setUrl(target)
+    setInputUrl(target)
+  }
+
+  useEffect(() => {
+    if (!gateBlocked && page.repEffect) {
+      const { addCompliance, addShadow } = useRepStore.getState()
+      if (page.repEffect.compliance) addCompliance(page.repEffect.compliance)
+      if (page.repEffect.shadow)     addShadow(page.repEffect.shadow)
+    }
+  }, [url])
+
+  return (
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* Address bar */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-neutral-200 border-b border-neutral-300 shrink-0">
+        <button onClick={() => navigate('gridos.corp')} className="text-neutral-500 hover:text-neutral-800 transition-colors text-base leading-none px-0.5">⌂</button>
+        <form onSubmit={e => { e.preventDefault(); navigate(inputUrl.trim()) }} className="flex-1 flex">
+          <input
+            value={inputUrl}
+            onChange={e => setInputUrl(e.target.value)}
+            className="flex-1 text-xs bg-white border border-neutral-300 rounded px-2.5 py-1 font-mono text-neutral-700 focus:outline-none focus:border-neutral-500"
+            spellCheck={false}
+          />
+        </form>
+        {isLive && (
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            <span className="text-xs text-neutral-500">live</span>
+          </div>
+        )}
+      </div>
+
+      {/* Page content */}
+      {t.layout === 'corp'    && <LayoutCorp    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+      {t.layout === 'news'    && <LayoutNews    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+      {t.layout === 'blog'    && <LayoutBlog    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+      {t.layout === 'archive' && <LayoutArchive page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+      {t.layout === 'void'    && <LayoutVoid    page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+      {t.layout === 'forum'   && <LayoutForum   page={page} t={t} url={url} navigate={navigate} gateBlocked={gateBlocked} isLive={isLive} forumPosts={forumPosts} />}
+    </div>
+  )
+}
