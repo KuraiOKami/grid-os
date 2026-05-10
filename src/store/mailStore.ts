@@ -20,22 +20,6 @@ export interface Mail {
 
 const SEED_MAILS: Mail[] = [
   {
-    id: 'sys-001',
-    tag: 'SYSTEM',
-    from: 'system@gridos.corp',
-    subject: 'Welcome to GridOS — Citizen Onboarding',
-    date: '06.05 // 09:00',
-    unread: true,
-    dot: '#00e5ff',
-    body: `Your node has been registered.
-
-You have been assigned a standard-tier citizen profile. All activity on this terminal is logged and may be reviewed by a Compliance Operator at any time.
-
-Stay productive. Stay visible.
-
-— GridOS Citizen Services`,
-  },
-  {
     id: 'lore-001',
     tag: 'LORE',
     from: 'no-reply@pulse.news',

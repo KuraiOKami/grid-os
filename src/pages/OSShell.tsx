@@ -128,15 +128,15 @@ export default function OSShell() {
     checkTriggers({ type: 'game_start' })
   }, [])
 
-  // Email queue tick — delivers timed story emails every 15s
+  // Email queue tick — runs immediately after game_start (100ms), then every 15s
   useEffect(() => {
-    const { tick } = useEmailQueueStore.getState()
-    const { send } = useMailStore.getState()
-    const id = setInterval(() => {
-      const delivered = tick()
-      delivered.forEach(mail => send(mail))
-    }, 15_000)
-    return () => clearInterval(id)
+    function runTick() {
+      const delivered = useEmailQueueStore.getState().tick()
+      delivered.forEach(mail => useMailStore.getState().send(mail))
+    }
+    const init = setTimeout(runTick, 100)   // catch E-01 queued by game_start
+    const id   = setInterval(runTick, 15_000)
+    return () => { clearTimeout(init); clearInterval(id) }
   }, [])
 
   // Playtime tracker — increments every second while registered + booted
