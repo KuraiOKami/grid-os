@@ -57,6 +57,9 @@ const APPS: AppEntry[] = [
   { id: 'shadownet',    name: 'ShadowNet',      publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Encrypted peer-to-peer communications. No metadata. No trace.',                                            price: 0, codeKey: 'SHD-??-??',    minShadow: 60 },
   { id: 'rootterm',     name: 'ROOT Terminal',  publisher: 'ROOT BLOOM',           tier: 'UNDERGROUND', desc: 'Direct access to ROOT BLOOM coordination infrastructure.',                                                 price: 0, codeKey: 'ROOT-BLOOM-??', minShadow: 80 },
   { id: 'ops',          name: 'OPS',            publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Backdoor recon and execution overlay. Attaches to active app context. Scan, probe, and execute against live targets. No logs.',                  price: 0, minShadow: 40, unlockId: 'ops' },
+  { id: 'cipher',       name: 'CIPHER',         publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'Encryption analysis suite. Crack .enc files recovered from exfil operations. Dictionary, pattern, and brute-force attack modes. Runs locally — no network trace.', price: 800, minShadow: 30, unlockId: 'cipher' },
+  { id: 'relay',        name: 'RELAY',          publisher: 'VoidSyndicate',        tier: 'UNDERGROUND', desc: 'Traffic routing tool. Chain anonymous relay nodes before Terminal operations to reduce heat generation. Each hop cuts heat by 25%. Some nodes go offline permanently.', price: 600, minShadow: 35, unlockId: 'relay' },
+  { id: 'socket',       name: 'SOCKET',         publisher: 'Unknown',              tier: 'UNDERGROUND', desc: 'End-to-end encrypted P2P messaging. No metadata. No logs. Used by fixers, faction handlers, and anonymous buyers. Your GRID mail is watched — this isn\'t.', price: 400, minShadow: 25, unlockId: 'socket' },
 ]
 
 const TIER_ORDER: Tier[] = ['CORPORATE', 'FREELANCE', 'RESTRICTED', 'UNDERGROUND']

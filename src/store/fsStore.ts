@@ -98,7 +98,10 @@ All .sh files are executable by the terminal.
 .enc files are encrypted — you need a key to read them.
 `),
       ]),
-      dir('downloads', []),
+      dir('downloads', [
+        file('memo_441c.enc',            '[ENCRYPTED — use CIPHER to crack]', { meta: meta('unknown') }),
+        file('node_identity_redacted.enc','[ENCRYPTED — use CIPHER to crack]', { meta: meta('unknown') }),
+      ]),
       file('.bash_history',
 `ls
 cd documents

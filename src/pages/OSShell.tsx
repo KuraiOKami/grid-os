@@ -13,6 +13,9 @@ import CheckpointApp  from '@/apps/CheckpointApp'
 import DataBrokerApp  from '@/apps/DataBrokerApp'
 import CourierApp     from '@/apps/CourierApp'
 import OpsApp         from '@/apps/OPSApp'
+import CipherApp      from '@/apps/CipherApp'
+import RelayApp       from '@/apps/RelayApp'
+import SocketApp      from '@/apps/SocketApp'
 import RepHUD         from '@/components/RepHUD'
 import BootScreen     from '@/components/BootScreen'
 import StartMenu      from '@/components/StartMenu'
@@ -55,6 +58,9 @@ const ALL_APPS = [
   { id: 'databroker', title: 'Data Broker',  icon: '[$]',  w: 820, h: 540, accent: '#e8a020' },
   { id: 'courier',    title: 'Courier',      icon: '[>>]', w: 860, h: 560, accent: '#ffaa00' },
   { id: 'ops',        title: 'OPS',          icon: '[!]',  w: 760, h: 520, accent: '#ff3b5c' },
+  { id: 'cipher',    title: 'CIPHER',       icon: '[C]',  w: 680, h: 520, accent: '#d6a2ff' },
+  { id: 'relay',     title: 'RELAY',        icon: '[R]',  w: 700, h: 540, accent: '#00e5ff' },
+  { id: 'socket',    title: 'SOCKET',       icon: '[S]',  w: 760, h: 520, accent: '#00cc88' },
 ]
 
 export default function OSShell() {
@@ -364,6 +370,9 @@ function OsWindow({ win, onClose, onFocus, onMove, onResize, onToggleMax, onMini
     if (win.title === 'Data Broker')              return <DataBrokerApp />
     if (win.title === 'Courier')                  return <CourierApp />
     if (win.title === 'OPS')                      return <OpsApp />
+    if (win.title === 'CIPHER')                   return <CipherApp />
+    if (win.title === 'RELAY')                    return <RelayApp />
+    if (win.title === 'SOCKET')                   return <SocketApp />
     return (
       <div style={{
         width: '100%', height: '100%',
