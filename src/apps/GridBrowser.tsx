@@ -1145,7 +1145,7 @@ function LayoutForum({ page, t, url, navigate, gateBlocked, isLive, forumPosts }
 export default function GridBrowser() {
   const [url, setUrl] = useState('gridos.corp')
   const [inputUrl, setInputUrl] = useState('gridos.corp')
-  const { compliance, shadow } = useRepStore()
+  const { compliance, shadow, applyEvent } = useRepStore()
 
   const { data: liveData, isLive } = useSite(url)
 
@@ -1184,9 +1184,10 @@ export default function GridBrowser() {
 
   useEffect(() => {
     if (!gateBlocked && page.repEffect) {
-      const { addCompliance, addShadow } = useRepStore.getState()
-      if (page.repEffect.compliance) addCompliance(page.repEffect.compliance)
-      if (page.repEffect.shadow)     addShadow(page.repEffect.shadow)
+      applyEvent({
+        compliance: page.repEffect.compliance,
+        shadow:     page.repEffect.shadow,
+      })
     }
   }, [url])
 
