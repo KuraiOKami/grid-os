@@ -16,15 +16,18 @@ import OpsApp         from '@/apps/OPSApp'
 import CipherApp      from '@/apps/CipherApp'
 import RelayApp       from '@/apps/RelayApp'
 import SocketApp      from '@/apps/SocketApp'
-import RepHUD         from '@/components/RepHUD'
-import MissionHUD     from '@/components/MissionHUD'
-import BootScreen     from '@/components/BootScreen'
-import StartMenu      from '@/components/StartMenu'
-import { useMailStore }          from '@/store/mailStore'
-import { useUnlockStore }        from '@/store/unlockStore'
+import RepHUD              from '@/components/RepHUD'
+import MissionHUD          from '@/components/MissionHUD'
+import RegistrationScreen  from '@/components/RegistrationScreen'
+import SaveMenu            from '@/components/SaveMenu'
+import BootScreen          from '@/components/BootScreen'
+import StartMenu           from '@/components/StartMenu'
+import { useMailStore }             from '@/store/mailStore'
+import { useUnlockStore }           from '@/store/unlockStore'
 import { useOSStore, type WindowState } from '@/store/osStore'
-import { checkTriggers }         from '@/store/triggerEngine'
-import { useEmailQueueStore }    from '@/store/emailQueue'
+import { checkTriggers }            from '@/store/triggerEngine'
+import { useEmailQueueStore }       from '@/store/emailQueue'
+import { useCitizenStore, isRegistered } from '@/store/citizenStore'
 
 const MIN_W = 280
 const MIN_H = 180
@@ -79,11 +82,17 @@ function defaultIconPos(index: number, desktopH: number): { x: number; y: number
 }
 
 export default function OSShell() {
+  const [registered,    setRegistered]    = useState(() => isRegistered())
   const [booted,        setBooted]        = useState(false)
   const [time,          setTime]          = useState('')
   const [menuOpen,      setMenuOpen]      = useState(false)
+  const [saveOpen,      setSaveOpen]      = useState(false)
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>({})
+  const [playtime,      setPlaytime]      = useState(0)
   const desktopRef = useRef<HTMLDivElement>(null)
+
+  // Load citizen profile on mount
+  useCitizenStore(s => s.load)()
 
   // ─ store ───────────────────────────────────────────────────────────
   const windows       = useOSStore(s => s.windows)
@@ -130,9 +139,22 @@ export default function OSShell() {
     return () => clearInterval(id)
   }, [])
 
+  // Playtime tracker — increments every second while registered + booted
+  useEffect(() => {
+    if (!registered || !booted) return
+    const id = setInterval(() => setPlaytime(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [registered, booted])
+
+  if (!registered) {
+    return <RegistrationScreen onComplete={() => setRegistered(true)} />
+  }
+
   return (
     <>
       {!booted && <BootScreen onDone={() => setBooted(true)} />}
+
+      {saveOpen && <SaveMenu playtime={playtime} onClose={() => setSaveOpen(false)} />}
 
       {menuOpen && (
         <StartMenu
@@ -231,10 +253,21 @@ export default function OSShell() {
 
           <div style={{ width: 1, height: 20, background: C.border }} />
 
-          <div style={{ display: 'flex', gap: 14, fontSize: 11, color: C.muted }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: C.muted }}>
             <span style={{ color: C.success }}>● ONLINE</span>
             {unreadCount > 0 && <span style={{ color: C.warn }}>✉ {unreadCount}</span>}
             <span>{time}</span>
+            <button
+              onClick={() => setSaveOpen(true)}
+              style={{
+                padding: '2px 10px', fontSize: 10, fontWeight: 'bold',
+                background: 'none', border: `1px solid ${C.border}`,
+                color: C.muted, borderRadius: 3, cursor: 'pointer',
+                fontFamily: 'inherit', letterSpacing: 1,
+              }}
+            >
+              SAVE
+            </button>
           </div>
         </div>
       </div>
