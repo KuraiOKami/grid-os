@@ -2,6 +2,19 @@
 // Overlay recon & execution suite. Attaches to active app context.
 
 import { useState, useEffect, useRef } from 'react'
+import { KNOWN_DOMAINS } from '@/lib/gridTargets'
+import { NPC_ACCOUNTS } from '@/store/nodeStore'
+
+const KNOWN_HANDLES = new Set(NPC_ACCOUNTS.map(a => a.handle.toLowerCase()))
+
+function isValidOpsTarget(raw: string): boolean {
+  const t = raw.toLowerCase().trim()
+  if (!t) return false
+  const domain = t.split('/')[0]
+  if (KNOWN_DOMAINS.has(domain)) return true
+  if (KNOWN_HANDLES.has(t)) return true
+  return false
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -197,8 +210,9 @@ interface OpsAppProps {
 
 export default function OpsApp({ activeTarget }: OpsAppProps) {
   const [panel, setPanel] = useState<OpsPanel>('scan')
-  const [target, setTarget] = useState(activeTarget ?? '')
+  const [target, setTarget]           = useState(activeTarget ?? '')
   const [inputTarget, setInputTarget] = useState(activeTarget ?? '')
+  const [targetError, setTargetError] = useState('')
 
   // SCAN state
   const [scanResults, setScanResults] = useState<ScanResult[]>([])
@@ -241,6 +255,11 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
 
   function applyTarget() {
     const t = inputTarget.trim()
+    if (!isValidOpsTarget(t)) {
+      setTargetError('Unknown target. Must be a Grid domain or @handle.')
+      return
+    }
+    setTargetError('')
     setTarget(t)
     resetAll()
   }
@@ -305,25 +324,30 @@ export default function OpsApp({ activeTarget }: OpsAppProps) {
       </div>
 
       {/* ── Target bar ── */}
-      <div className="px-3 py-2 border-b border-zinc-800 bg-zinc-900/60 flex items-center gap-2 shrink-0">
-        <span className="text-xs text-zinc-600 uppercase tracking-widest shrink-0">TARGET</span>
-        <input
-          value={inputTarget}
-          onChange={e => setInputTarget(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && applyTarget()}
-          placeholder="gridos.corp / user_handle / IP"
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-green-300 placeholder-zinc-600 focus:outline-none focus:border-green-700 min-w-0"
-        />
-        <button
-          onClick={applyTarget}
-          className="text-xs px-2 py-1 border border-zinc-700 rounded text-zinc-400 hover:border-green-700 hover:text-green-400 transition-colors"
-        >
-          LOCK
-        </button>
-        {target && (
-          <span className="text-xs text-green-700 truncate max-w-24 shrink-0" title={target}>
-            ● {target.length > 18 ? target.slice(0, 16) + '…' : target}
-          </span>
+      <div className="border-b border-zinc-800 bg-zinc-900/60 shrink-0">
+        <div className="px-3 py-2 flex items-center gap-2">
+          <span className="text-xs text-zinc-600 uppercase tracking-widest shrink-0">TARGET</span>
+          <input
+            value={inputTarget}
+            onChange={e => { setInputTarget(e.target.value); setTargetError('') }}
+            onKeyDown={e => e.key === 'Enter' && applyTarget()}
+            placeholder="gridos.corp or @handle"
+            className={`flex-1 bg-zinc-800 rounded px-2 py-1 text-xs text-green-300 placeholder-zinc-600 focus:outline-none min-w-0 border ${targetError ? 'border-red-700 focus:border-red-600' : 'border-zinc-700 focus:border-green-700'}`}
+          />
+          <button
+            onClick={applyTarget}
+            className="text-xs px-2 py-1 border border-zinc-700 rounded text-zinc-400 hover:border-green-700 hover:text-green-400 transition-colors"
+          >
+            LOCK
+          </button>
+          {target && !targetError && (
+            <span className="text-xs text-green-700 truncate max-w-24 shrink-0" title={target}>
+              ● {target.length > 18 ? target.slice(0, 16) + '…' : target}
+            </span>
+          )}
+        </div>
+        {targetError && (
+          <div className="px-3 pb-2 text-xs text-red-500 font-mono">{targetError}</div>
         )}
       </div>
 

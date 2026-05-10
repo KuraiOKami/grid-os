@@ -3,6 +3,7 @@ import { addJob } from '@/store/jobStore'
 import { useRepStore } from '@/store/reputationStore'
 import { useUnlockStore } from '@/store/unlockStore'
 import { useSite } from '@/hooks/useSite'
+import { KNOWN_DOMAINS, isValidGridUrl } from '@/lib/gridTargets'
 import type { SiteRow, SiteContentRow, SiteTheme } from '@/lib/browserTypes'
 
 // ── types ────────────────────────────────────────────────────────────────
@@ -479,18 +480,6 @@ const PAGES: Record<string, PageData> = {
     body: ['The domain you entered does not exist or has been removed from GridOS routing tables.'],
     links: [{ label: 'Go to GridOS Home', url: 'gridos.corp' }],
   },
-}
-
-// ── URL validation ────────────────────────────────────────────────────────
-const KNOWN_DOMAINS = new Set([
-  'gridos.corp', 'pulse.news', 'ghostlily.blog',
-  'civic.archive', 'voidbay.net', 'yellowthread.forum',
-  'gridnetnews.com', 'gridsocial.net', 'noodlehut.blog',
-  'mtell.dev', 'gridmart.shop',
-])
-
-function isValidGridUrl(url: string) {
-  return KNOWN_DOMAINS.has(url.split('/')[0])
 }
 
 // ── OPS panel (inline scan engine) ───────────────────────────────────────
