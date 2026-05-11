@@ -1,4 +1,4 @@
-// ── triggerEngine.bridge.ts ───────────────────────────────────────────────────
+// ── triggerEngine.bridge.ts ─────────────────────────────────────────────────────────
 // Phase 1d adapter: evaluates DB-authored triggers alongside the hand-coded
 // switch cases in triggerEngine.ts WITHOUT replacing them.
 //
@@ -13,14 +13,14 @@
 // Once every hand-coded case has a DB equivalent authored via the Phase 2
 // /admin editor, the corresponding switch cases can be deleted one by one.
 
-import { supabase }             from '../lib/supabase'
-import { snapshotGameState }    from '../lib/engine/evaluate'
-import { evaluate }             from '../lib/engine/evaluate'
-import { dispatchAll }          from '../lib/engine/dispatch'
-import type { ConditionNode }   from '../lib/engine/conditionTypes'
-import type { Effect }          from '../lib/engine/effects'
-import type { TriggerEvent }    from './triggerEngine'
-import { useStoryStore }        from './storyStore'
+import { supabase }              from '../lib/supabase'
+import { snapshotGameState }     from '../lib/engine/evaluate'
+import { evaluate }              from '../lib/engine/evaluate'
+import { dispatchEffects }       from '../lib/engine/dispatch'
+import type { ConditionNode }    from '../lib/engine/conditionTypes'
+import type { Effect }           from '../lib/engine/effects'
+import type { TriggerEvent }     from './triggerEngine'
+import { useStoryStore }         from './storyStore'
 
 interface TriggerRow {
   id:            string
@@ -66,7 +66,7 @@ export async function runDatabaseTriggers(_event: TriggerEvent): Promise<void> {
           .update({ enabled: false })
           .eq('id', row.id)
       }
-      await dispatchAll(row.effects)
+      await dispatchEffects(row.effects)
     }
   }
 }
