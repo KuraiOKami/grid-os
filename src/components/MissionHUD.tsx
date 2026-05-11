@@ -1,9 +1,14 @@
-// ── MissionHUD.tsx ────────────────────────────────────────────────────────────
+// ── MissionHUD.tsx ───────────────────────────────────────────────────────────────────
 // Compact inline taskbar widget. Click to expand an upward dropdown.
-// Never overlaps windows or desktop content.
+// Reads from the Phase 1d shim shape:
+//   statuses:           Record<MissionId, MissionStatus>
+//   missions:           Record<MissionId, MissionRow>   (title, description)
+//   objectives:         Record<MissionId, MissionObjectiveRow[]>
+//   completedObjectives: Record<string, boolean>
 
 import { useState } from 'react'
 import { useMissionStore } from '@/store/missionStore'
+import type { MissionId } from '@/store/storyStore.shim'
 
 const C = {
   bg:      '#0d0d14',
@@ -19,13 +24,28 @@ const C = {
 
 export default function MissionHUD() {
   const [open, setOpen] = useState(false)
-  const missions = useMissionStore(s => s.missions)
 
-  const active = Object.values(missions).filter(m => m.status === 'active')[0] ?? null
-  if (!active) return null
+  const statuses           = useMissionStore(s => s.statuses)
+  const missions           = useMissionStore(s => s.missions)
+  const objectives         = useMissionStore(s => s.objectives)
+  const completedObjectives = useMissionStore(s => s.completedObjectives)
 
-  const done  = active.objectives.filter(o => o.complete).length
-  const total = active.objectives.length
+  // Find the first active mission
+  const activeId = (Object.keys(statuses) as MissionId[]).find(
+    id => statuses[id] === 'active'
+  ) ?? null
+
+  const activeMission = activeId ? missions[activeId] : null
+
+  // If DB hasn't hydrated yet (mission row missing) but status is active,
+  // show a minimal placeholder rather than disappearing entirely.
+  if (!activeId) return null
+
+  const objRows  = activeId ? (objectives[activeId] ?? []) : []
+  const done     = objRows.filter(o => completedObjectives[o.id] === true).length
+  const total    = objRows.length
+  const title    = activeMission?.title ?? activeId
+  const desc     = activeMission?.description ?? null
 
   return (
     <div style={{ position: 'relative', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -50,11 +70,13 @@ export default function MissionHUD() {
       >
         <span style={{ color: C.warn, fontWeight: 'bold', letterSpacing: 1 }}>MISSION</span>
         <span style={{ color: C.text, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {active.title}
+          {title}
         </span>
-        <span style={{ color: done === total ? C.success : C.warn }}>
-          {done}/{total}
-        </span>
+        {total > 0 && (
+          <span style={{ color: done === total ? C.success : C.warn }}>
+            {done}/{total}
+          </span>
+        )}
         <span style={{ color: C.muted, fontSize: 9 }}>{open ? '▾' : '▴'}</span>
       </button>
 
@@ -91,23 +113,27 @@ export default function MissionHUD() {
                 MISSION
               </span>
               <span style={{ color: C.text, fontWeight: 'bold', fontSize: 11 }}>
-                {active.title}
+                {title}
               </span>
-              <span style={{ color: C.muted, fontSize: 10 }}>{done}/{total}</span>
+              {total > 0 && (
+                <span style={{ color: C.muted, fontSize: 10 }}>{done}/{total}</span>
+              )}
             </div>
 
             {/* Progress bar */}
-            <div style={{ height: 2, background: C.faint }}>
-              <div style={{
-                width:      `${total ? Math.round((done / total) * 100) : 0}%`,
-                height:     '100%',
-                background: done === total ? C.success : C.warn,
-                transition: 'width 0.3s ease',
-              }} />
-            </div>
+            {total > 0 && (
+              <div style={{ height: 2, background: C.faint }}>
+                <div style={{
+                  width:      `${Math.round((done / total) * 100)}%`,
+                  height:     '100%',
+                  background: done === total ? C.success : C.warn,
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+            )}
 
             {/* Briefing */}
-            {active.description && (
+            {desc && (
               <div style={{
                 padding:      '8px 12px',
                 fontSize:     10,
@@ -115,50 +141,46 @@ export default function MissionHUD() {
                 lineHeight:   1.6,
                 borderBottom: `1px solid ${C.border}`,
               }}>
-                {active.description}
+                {desc}
               </div>
             )}
 
             {/* Objectives */}
-            <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {active.objectives.map(obj => (
-                <div key={obj.id} style={{
-                  display:    'flex',
-                  alignItems: 'flex-start',
-                  gap:        8,
-                  opacity:    obj.complete ? 0.45 : 1,
-                }}>
-                  <span style={{
-                    color:      obj.complete ? C.success : C.warn,
-                    fontSize:   13,
-                    lineHeight: 1.2,
-                    flexShrink: 0,
-                    marginTop:  1,
-                  }}>
-                    {obj.complete ? '✓' : '○'}
-                  </span>
-                  <span style={{
-                    fontSize:       10,
-                    color:          obj.complete ? C.muted : C.text,
-                    lineHeight:     1.5,
-                    textDecoration: obj.complete ? 'line-through' : 'none',
-                  }}>
-                    {obj.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Footer */}
-            {active.giver && (
-              <div style={{
-                padding:    '6px 12px',
-                borderTop:  `1px solid ${C.border}`,
-                fontSize:   9,
-                color:      C.muted,
-                letterSpacing: 0.5,
-              }}>
-                SOURCE: {active.giver.toUpperCase()}
+            {objRows.length > 0 ? (
+              <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {objRows.map(obj => {
+                  const complete = completedObjectives[obj.id] === true
+                  return (
+                    <div key={obj.id} style={{
+                      display:    'flex',
+                      alignItems: 'flex-start',
+                      gap:        8,
+                      opacity:    complete ? 0.45 : 1,
+                    }}>
+                      <span style={{
+                        color:      complete ? C.success : C.warn,
+                        fontSize:   13,
+                        lineHeight: 1.2,
+                        flexShrink: 0,
+                        marginTop:  1,
+                      }}>
+                        {complete ? '\u2713' : '\u25cb'}
+                      </span>
+                      <span style={{
+                        fontSize:       10,
+                        color:          complete ? C.muted : C.text,
+                        lineHeight:     1.5,
+                        textDecoration: complete ? 'line-through' : 'none',
+                      }}>
+                        {obj.description}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ padding: '8px 12px', fontSize: 10, color: C.muted }}>
+                Loading objectives…
               </div>
             )}
           </div>
