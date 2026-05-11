@@ -1,6 +1,10 @@
 // ── saveStore.ts ──────────────────────────────────────────────────────────────
 // Manual save/load system. 3 slots stored in localStorage.
 // Snapshots all key stores. Restores on load. Hard reset on New Game.
+//
+// Phase 1d — updated to use missionStore.shim shape:
+//   missions.statuses[id]          instead of missions.missions[id].status
+//   missions.completedObjectives   instead of missions.missions[id].objectives
 
 import { useStoryStore }      from './storyStore'
 import { useMissionStore }    from './missionStore'
@@ -59,8 +63,9 @@ export function createSave(slot: SlotId, playtime: number): SaveData {
   const mails    = useMailStore.getState()
   const citizen  = useCitizenStore.getState()
 
-  const activeMission = Object.entries(missions.missions)
-    .find(([, m]) => m.status === 'active')?.[1].title ?? null
+  // shim shape: statuses is a separate map
+  const activeMission =
+    Object.entries(missions.statuses).find(([, s]) => s === 'active')?.[0] ?? null
 
   const data: SaveData = {
     slot,
@@ -84,11 +89,17 @@ export function createSave(slot: SlotId, playtime: number): SaveData {
     },
 
     missions: {
+      // Rebuild the flattened save shape from the shim's split maps
       missions: Object.fromEntries(
-        Object.entries(missions.missions).map(([id, m]) => [id, {
-          status:     m.status,
-          objectives: m.objectives.map(o => ({ id: o.id, complete: o.complete })),
-        }])
+        Object.keys(missions.missions).map(id => [
+          id,
+          {
+            status: missions.statuses[id as keyof typeof missions.statuses] ?? 'inactive',
+            objectives: Object.entries(missions.completedObjectives)
+              .filter(([objId]) => objId.startsWith(`${id}-`))
+              .map(([objId, complete]) => ({ id: objId, complete })),
+          },
+        ])
       ),
     },
 
@@ -118,7 +129,7 @@ export function loadSave(slot: SlotId): boolean {
       story.setMission(id as any, status as any)
     )
 
-    // missions — restore statuses + objectives
+    // missions — restore statuses + objectives (shim API unchanged here ✓)
     const missions = useMissionStore.getState()
     Object.entries(data.missions.missions).forEach(([id, saved]) => {
       missions.setMissionStatus(id as any, saved.status as any)

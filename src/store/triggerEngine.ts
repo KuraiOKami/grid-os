@@ -425,9 +425,11 @@ function _checkM03Completion(
 ) {
   if (story.getMission('M-03') !== 'active') return
 
-  const obj1 = missions.missions['M-03'].objectives.find(o => o.id === 'M03-OBJ-1')?.complete
-  const obj2 = missions.missions['M-03'].objectives.find(o => o.id === 'M03-OBJ-2')?.complete
-  const obj3 = missions.missions['M-03'].objectives.find(o => o.id === 'M03-OBJ-3')?.complete
+  // Phase 1d — use shim's completedObjectives map instead of missions[id].objectives
+  const co   = missions.completedObjectives
+  const obj1 = co['M03-OBJ-1'] ?? false
+  const obj2 = co['M03-OBJ-2'] ?? false
+  const obj3 = co['M03-OBJ-3'] ?? false
 
   const routeA = obj1 && rep.compliance >= 65
   const routeB = obj2
