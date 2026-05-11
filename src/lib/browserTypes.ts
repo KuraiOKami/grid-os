@@ -20,6 +20,7 @@ export interface SiteContentRow {
   job_title:    string | null
   job_corp:     string | null
   job_pay:      string | null
+  job_action_id: string | null
   // forum_post
   post_author:  string | null
   post_handle:  string | null
