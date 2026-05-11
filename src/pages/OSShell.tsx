@@ -1,4 +1,4 @@
-// ── OSShell.tsx ───────────────────────────────────────────────────────────
+// ── OSShell.tsx ───────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react'
 import GridBrowser    from '@/apps/GridBrowser'
 import JobBoard       from '@/apps/JobBoard'
@@ -18,6 +18,7 @@ import RelayApp       from '@/apps/RelayApp'
 import SocketApp      from '@/apps/SocketApp'
 import RepHUD              from '@/components/RepHUD'
 import MissionHUD          from '@/components/MissionHUD'
+import NotificationToast   from '@/components/NotificationToast'
 import RegistrationScreen  from '@/components/RegistrationScreen'
 import SaveMenu            from '@/components/SaveMenu'
 import BootScreen          from '@/components/BootScreen'
@@ -94,7 +95,7 @@ export default function OSShell() {
   // Load citizen profile on mount
   useCitizenStore(s => s.load)()
 
-  // ─ store ───────────────────────────────────────────────────────────
+  // ─ store ──────────────────────────────────────────────────────────────────
   const windows       = useOSStore(s => s.windows)
   const openApp       = useOSStore(s => s.openApp)
   const closeWindow   = useOSStore(s => s.closeWindow)
@@ -162,6 +163,9 @@ export default function OSShell() {
           onOpenApp={(id) => { openApp(id); setMenuOpen(false) }}
         />
       )}
+
+      {/* Windows-style toast notifications — fixed, bottom-right, above taskbar */}
+      <NotificationToast />
 
       <div style={{
         width: '100vw', height: '100vh', background: C.bg,
@@ -275,7 +279,7 @@ export default function OSShell() {
   )
 }
 
-// ── DesktopIcon ───────────────────────────────────────────────────────────
+// ── DesktopIcon ───────────────────────────────────────────────────────────────────
 function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, x, y, desktopRef, onClick, onDrag }: {
   icon: string; label: string; accent?: string; badge?: number
   x: number; y: number
@@ -376,7 +380,7 @@ function DesktopIcon({ icon, label, accent = '#00e5ff', badge = 0, x, y, desktop
   )
 }
 
-// ── OsWindow ───────────────────────────────────────────────────────────
+// ── OsWindow ───────────────────────────────────────────────────────────────────
 function OsWindow({ win, onClose, onFocus, onMove, onResize, onToggleMax, onMinimize }: {
   win: WindowState
   onClose:     () => void
