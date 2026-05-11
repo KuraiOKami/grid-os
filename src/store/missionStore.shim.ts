@@ -1,4 +1,4 @@
-// ── missionStore.shim.ts ──────────────────────────────────────────────────────
+// ── missionStore.shim.ts ─────────────────────────────────────────────────────────
 // Phase 1d: Supabase-backed mission content store.
 // Hydrates mission metadata and objectives from DB on boot.
 // Player mission *statuses* are owned by storyStore (player_state table).
@@ -38,11 +38,18 @@ interface MissionShimState {
   statuses:           Record<MissionId, MissionStatus>
   completedObjectives: Record<string, boolean>
 
-  hydrate:              () => Promise<void>
-  setMissionStatus:     (id: MissionId, status: MissionStatus) => void
-  setObjectiveComplete: (missionId: MissionId, objectiveId: string, complete?: boolean) => void
-  getMission:           (id: MissionId) => MissionRow | null
-  getObjectives:        (missionId: MissionId) => MissionObjectiveRow[]
+  hydrate:                () => Promise<void>
+  setMissionStatus:       (id: MissionId, status: MissionStatus) => void
+  setObjectiveComplete:   (missionId: MissionId, objectiveId: string, complete?: boolean) => void
+  getMission:             (id: MissionId) => MissionRow | null
+  getObjectives:          (missionId: MissionId) => MissionObjectiveRow[]
+  /**
+   * Returns true when every objective row for the given mission has been
+   * marked complete in completedObjectives.
+   * Falls back to true if no objectives are loaded (DB not yet hydrated)
+   * so that hand-coded checks in triggerEngine don't silently block.
+   */
+  allObjectivesComplete:  (missionId: MissionId) => boolean
 }
 
 const ALL_MISSION_IDS: MissionId[] = [
@@ -116,4 +123,12 @@ export const useMissionStore = create<MissionShimState>((set, get) => ({
 
   getMission:    (id) => get().missions[id] ?? null,
   getObjectives: (id) => get().objectives[id] ?? [],
+
+  allObjectivesComplete: (missionId) => {
+    const { objectives, completedObjectives } = get()
+    const rows = objectives[missionId]
+    // If objectives haven't loaded from DB yet, don't silently block completion
+    if (!rows || rows.length === 0) return true
+    return rows.every(obj => completedObjectives[obj.id] === true)
+  },
 }))
