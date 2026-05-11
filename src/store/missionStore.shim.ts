@@ -1,153 +1,119 @@
 // ── missionStore.shim.ts ──────────────────────────────────────────────────────
-// Thin shim for missionStore.ts — Phase 1d replacement.
-//
-// Mission definitions (title, giver, description, objectives, rewards) now
-// live in Supabase (tables: missions, mission_objectives).  This store:
-//   1. Hydrates on boot by fetching all missions + objectives from Supabase
-//   2. Exposes the identical selector/mutation API as the original
-//   3. Delegates status changes to storyStore (single source of truth)
-//
-// MIGRATION STEPS:
-//   1. Rename missionStore.ts → missionStore.legacy.ts
-//   2. Rename this file       → missionStore.ts
-//   3. Remove missionStore.legacy.ts once smoke tests pass
+// Phase 1d: Supabase-backed mission content store.
+// Hydrates mission metadata and objectives from DB on boot.
+// Player mission *statuses* are owned by storyStore (player_state table).
 
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { MissionId, MissionStatus, StoryFlag } from './storyStore'
-import { useStoryStore } from './storyStore'
+import type { MissionId, MissionStatus, StoryFlag } from './storyStore.shim'
 
-export interface MissionObjective {
-  id:       string
-  label:    string
-  complete: boolean
+export interface MissionRow {
+  id:             MissionId
+  title:          string
+  description:    string | null
+  prereq_flag:    StoryFlag | null
+  sort_order:     number
+  faction_tag:    'corp' | 'underground' | 'neutral' | null
+  phase_gate:     number
+  reward_credits: number
+  reward_flags:   StoryFlag[]
+  is_side_mission: boolean
 }
 
-export interface MissionReward {
-  credits?:      number
-  compliance?:   number
-  shadow?:       number
-  flags?:        StoryFlag[]
-  filesAdded?:   string[]
-  emailsQueued?: string[]
+export interface MissionObjectiveRow {
+  id:            string
+  mission_id:    MissionId
+  description:   string
+  condition_ast: unknown
+  sort_order:    number
 }
 
-export interface MissionFailure {
-  condition:   string
-  compliance?: number
-  shadow?:     number
-  notes?:      string
+interface MissionShimState {
+  hydrated:           boolean
+  loading:            boolean
+  error:              string | null
+  missions:           Record<MissionId, MissionRow>
+  objectives:         Record<MissionId, MissionObjectiveRow[]>
+  // Runtime statuses — mirrors storyStore.missions, set by setMissionStatus
+  statuses:           Record<MissionId, MissionStatus>
+  completedObjectives: Record<string, boolean>
+
+  hydrate:              () => Promise<void>
+  setMissionStatus:     (id: MissionId, status: MissionStatus) => void
+  setObjectiveComplete: (missionId: MissionId, objectiveId: string, complete?: boolean) => void
+  getMission:           (id: MissionId) => MissionRow | null
+  getObjectives:        (missionId: MissionId) => MissionObjectiveRow[]
 }
 
-export interface MissionDef {
-  id:          MissionId
-  title:       string
-  giver:       string
-  description: string
-  notes?:      string
-  status:      MissionStatus
-  objectives:  MissionObjective[]
-  reward:      MissionReward
-  failure?:    MissionFailure
-}
+const ALL_MISSION_IDS: MissionId[] = [
+  'M-01','M-02','M-03','M-04','M-05','M-06','M-07','M-08',
+  'S-01','S-02','S-03','S-04','S-05','S-06',
+]
 
-interface MissionState {
-  missions:     Record<string, MissionDef>
-  hydrated:     boolean
+const DEFAULT_STATUSES = Object.fromEntries(
+  ALL_MISSION_IDS.map(id => [id, 'inactive' as MissionStatus])
+) as Record<MissionId, MissionStatus>
 
-  activeMissions:    () => MissionDef[]
-  completedMissions: () => MissionDef[]
+export const useMissionStore = create<MissionShimState>((set, get) => ({
+  hydrated:            false,
+  loading:             false,
+  error:               null,
+  missions:            {} as Record<MissionId, MissionRow>,
+  objectives:          {} as Record<MissionId, MissionObjectiveRow[]>,
+  statuses:            { ...DEFAULT_STATUSES },
+  completedObjectives: {},
 
-  setObjectiveComplete:  (missionId: MissionId, objectiveId: string) => void
-  allObjectivesComplete: (missionId: MissionId) => boolean
-  setMissionStatus:      (missionId: MissionId, status: MissionStatus) => void
-  getMissionStatus:      (missionId: MissionId) => MissionStatus
+  hydrate: async () => {
+    if (get().loading) return
+    set({ loading: true, error: null })
 
-  hydrateFromSupabase: () => Promise<void>
-}
+    const [missionsRes, objectivesRes] = await Promise.all([
+      supabase
+        .from('missions')
+        .select('*')
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('mission_objectives')
+        .select('*')
+        .order('sort_order', { ascending: true }),
+    ])
 
-export const useMissionStore = create<MissionState>((set, get) => ({
-  missions: {},
-  hydrated: false,
-
-  activeMissions:    () => Object.values(get().missions).filter(m => m.status === 'active'),
-  completedMissions: () => Object.values(get().missions).filter(m => m.status === 'complete'),
-
-  getMissionStatus: (id) => useStoryStore.getState().getMission(id),
-
-  setMissionStatus: (id, status) => {
-    useStoryStore.getState().setMission(id, status)
-    set(s => {
-      const m = s.missions[id]
-      if (!m) return s
-      return { missions: { ...s.missions, [id]: { ...m, status } } }
-    })
-  },
-
-  setObjectiveComplete: (missionId, objectiveId) => {
-    set(s => {
-      const m = s.missions[missionId]
-      if (!m) return s
-      return {
-        missions: {
-          ...s.missions,
-          [missionId]: {
-            ...m,
-            objectives: m.objectives.map(o =>
-              o.id === objectiveId ? { ...o, complete: true } : o
-            ),
-          },
-        },
-      }
-    })
-  },
-
-  allObjectivesComplete: (missionId) =>
-    get().missions[missionId]?.objectives.every(o => o.complete) ?? false,
-
-  hydrateFromSupabase: async () => {
-    const { data: mRows, error: mErr } = await supabase
-      .from('missions')
-      .select('id, title, giver, description, notes, reward_json, failure_json')
-
-    if (mErr || !mRows) {
-      console.warn('[missionStore.shim] hydrate missions failed:', mErr?.message)
+    if (missionsRes.error) {
+      set({ loading: false, error: missionsRes.error.message })
+      return
+    }
+    if (objectivesRes.error) {
+      set({ loading: false, error: objectivesRes.error.message })
       return
     }
 
-    const { data: oRows, error: oErr } = await supabase
-      .from('mission_objectives')
-      .select('id, mission_id, label, sort_order')
-      .order('sort_order', { ascending: true })
+    const missionMap = Object.fromEntries(
+      (missionsRes.data ?? []).map(m => [m.id, m])
+    ) as Record<MissionId, MissionRow>
 
-    if (oErr || !oRows) {
-      console.warn('[missionStore.shim] hydrate objectives failed:', oErr?.message)
-      return
-    }
+    const objectiveMap = (objectivesRes.data ?? []).reduce((acc, obj) => {
+      const key = obj.mission_id as MissionId
+      if (!acc[key]) acc[key] = []
+      acc[key].push(obj as MissionObjectiveRow)
+      return acc
+    }, {} as Record<MissionId, MissionObjectiveRow[]>)
 
-    const objByMission: Record<string, MissionObjective[]> = {}
-    for (const o of oRows) {
-      if (!objByMission[o.mission_id]) objByMission[o.mission_id] = []
-      objByMission[o.mission_id].push({ id: o.id, label: o.label, complete: false })
-    }
-
-    const storyMissions = useStoryStore.getState().missions
-
-    const built: Record<string, MissionDef> = {}
-    for (const m of mRows) {
-      built[m.id] = {
-        id:          m.id as MissionId,
-        title:       m.title,
-        giver:       m.giver,
-        description: m.description,
-        notes:       m.notes ?? undefined,
-        status:      storyMissions[m.id as MissionId] ?? 'inactive',
-        objectives:  objByMission[m.id] ?? [],
-        reward:      (m.reward_json  as MissionReward)  ?? {},
-        failure:     (m.failure_json as MissionFailure) ?? undefined,
-      }
-    }
-
-    set({ missions: built, hydrated: true })
+    set({
+      missions:  missionMap,
+      objectives: objectiveMap,
+      hydrated:  true,
+      loading:   false,
+    })
   },
+
+  setMissionStatus: (id, status) =>
+    set(s => ({ statuses: { ...s.statuses, [id]: status } })),
+
+  setObjectiveComplete: (_missionId, objectiveId, complete = true) =>
+    set(s => ({
+      completedObjectives: { ...s.completedObjectives, [objectiveId]: complete },
+    })),
+
+  getMission:    (id) => get().missions[id] ?? null,
+  getObjectives: (id) => get().objectives[id] ?? [],
 }))
