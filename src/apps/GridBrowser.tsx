@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { checkTriggers } from '@/store/triggerEngine'
+import { useNotificationStore } from '@/store/notificationStore'
 import { useSite } from '@/hooks/useSite'
 import type { SiteRow, SiteContentRow } from '@/lib/browserTypes'
 
@@ -39,7 +40,6 @@ export default function GridBrowser() {
       background: C.bg, color: C.text,
       fontFamily: "'JetBrains Mono', monospace",
     }}>
-      {/* Address bar */}
       <form onSubmit={handleSubmit} style={{
         display: 'flex', gap: 8, padding: '10px 14px',
         background: '#0f1320', borderBottom: `1px solid ${C.border}`,
@@ -65,7 +65,6 @@ export default function GridBrowser() {
         </button>
       </form>
 
-      {/* Page content */}
       <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
         {result.status === 'loading' || result.status === 'idle' ? (
           <div style={{ color: C.muted, fontSize: 12 }}>Connecting…</div>
@@ -81,14 +80,11 @@ export default function GridBrowser() {
   )
 }
 
-// ── SitePage ──────────────────────────────────────────────────────────────────
-
 function SitePage({ site, navigate }: { site: SiteRow; navigate: (url: string) => void }) {
   const rows: SiteContentRow[] = site.content ?? []
 
   return (
     <div style={{ maxWidth: 680 }}>
-      {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 10, color: C.accent, letterSpacing: '0.1em', marginBottom: 6, opacity: 0.7 }}>
           {site.slug}
@@ -101,16 +97,13 @@ function SitePage({ site, navigate }: { site: SiteRow; navigate: (url: string) =
         )}
       </div>
 
-      {/* Content rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {rows.length === 0 && (
           <p style={{ color: C.faint, fontSize: 12 }}>[ No content ]</p>
         )}
         {rows.map(row => {
           if (row.kind === 'body') {
-            return (
-              <BodyBlock key={row.id} text={row.body_text ?? ''} navigate={navigate} />
-            )
+            return <BodyBlock key={row.id} text={row.body_text ?? ''} navigate={navigate} />
           }
           if (row.kind === 'link') {
             return (
@@ -127,17 +120,7 @@ function SitePage({ site, navigate }: { site: SiteRow; navigate: (url: string) =
             )
           }
           if (row.kind === 'job') {
-            return (
-              <div key={row.id} style={{
-                background: C.surface, border: `1px solid ${C.border}`,
-                borderRadius: 6, padding: '10px 14px', fontSize: 12,
-              }}>
-                <div style={{ color: C.green, marginBottom: 4 }}>{row.job_title}</div>
-                <div style={{ color: C.muted }}>
-                  {row.job_corp} — <span style={{ color: C.warn }}>{row.job_pay}</span>
-                </div>
-              </div>
-            )
+            return <JobCard key={row.id} row={row} />
           }
           if (row.kind === 'forum_post') {
             return (
@@ -170,7 +153,52 @@ function SitePage({ site, navigate }: { site: SiteRow; navigate: (url: string) =
   )
 }
 
-// ── BodyBlock — parses [label](url) markdown links ───────────────────────────
+function JobCard({ row }: { row: SiteContentRow }) {
+  const [accepted, setAccepted] = useState(false)
+
+  function acceptJob() {
+    if (accepted || !row.job_action_id) return
+    setAccepted(true)
+    checkTriggers({ type: 'job_complete', jobId: row.job_action_id })
+    useNotificationStore.getState().push({
+      title: 'Job Accepted',
+      body: `${row.job_title ?? 'Contract'} added to your record.`,
+      type: 'success',
+    })
+  }
+
+  return (
+    <div style={{
+      background: C.surface, border: `1px solid ${C.border}`,
+      borderRadius: 6, padding: '10px 14px', fontSize: 12,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    }}>
+      <div>
+        <div style={{ color: C.green, marginBottom: 4 }}>{row.job_title}</div>
+        <div style={{ color: C.muted }}>
+          {row.job_corp} — <span style={{ color: C.warn }}>{row.job_pay}</span>
+        </div>
+      </div>
+      {row.job_action_id && (
+        <button
+          onClick={acceptJob}
+          disabled={accepted}
+          style={{
+            padding: '6px 12px', borderRadius: 6, fontSize: 11,
+            border: `1px solid ${accepted ? C.faint : C.accent}66`,
+            background: accepted ? `${C.faint}22` : `${C.accent}12`,
+            color: accepted ? C.muted : C.accent,
+            cursor: accepted ? 'default' : 'pointer',
+            fontFamily: 'inherit',
+            flexShrink: 0,
+          }}
+        >
+          {accepted ? 'ACCEPTED' : 'ACCEPT'}
+        </button>
+      )}
+    </div>
+  )
+}
 
 function BodyBlock({ text, navigate }: { text: string; navigate: (url: string) => void }) {
   const lines = text.split('\n')
@@ -206,8 +234,6 @@ function BodyBlock({ text, navigate }: { text: string; navigate: (url: string) =
   )
 }
 
-// ── 404 ───────────────────────────────────────────────────────────────────────
-
 function NotFound({ url }: { url: string }) {
   return (
     <div style={{
@@ -223,8 +249,6 @@ function NotFound({ url }: { url: string }) {
     </div>
   )
 }
-
-// ── Error ─────────────────────────────────────────────────────────────────────
 
 function ErrorState({ message }: { message: string }) {
   return (
