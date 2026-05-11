@@ -26,8 +26,6 @@ function fsAddFile(name: string, content: string) {
 
 const MINUTE = 60_000
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 export type TriggerEvent =
   | { type: 'page_visit';   url:      string }
   | { type: 'email_read';   emailId:  string }
@@ -37,8 +35,6 @@ export type TriggerEvent =
   | { type: 'watch_submit'; decision: string }
   | { type: 'rep_change' }
   | { type: 'game_start' }
-
-// ── Main entry point ──────────────────────────────────────────────────────────
 
 export function checkTriggers(event: TriggerEvent) {
   const story    = useStoryStore.getState()
@@ -57,29 +53,21 @@ export function checkTriggers(event: TriggerEvent) {
     case 'rep_change':         _onRepChange(story, queue, rep);                         break
   }
 
-  // Always re-evaluate phase advancement after any trigger
   _checkPhaseAdvancement(story)
 }
-
-// ── game_start ────────────────────────────────────────────────────────────────
-// Phase 0.1: queue E-01 immediately.
-// M-01 becomes active on first game start.
 
 async function _onGameStart(
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
   queue:    ReturnType<typeof useEmailQueueStore.getState>,
 ) {
-  if (story.getMission('M-01') !== 'inactive') return  // already started
+  if (story.getMission('M-01') !== 'inactive') return
 
-  // Activate M-01
   missions.setMissionStatus('M-01', 'active')
   story.setMission('M-01', 'active')
 
-  // Phase 0.1 — deliver E-01 immediately (content from Supabase)
   await queueStoryEmail('E-01', 0)
 
-  // Timed flavor/lore mails — arrive gradually to drive notification UX
   queue.queueEmail({
     deliverAt: Date.now() + 3 * MINUTE,
     mail: {
@@ -135,24 +123,26 @@ If you believe this is an error, no action is required. Your compliance record w
   })
 }
 
-// ── email_read ────────────────────────────────────────────────────────────────
-
 async function _onEmailRead(
   emailId:  string,
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
   queue:    ReturnType<typeof useEmailQueueStore.getState>,
 ) {
-  // ── Phase 0.2: E-01 read → queue E-02 after 15 seconds (once only) ──────
   if (emailId === 'E-01') {
-    const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-02')
-    const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-02')
-    if (!alreadySent && !alreadyQueued) {
+    const alreadySentE02   = useMailStore.getState().mails.some(m => m.storyId === 'E-02')
+    const alreadyQueuedE02 = queue.queue.some(q => (q.mail as any).storyId === 'E-02')
+    if (!alreadySentE02 && !alreadyQueuedE02) {
       await queueStoryEmail('E-02', 15_000)
+    }
+
+    const alreadySentCareers   = useMailStore.getState().mails.some(m => m.storyId === 'E-CAREERS')
+    const alreadyQueuedCareers = queue.queue.some(q => (q.mail as any).storyId === 'E-CAREERS')
+    if (!alreadySentCareers && !alreadyQueuedCareers) {
+      await queueStoryEmail('E-CAREERS', 15_000)
     }
   }
 
-  // ── Phase 0.3: E-02 read → activate M-02 (once only) ────────────────────
   if (emailId === 'E-02') {
     if (story.getMission('M-02') === 'inactive') {
       missions.setMissionStatus('M-02', 'active')
@@ -160,7 +150,6 @@ async function _onEmailRead(
     }
   }
 
-  // ── Phase 0.5: E-03 read → queue E-04 after 5 min (once only) ───────────
   if (emailId === 'E-03') {
     const alreadySent   = useMailStore.getState().mails.some(m => m.storyId === 'E-04')
     const alreadyQueued = queue.queue.some(q => (q.mail as any).storyId === 'E-04')
@@ -169,13 +158,11 @@ async function _onEmailRead(
     }
   }
 
-  // ── M-01 objective 2: track onboarding emails read ───────────────────────
-  const ONBOARDING_EMAIL_IDS = ['E-01', 'E-02', 'E-03', 'E-04']
+  const ONBOARDING_EMAIL_IDS = ['E-01', 'E-02', 'E-03', 'E-04', 'E-CAREERS']
   if (ONBOARDING_EMAIL_IDS.includes(emailId)) {
     _checkM01Objective2(story, missions)
   }
 
-  // ── Phase 2.3: E-10 read → activate M-03 (once only) ───────────────────
   if (emailId === 'E-10' && !story.hasFlag('UNDERGROUND_CONTACT_MADE')) {
     story.setFlag('UNDERGROUND_CONTACT_MADE')
     if (story.getMission('M-03') === 'inactive') {
@@ -185,8 +172,6 @@ async function _onEmailRead(
   }
 }
 
-// ── page_visit ────────────────────────────────────────────────────────────────
-
 function _onPageVisit(
   url:      string,
   story:    ReturnType<typeof useStoryStore.getState>,
@@ -195,13 +180,11 @@ function _onPageVisit(
 ) {
   story.recordPageVisit(url)
 
-  // ── M-01 objective 1: visited gridos.corp ────────────────────────────────
   if (url === 'gridos.corp' && story.getMission('M-01') === 'active') {
     missions.setObjectiveComplete('M-01', 'M01-OBJ-1')
     _checkM01Completion(story, missions)
   }
 
-  // ── Phase 1 — SECTOR7_SUSPECTED flag triggers ────────────────────────────
   const SECTOR7_PAGES = [
     'yellowthread.forum',
     'ghostlily.blog/root-bloom',
@@ -210,32 +193,26 @@ function _onPageVisit(
   ]
   if (SECTOR7_PAGES.includes(url) && !story.hasFlag('SECTOR7_SUSPECTED')) {
     story.setFlag('SECTOR7_SUSPECTED')
-    // E-10 queued 45 min after flag set — the underground reaches out
     void queueStoryEmail('E-10', 45 * MINUTE)
   }
 
-  // ── M-03 objective 1: visited Gridcorp intranet ───────────────────────────
   const INTRANET_PAGES = ['gridos.corp/internal', 'gridos.corp/compliance']
   if (INTRANET_PAGES.includes(url) && story.getMission('M-03') === 'active') {
     missions.setObjectiveComplete('M-03', 'M03-OBJ-1')
     _checkM03Completion(story, missions, rep)
   }
 
-  // ── OVERSEER pressure: intranet page visit ───────────────────────────────
   if (url === 'gridos.corp/internal') {
     story.adjustOverseer(+3)
     if (rep.compliance >= 65) {
-      story.adjustOverseer(-3)  // net zero if legitimately accessed
+      story.adjustOverseer(-3)
     }
   }
 
-  // ── OVERSEER pressure: other underground pages ────────────────────────────
   if (url.startsWith('voidbay.net'))   story.adjustOverseer(+5)
   if (url.startsWith('splice.onion'))  story.adjustOverseer(+8)
   if (url.startsWith('vault.archive')) story.adjustOverseer(+10)
 }
-
-// ── job_complete ──────────────────────────────────────────────────────────────
 
 function _onJobComplete(
   jobId:    string,
@@ -246,14 +223,11 @@ function _onJobComplete(
 ) {
   story.recordJobComplete(jobId)
 
-  // ── M-02 objective 1: any job completed ───────────────────────────────────
   if (story.getMission('M-02') === 'active') {
     missions.setObjectiveComplete('M-02', 'M02-OBJ-1')
     _completeMission02(story, missions)
   }
 }
-
-// ── file_read ─────────────────────────────────────────────────────────────────
 
 function _onFileRead(
   path:     string,
@@ -262,14 +236,11 @@ function _onFileRead(
 ) {
   story.recordFileRead(path)
 
-  // ── M-01 objective 3: home directory viewed ───────────────────────────────
   if (path === '~/' && story.getMission('M-01') === 'active') {
     missions.setObjectiveComplete('M-01', 'M01-OBJ-3')
     _checkM01Completion(story, missions)
   }
 }
-
-// ── rep_change ────────────────────────────────────────────────────────────────
 
 function _onRepChange(
   story:    ReturnType<typeof useStoryStore.getState>,
@@ -289,8 +260,6 @@ function _onRepChange(
     console.warn('[M-03] Failed — overseerFlag hit 90 before completion')
   }
 }
-
-// ── M-01 helpers ──────────────────────────────────────────────────────────────
 
 function _checkM01Objective2(
   story:    ReturnType<typeof useStoryStore.getState>,
@@ -317,11 +286,8 @@ function _checkM01Completion(
   story.addCredits(100)
   story.setFlag('ONBOARDING_COMPLETE')
 
-  // Phase 0.4: E-03 queued immediately (content from Supabase)
   void queueStoryEmail('E-03', 0)
 }
-
-// ── M-02 helpers ──────────────────────────────────────────────────────────────
 
 function _completeMission02(
   story:    ReturnType<typeof useStoryStore.getState>,
@@ -375,8 +341,6 @@ Note: All WATCH activity is logged and attributed to your analyst profile. Decis
   }
 }
 
-// ── open_app ──────────────────────────────────────────────────────────────────
-
 function _onOpenApp(
   appId:    string,
   story:    ReturnType<typeof useStoryStore.getState>,
@@ -390,8 +354,6 @@ function _onOpenApp(
     missions.setObjectiveComplete('S-01', 'S01-OBJ-1')
   }
 }
-
-// ── watch_submit ──────────────────────────────────────────────────────────────
 
 function _onWatchSubmit(
   decision: string,
@@ -416,8 +378,6 @@ function _onWatchSubmit(
   }
 }
 
-// ── M-03 helpers ──────────────────────────────────────────────────────────────
-
 function _checkM03Completion(
   story:    ReturnType<typeof useStoryStore.getState>,
   missions: ReturnType<typeof useMissionStore.getState>,
@@ -425,7 +385,6 @@ function _checkM03Completion(
 ) {
   if (story.getMission('M-03') !== 'active') return
 
-  // Phase 1d — use shim's completedObjectives map instead of missions[id].objectives
   const co   = missions.completedObjectives
   const obj1 = co['M03-OBJ-1'] ?? false
   const obj2 = co['M03-OBJ-2'] ?? false
@@ -459,8 +418,6 @@ Status: not disclosed to public infrastructure.
     console.info('[M-03 complete] E-12 should be queued for +20min delivery')
   }
 }
-
-// ── Phase advancement ─────────────────────────────────────────────────────────
 
 function _checkPhaseAdvancement(
   story: ReturnType<typeof useStoryStore.getState>,
